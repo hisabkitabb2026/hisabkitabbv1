@@ -5,6 +5,8 @@
     <title>Bill - {{ $invoice->invoice_number }}</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
+    @include("app.pdf.partials.fonts")
+
     <style type="text/css">
         @page {
             margin: 10mm;
@@ -24,7 +26,6 @@
 
         body {
             color: #111;
-            font-family: Arial, Helvetica, sans-serif;
             font-size: 12px;
             margin: 0;
         }
@@ -85,7 +86,7 @@
         }
 
         .brand-row {
-            background: #f8f8f8;
+            background: #ffffff;
             border-bottom: 2px solid #000;
             min-height: 104px;
             table-layout: fixed;
@@ -100,13 +101,17 @@
         }
 
         .logo-cell {
+            padding-left: 14px !important;
+            padding-right: 8px !important;
             text-align: center;
-            width: 20%;
+            width: 22%;
         }
 
         .company-logo {
-            max-height: 100px;
-            max-width: 150px;
+            display: block;
+            margin: 0 auto;
+            max-height: 72px;
+            max-width: 110px;
         }
 
         .brand-fallback {
@@ -126,34 +131,36 @@
 
         .company-cell {
             text-align: center;
-            width: 80%;
+            width: 78%;
         }
 
         .company-name {
-            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 30px;
+            color: #111;
+            font-size: 23px;
             font-weight: bold;
-            line-height: 32px;
+            line-height: 26px;
             margin-top: 1px;
         }
 
         .company-tagline {
-            font-size: 16px;
+            font-size: 13px;
             font-weight: bold;
-            line-height: 18px;
+            line-height: 15px;
         }
 
         .company-address {
             font-size: 13px;
-            line-height: 15px;
-            margin-top: 4px;
+            line-height: 16px;
+            margin-top: 2px;
             text-align: center;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .company-contact {
             font-size: 13px;
             font-weight: bold;
-            line-height: 15px;
+            line-height: 16px;
             margin-top: 2px;
             text-align: center;
         }
@@ -210,37 +217,40 @@
             border-left: 0;
             border-right: 0;
             border-top: 0;
-            font-size: 19px;
+            font-size: 12.5px;
+            line-height: 16px;
             min-height: 18px;
-            padding: 3px 8px;
+            padding: 3px 6px;
         }
 
         .party-address-lines {
-            font-size: 16px;
-            line-height: 20px;
+            font-size: 12.5px;
+            line-height: 16px;
             overflow: hidden;
-            padding: 3px 8px 20px;
+            padding: 3px 6px 6px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .party-display-name {
-            font-size: 17px;
-            font-weight: normal;
+            font-size: 13px;
+            font-weight: bold;
             margin-bottom: 2px;
         }
 
         .party-gstin {
             border-top: 1px solid #111;
             bottom: 0;
-            font-size: 16px;
-            line-height: 20px;
+            font-size: 12.5px;
+            line-height: 16px;
             overflow: hidden;
-            padding: 4px 8px;
+            padding: 3px 6px;
             text-overflow: clip;
             white-space: nowrap;
         }
 
         .party-gstin b {
-            font-size: 19px;
+            font-size: 12.5px;
         }
 
         .bill-details td {
@@ -350,13 +360,22 @@
         }
 
         .terms {
-            font-size: 12px;
-            line-height: 17px;
+            font-size: 11px;
+            line-height: 14.5px;
+            padding: 5px 7px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .terms-title {
+            font-weight: bold;
+            margin-bottom: 3px;
         }
 
         .term-item {
-            margin-bottom: 4px;
-            padding-left: 12px;
+            margin-bottom: 3px;
+            padding-left: 14px;
+            text-indent: -14px;
         }
 
         .prepared {
@@ -381,10 +400,9 @@
         }
 
         .for-company {
-            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: bold;
-            line-height: 18px;
+            line-height: 16px;
             text-align: center;
         }
 
@@ -454,36 +472,38 @@
         }
 
         .tax-box div {
-            font-size: 15px;
+            font-size: 13px;
+            line-height: 16px;
         }
 
         .tax-box .highlight-value {
-            font-size: 15px;
+            font-size: 13px;
         }
 
         .bill-details td {
-            font-size: 14px;
+            font-size: 13px;
+            line-height: 16px;
             overflow: hidden;
             word-break: break-word;
         }
 
         .bill-details .highlight-value {
-            font-size: 15px;
+            font-size: 13px;
             white-space: nowrap;
         }
 
         .words-row .highlight-value {
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .footer-head .highlight-value {
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .sig-label {
-            font-size: 15px;
-            letter-spacing: 1px;
-            padding-top: 6px;
+            font-size: 12.5px;
+            letter-spacing: 0.5px;
+            padding-top: 4px;
         }
     </style>
 </head>
@@ -569,109 +589,137 @@
     };
 
     $invoiceField = function ($keys) use ($invoice, $fieldValue) {
-        foreach ((array) $keys as $key) {
-            $normalizedKey = strtolower(trim($key));
-            
-            // Map common aliases to native columns
-            if ($normalizedKey === 'e_way_bill_no') {
-                $normalizedKey = 'eway_bill_no';
-            }
-            if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
-                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
-                    return $invoice->gstin;
-                }
-                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
-                    return $invoice->gst_no;
-                }
+        $aliases = [
+            'from' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
+            'from_location' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
+            'to' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'to_location' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'truck_no' => ['tr_truck_no', 'tr_lorry_no', 'truck_no', 'lorry_no'],
+            'lorry_no' => ['tr_lorry_no', 'tr_truck_no', 'lorry_no', 'truck_no'],
+            'e_way_bill_no' => ['tr_eway_bill_no', 'eway_bill_no', 'e_way_bill_no'],
+            'eway_bill_no' => ['tr_eway_bill_no', 'eway_bill_no', 'e_way_bill_no'],
+            'gst_tax_through' => ['tr_gst_through', 'gst_through', 'gst_tax_through', 'service_tax_through'],
+            'service_tax_through' => ['tr_gst_through', 'gst_through', 'gst_tax_through', 'service_tax_through'],
+            'gst_tax_payable_by' => ['tr_gst_payable_by', 'gst_payable_by', 'gst_tax_payable_by'],
+            'gst_payable_by' => ['tr_gst_payable_by', 'gst_payable_by', 'gst_tax_payable_by'],
+            'bank' => ['tr_bank', 'tr_advance_bank', 'tr_final_bank', 'bank'],
+            'cheque_no' => ['tr_cash_cheque_no', 'tr_advance_cash_cheque_no', 'tr_final_cash_cheque_no', 'cheque_no'],
+            'cash' => ['tr_cash_cheque_no', 'cash'],
+            'payment_date' => ['tr_advance_on', 'tr_final_balance_on', 'payment_date'],
+            'prepared_by' => ['tr_hire_prepared_by', 'tr_final_prepared_by', 'prepared_by'],
+            'checked_by' => ['tr_hire_certified_by', 'tr_final_certified_by', 'tr_hire_passed_by', 'tr_final_passed_by', 'checked_by'],
+            'gstin' => ['gstin', 'gst_no'],
+            'gst_no' => ['gst_no', 'gstin'],
+            'pan' => ['pan_no', 'pan'],
+            'pan_no' => ['pan_no', 'pan'],
+            'enrollment_no' => ['enrollment_no', 'enrollment'],
+            'enrollment' => ['enrollment_no', 'enrollment'],
+            'party_code' => ['party_code', 'customer_code'],
+            'branch_code' => ['branch_code'],
+            'tick_bill_type' => ['tick_bill_type', 'bill_type', 'tr_mode_of_payment'],
+            'bill_type' => ['tick_bill_type', 'bill_type', 'tr_mode_of_payment'],
+            'basis_of_charges' => ['basis_of_charges', 'basis'],
+            'enclosures' => ['enclosures', 'tr_received_no_bilties'],
+            'emp_code' => ['emp_code', 'employee_code'],
+            'mobile' => ['mobile', 'phone', 'tr_consignor_phone'],
+            'phone' => ['phone', 'mobile', 'tr_consignor_phone'],
+            'email' => ['email'],
+            'billing_branch' => ['billing_branch', 'billing_branch_name_address', 'billing_branch_address'],
+            'billing_branch_name_address' => ['billing_branch_name_address', 'billing_branch_address', 'billing_branch'],
+            'billing_branch_address' => ['billing_branch_address', 'billing_branch_name_address', 'billing_branch'],
+        ];
+
+        foreach ((array) $keys as $rawKey) {
+            $normalizedKey = strtolower(trim($rawKey));
+
+            $candidates = $aliases[$normalizedKey] ?? [];
+            array_unshift($candidates, $normalizedKey);
+            if (! str_starts_with($normalizedKey, 'tr_')) {
+                $candidates[] = 'tr_' . $normalizedKey;
             }
 
-            // Direct mapping for From / To location
-            if ($normalizedKey === 'from') {
-                if (isset($invoice->from_name) && trim((string)$invoice->from_name) !== '') {
-                    return $invoice->from_name;
+            foreach ($candidates as $cand) {
+                if (isset($invoice->$cand) && trim((string) $invoice->$cand) !== '') {
+                    return $invoice->$cand;
                 }
-                if (isset($invoice->from_code) && trim((string)$invoice->from_code) !== '') {
-                    return $invoice->from_code;
+                $camel = \Illuminate\Support\Str::camel($cand);
+                if (isset($invoice->$camel) && trim((string) $invoice->$camel) !== '') {
+                    return $camel === 'invoicePdfUrl' ? $invoice->invoicePdfUrl : $invoice->$camel;
                 }
-            }
-            if ($normalizedKey === 'to') {
-                if (isset($invoice->to_name) && trim((string)$invoice->to_name) !== '') {
-                    return $invoice->to_name;
-                }
-                if (isset($invoice->to_code) && trim((string)$invoice->to_code) !== '') {
-                    return $invoice->to_code;
-                }
-            }
-
-            // Check if column exists directly on the invoice model
-            if (isset($invoice->$normalizedKey) && trim((string)$invoice->$normalizedKey) !== '') {
-                return $invoice->$normalizedKey;
-            }
-            
-            // Check camelCase versions
-            $camelKey = \Illuminate\Support\Str::camel($normalizedKey);
-            if (isset($invoice->$camelKey) && trim((string)$invoice->$camelKey) !== '') {
-                return $camelKey === 'invoicePdfUrl' ? $invoice->invoicePdfUrl : $invoice->$camelKey;
             }
         }
 
-        // Fallback to custom fields relationship
-        return $fieldValue($invoice->fields, $keys);
+        return $fieldValue($invoice->fields ?? [], $keys);
     };
 
     $customerField = function ($keys) use ($invoice, $fieldValue) {
-        return $invoice->customer ? $fieldValue($invoice->customer->fields, $keys) : '';
+        return $invoice->customer ? $fieldValue($invoice->customer->fields ?? [], $keys) : '';
     };
 
     $itemField = function ($item, $keys) use ($fieldValue, $normalize) {
-        // Check native item columns first (transport fields are now native
-        // columns on invoice_items, not custom fields).
-        foreach ((array) $keys as $key) {
-            $normalizedKey = strtolower(trim($key));
+        $aliases = [
+            'from' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
+            'to' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'destination' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'vehicle_no' => ['tr_truck_no', 'tr_lorry_no', 'truck_no', 'lorry_no', 'vehicle_no'],
+            'vehicle_number' => ['tr_truck_no', 'tr_lorry_no', 'truck_no', 'lorry_no', 'vehicle_number'],
+            'truck_no' => ['tr_truck_no', 'tr_lorry_no', 'truck_no', 'lorry_no'],
+            'consignment_no' => ['tr_consignment_number', 'consignment_number', 'consignment_no'],
+            'consignment_number' => ['tr_consignment_number', 'consignment_number'],
+            'old_bill_number' => ['tr_consignment_number', 'consignment_number'],
+            'consignment_date' => ['tr_consignment_date', 'consignment_date'],
+            'old_bill_date' => ['tr_consignment_date', 'consignment_date'],
+            'date' => ['tr_consignment_date', 'consignment_date'],
+            'invoice_no' => ['tr_party_inv_no', 'party_inv_no', 'invoice_no'],
+            'invoice_number' => ['tr_party_inv_no', 'party_inv_no', 'invoice_number'],
+            'party_inv_no' => ['tr_party_inv_no', 'party_inv_no'],
+            'pkg' => ['tr_pkg_weight', 'pkg', 'tr_packing', 'packing'],
+            'package' => ['tr_pkg_weight', 'pkg', 'tr_packing', 'packing'],
+            'packages' => ['tr_pkg_weight', 'pkg', 'tr_packing', 'packing'],
+            'weight' => ['tr_charged_weight', 'charged_weight', 'weight'],
+            'charged_weight' => ['tr_charged_weight', 'charged_weight', 'weight'],
+            'charged_weight_kgs' => ['tr_charged_weight', 'charged_weight', 'weight'],
+            'rate' => ['tr_rate', 'rate'],
+            'other_charge' => ['tr_other_charge', 'other_charge'],
+            'lr_charge' => ['tr_lr_charge', 'lr_charge'],
+            'dd_charge' => ['tr_dd_charge', 'dd_charge'],
+            'amount' => ['amount', 'total'],
+        ];
 
-            // Map template field names to actual database column names
-            $columnMap = [
-                'from' => 'from_code',
-                'to' => 'to_code',
-                'destination' => 'to_code',
-                'vehicle_no' => 'truck_no',
-                'vehicle_number' => 'truck_no',
-                'consignment_no' => 'consignment_number',
-                'consignment_number' => 'consignment_number',
-                'old_bill_number' => 'consignment_number',
-                'old_bill_date' => 'consignment_date',
-                'date' => 'consignment_date',
-                'invoice_no' => 'party_inv_no',
-                'invoice_number' => 'party_inv_no',
-                'package' => 'pkg',
-                'packages' => 'pkg',
-                'charged_weight_kgs' => 'weight',
-                'charged_weight' => 'weight',
-            ];
+        foreach ((array) $keys as $rawKey) {
+            $normalizedKey = strtolower(trim($rawKey));
 
-            $columnName = $columnMap[$normalizedKey] ?? $normalizedKey;
-
-            if (isset($item->$columnName) && trim((string) $item->$columnName) !== '') {
-                return $item->$columnName;
+            $candidates = $aliases[$normalizedKey] ?? [];
+            array_unshift($candidates, $normalizedKey);
+            if (! str_starts_with($normalizedKey, 'tr_')) {
+                $candidates[] = 'tr_' . $normalizedKey;
             }
 
-            // Also check the original key name directly
-            if (isset($item->$normalizedKey) && trim((string) $item->$normalizedKey) !== '') {
-                return $item->$normalizedKey;
+            foreach ($candidates as $cand) {
+                if (isset($item->$cand) && trim((string) $item->$cand) !== '') {
+                    return $item->$cand;
+                }
+                $camel = \Illuminate\Support\Str::camel($cand);
+                if (isset($item->$camel) && trim((string) $item->$camel) !== '') {
+                    return $item->$camel;
+                }
             }
         }
 
-        // Fallback to custom fields relationship
-        return $fieldValue($item->fields, $keys);
+        return $fieldValue($item->fields ?? [], $keys);
     };
 
-    $companyName = $invoice->company?->name ?: '';
+    $companyName = $invoiceField(['company_name']) ?: ($invoice->company?->name ?: '');
     $companyInitials = collect(preg_split('/\s+/', trim($companyName)))
         ->filter()
         ->map(fn ($word) => mb_substr($word, 0, 1))
         ->take(2)
         ->implode('');
-    $billingBranch = 'Vapi Branch Office: B38, Param Logistics And Industrial Pack, Opp Bharat Petroleum Karvad Vapi -396195';
+    // Billing Branch: dynamically read from Address 2nd box (address_street_2),
+    // or company billing_branch, or custom invoice field
+    $billingBranch = $invoice->company?->address?->address_street_2
+        ?: ($invoice->company?->billing_branch
+            ?: ($invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch']) ?: ''));
     $billingBranchHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billingBranch);
     $billingBranchHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $billingBranchHtml);
     $billingBranchHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $billingBranchHtml);
@@ -681,25 +729,31 @@
         ->filter()
         ->values();
     $companyTagline = $invoice->company?->tagline ?: '';
-    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Vapi Jurisdiction';
-    $companyGstin = $invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->gstin ?: '');
-    $companyEnrollmentNo = '24BHLPS2943H1Z3';
-    $companyTaxIdentityLabel = 'Enrollment No';
-    $companyTaxIdentityValue = $companyEnrollmentNo;
-    $panNo = 'BHLPS2943H';
-    $partyGstin = $invoice->customer->tax_id ?: $customerField(['gstin', 'gst_no']);
-    $partyCode = $invoiceField(['party_code']);
+    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Jurisdiction';
+    // GSTIN: read from VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
+    $companyGstin = $invoiceField(['company_gstin', 'gstin', 'gst_no'])
+        ?: ($invoice->company?->vat_id
+            ?: ($invoice->company?->gstin ?: ''));
+    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
+    $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
+    $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
+    // PAN No: read from Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
+    $panNo = $invoiceField(['company_pan', 'pan_no', 'pan'])
+        ?: ($invoice->company?->tax_id
+            ?: ($invoice->company?->pan_no ?: ''));
+    $partyGstin = $invoice->customer?->tax_id ?: ($invoiceField(['party_gstin', 'consignor_gst', 'consignor_gst_no', 'gstin', 'gst_no']) ?: $customerField(['gstin', 'gst_no']));
+    $partyCode = $invoiceField(['party_code', 'customer_code', 'consignor_code']) ?: ($invoice->customer?->prefix ?: '');
     $branchCode = $invoiceField(['branch_code']);
-    $tickBillType = $invoiceField(['tick_bill_type', 'bill_type']);
+    $tickBillType = $invoiceField(['tick_bill_type', 'bill_type', 'mode_of_payment', 'tr_mode_of_payment']);
     $basisOfCharges = $invoiceField(['basis_of_charges', 'basis']);
-    $enclosures = $invoiceField(['enclosures']);
-    $gstTaxThrough = $invoice->gst_tax_payable_by ?: $invoiceField(['gst_tax_through', 'service_tax_through']);
+    $enclosures = $invoiceField(['enclosures', 'tr_received_no_bilties']);
+    $gstTaxThrough = $invoice->gst_tax_payable_by ?: ($invoiceField(['gst_tax_through', 'service_tax_through', 'gst_tax_payable_by', 'tr_gst_payable_by']) ?: 'CONSIGNOR');
 
     $empCode = $invoiceField(['emp_code', 'employee_code']);
     $preparedBy = $invoiceField(['prepared_by']);
     $checkedBy = $invoiceField(['checked_by']);
-    $billingAddress = $invoice->customer?->billingAddress;
-    $partyDisplayName = $billingAddress?->name ?: $invoice->customer?->display_name ?: $invoice->customer?->name;
+    $billingAddress = $invoice->customer?->billingAddress ?: ($invoice->customer?->shippingAddress ?: $invoice->customer?->addresses?->first());
+    $partyDisplayName = $invoiceField(['party_name', 'consignor_name', 'customer_name']) ?: ($billingAddress?->name ?: ($invoice->customer?->display_name ?: $invoice->customer?->name));
     $partyAddressLines = collect();
 
     if ($billingAddress) {
@@ -716,7 +770,7 @@
         ])->filter()->values();
     }
 
-    if ($partyAddressLines->isEmpty()) {
+    if ($partyAddressLines->isEmpty() && isset($billing_address) && $billing_address) {
         $partyAddressHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billing_address);
         $partyAddressHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $partyAddressHtml);
         $partyAddressHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $partyAddressHtml);
@@ -731,22 +785,47 @@
             $partyDisplayName = $partyAddressLines->shift();
         }
     }
+
+    if ($partyAddressLines->isEmpty() && ! empty($invoice->tr_consignor)) {
+        $consignorLines = collect(preg_split('/\r\n|\r|\n/', (string) $invoice->tr_consignor))
+            ->map(fn ($line) => trim($line))
+            ->filter()
+            ->values();
+        if (! $partyDisplayName && $consignorLines->isNotEmpty()) {
+            $partyDisplayName = $consignorLines->first();
+            $partyAddressLines = $consignorLines->slice(1)->values();
+        } else {
+            $partyAddressLines = $consignorLines;
+        }
+    }
     $companyPhone = $invoice->company?->address?->phone;
     $companyEmail = $invoice->company?->address?->email ?: ($invoice->company?->notification_email ?: \App\Domains\Accounts\Models\CompanySetting::getSetting('notification_email', $invoice->company_id));
-    $mobile = $invoiceField(['mobile', 'phone']) ?: ($companyPhone ?: '');
+    $mobile = $companyPhone ?: ($invoiceField(['mobile', 'phone']) ?: '');
     $email = $invoiceField(['email']) ?: ($companyEmail ?: '');
-    $displayCompanyAddress = preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $company_address);
+    $displayCompanyAddress = trim(strip_tags((string) ($company_address ?? '')))
+        ? preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $company_address)
+        : '';
     if ($companyName) {
         $cleanNamePattern = '/^\s*(?:<[^>]+>)*\s*' . preg_quote($companyName, '/') . '\s*(?:<\/[^>]+>)*\s*(?:<br\s*\/?>)?/i';
         $displayCompanyAddress = preg_replace($cleanNamePattern, '', $displayCompanyAddress);
     }
     $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*E-?mail\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
     $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*Mob(?:ile)?\.?\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
-    if ($companyPhone) {
-        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($companyPhone, '/').'\s*/i', '', $displayCompanyAddress);
+    if ($mobile) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($mobile, '/').'\s*/i', '', $displayCompanyAddress);
     }
-    if ($companyEmail) {
-        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($companyEmail, '/').'\s*/i', '', $displayCompanyAddress);
+    if ($email) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($email, '/').'\s*/i', '', $displayCompanyAddress);
+    }
+    if ($displayCompanyAddress === '' && $invoice->company) {
+        $address = $invoice->company->address;
+        $isStreet2InBranch = $billingBranch && trim((string) $address?->address_street_2) !== '' && str_contains((string) $billingBranch, trim((string) $address?->address_street_2));
+        $displayCompanyAddress = implode('<br>', array_filter([
+            e($address?->address_street_1),
+            $isStreet2InBranch ? null : e($address?->address_street_2),
+            e(trim(implode(' ', array_filter([$address?->city, $address?->state, $address?->zip])))),
+            e($address?->country_name),
+        ]));
     }
     $officeGrandTotal = 0;
     $signaturePath = base_path('resources/static/img/PDF/authorized_signature.jpeg');
@@ -755,9 +834,7 @@
 
     // Auto-fit font sizing: shrinks font size for text that would overflow
     // its container. Each block shrinks independently so other blocks are
-    // not disturbed. Uses the same pattern as lorry_receipt.blade.php.
-    // $widthLimit is in px (matching the template's unit system).
-    // $baseSize is the default font size; $minSize is the floor.
+    // not disturbed.
     $getFontForWidth = function ($value, $widthLimit, $baseSize = 11.5, $minSize = 6.5) {
         $length = strlen((string) $value);
         if ($length === 0) {
@@ -772,18 +849,10 @@
     };
 
     // Pre-calculate auto-fit styles for key fields that commonly overflow.
-    // Widths are estimated from the landscape A4 layout (297mm ≈ 1123px at 96 DPI).
-    // Party box is 50% of left-zone (65% of page) ≈ 349px usable.
-    $partyDisplayNameStyle = $getFontForWidth($partyDisplayName, 330, 11.5, 6.5);
-    // Party GSTIN box is 55% of party box ≈ 184px usable, nowrap.
-    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 16, 6.5);
-    // Company name is in center cell (63% of left zone) ≈ 450px usable.
-    $companyNameStyle = $getFontForWidth($companyName, 430, 27, 10);
-    // Billing branch address is in right zone (35%) ≈ 370px usable.
-    $branchAddressStyle = $getFontForWidth($billingBranchLines->implode(' '), 360, 11, 6.5);
-    // Item table column widths (percentages of ~1123px page width).
-    // From/Destination: 7% ≈ 73px usable.
-    // Consignment No: 7% ≈ 73px. Vehicle No: 9% ≈ 88px. Invoice No: 8% ≈ 78px.
+    $partyDisplayNameStyle = '';
+    $partyGstinStyle = '';
+    $companyNameStyle = $getFontForWidth($companyName, 430, 23, 10);
+    $branchAddressStyle = '';
 @endphp
 
 
@@ -795,7 +864,7 @@
                     <table class="brand-row">
                         <tr>
                             <td class="logo-cell">
-                                @if ($logo)
+                                @if ($logo && file_exists($logo))
                                     <img class="company-logo" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
                                     <div class="brand-fallback">{{ $companyInitials }}</div>
@@ -974,7 +1043,7 @@
                         <td class="text-right">{{ $otherCharge }}</td>
                         <td class="text-right">{{ $lrCharge }}</td>
                         <td class="text-right">{{ $ddCharge }}</td>
-                        <td class="text-right">{!! format_money_pdf($officeLineTotal, $invoice->customer->currency) !!}</td>
+                        <td class="text-right">{!! format_money_pdf($officeLineTotal, $invoice->customer?->currency ?: $invoice->company?->currency) !!}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -996,7 +1065,7 @@
             <tr>
                 <td><b>Rupees in words :</b> <span class="highlight-value">{{ $rupeesInWords }}</span></td>
                 <td class="grand-label">GRAND TOTAL</td>
-                <td class="text-right bold grand-total-value">{!! format_money_pdf($officeGrandTotal ?: $invoice->total, $invoice->customer->currency) !!}</td>
+                <td class="text-right bold grand-total-value">{!! format_money_pdf($officeGrandTotal ?: $invoice->total, $invoice->customer?->currency ?: $invoice->company?->currency) !!}</td>
             </tr>
         </table>
 
@@ -1010,8 +1079,9 @@
             </tr>
             <tr class="footer-body">
                 <td width="42%" class="terms">
-                    <div class="term-item">1) Payment should be made by payee A/c Cheque /<br>D.D. Favour of {{ $companyName }}</div>
-                    <div class="term-item">2) Interest @ 10% per annum will be charged if bill<br>not paid within 7 days from date of bill</div>
+                    <div class="terms-title">Terms &amp; Conditions :</div>
+                    <div class="term-item">• Payment should be made by payee A/c Cheque / D.D. in favour of {{ $companyName }}.</div>
+                    <div class="term-item">• Interest @ 10% per annum will be charged if bill not paid within 7 days from date of bill.</div>
                 </td>
 
                 <td width="10%" class="prepared text-center">Prepared by :<br>{{ $preparedBy }}</td>
@@ -1031,7 +1101,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="font-size: 16px; font-weight: bold; text-align: center; padding-top: 4px;">
+                            <td colspan="2" style="font-size: 13px; font-weight: bold; text-align: center; padding-top: 4px;">
                                 {{ auth()->user()?->name ?: $preparedBy }}
                             </td>
                         </tr>

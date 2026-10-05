@@ -5,6 +5,8 @@
     <title>LR Receipt - {{ $invoice->invoice_number }}</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
+    @include("app.pdf.partials.fonts")
+
     <style type="text/css">
         /* ── Page setup: landscape A4 with comfortable print margins ── */
         @page {
@@ -18,7 +20,6 @@
 
         body {
             color: #111;
-            font-family: Arial, Helvetica, sans-serif;
             font-size: 13px;
             margin: 0;
         }
@@ -90,7 +91,7 @@
 
         /* ── Brand row: horizontal layout matching office_invoice ── */
         .brand-row {
-            background-color: #f8f8f8;
+            background-color: #ffffff;
             border-bottom: 2px solid #000;
             table-layout: fixed;
             width: 100%;
@@ -103,13 +104,17 @@
         }
 
         .logo-cell {
+            padding-left: 14px !important;
+            padding-right: 8px !important;
             text-align: center;
-            width: 20%;
+            width: 22%;
         }
 
         .company-logo {
+            display: block;
+            margin: 0 auto;
             max-height: 72px;
-            max-width: 130px;
+            max-width: 110px;
         }
 
         .brand-mark {
@@ -131,15 +136,14 @@
 
         .company-cell {
             text-align: left;
-            width: 80%;
+            width: 78%;
         }
 
         .company-name {
             color: #111;
-            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 26px;
+            font-size: 23px;
             font-weight: bold;
-            line-height: 28px;
+            line-height: 26px;
             margin-top: 1px;
         }
 
@@ -150,9 +154,8 @@
         }
 
         .company-address {
-            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
-            font-size: 15px;
-            line-height: 17px;
+            font-size: 13px;
+            line-height: 16px;
             margin-top: 2px;
             word-break: break-word;
             overflow-wrap: anywhere;
@@ -220,6 +223,7 @@
         }
 
         .party-details {
+            font-size: 12.5px;
             min-height: 59px;
             line-height: 16px;
             padding-top: 4px;
@@ -380,13 +384,23 @@
 
         /* ── Declaration: readable font, min-height, no overflow:hidden ── */
         .declaration {
-            font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
             font-size: 10.5px;
-            line-height: 12px;
+            line-height: 13.5px;
             min-height: 51px;
             padding: 4px 6px;
             word-break: break-word;
             overflow-wrap: anywhere;
+        }
+
+        .declaration-title {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .declaration-item {
+            margin-bottom: 2px;
+            padding-left: 10px;
+            text-indent: -10px;
         }
 
         .agreement {
@@ -527,122 +541,113 @@
     };
 
     $invoiceField = function ($keys) use ($invoice, $fieldValue) {
-        foreach ((array) $keys as $key) {
-            $normalizedKey = strtolower(trim($key));
+        $aliases = [
+            'from' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
+            'from_location' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
+            'to' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'to_location' => ['tr_to_name', 'tr_to_code', 'to_name', 'to_code'],
+            'truck_no' => ['tr_truck_no', 'tr_lorry_no', 'truck_no', 'lorry_no'],
+            'lorry_no' => ['tr_lorry_no', 'tr_truck_no', 'lorry_no', 'truck_no'],
+            'e_way_bill_no' => ['tr_eway_bill_no', 'eway_bill_no', 'e_way_bill_no'],
+            'eway_bill_no' => ['tr_eway_bill_no', 'eway_bill_no', 'e_way_bill_no'],
+            'actual_weight' => ['tr_actual_weight', 'actual_weight'],
+            'charged_weight' => ['tr_charged_weight', 'charged_weight', 'charge_weight'],
+            'charge_weight' => ['tr_charged_weight', 'charged_weight', 'charge_weight'],
+            'no_of_articles' => ['tr_no_of_articles', 'no_of_articles', 'tr_no_of_packages', 'no_of_packages'],
+            'articles' => ['tr_no_of_articles', 'no_of_articles'],
+            'packing' => ['tr_packing', 'packing'],
+            'description_of_goods' => ['tr_description_goods', 'description_goods', 'description_of_goods'],
+            'description_goods' => ['tr_description_goods', 'description_goods', 'description_of_goods'],
+            'hsn_code' => ['tr_hsn_code', 'hsn_code', 'hsn'],
+            'delivery_at' => ['tr_delivery_at', 'delivery_at'],
+            'goods_value' => ['tr_goods_value', 'goods_value'],
+            'pod_required' => ['tr_pod_required', 'pod_required'],
+            'time' => ['tr_time', 'time'],
+            'basic_freight' => ['tr_basic_freight', 'basic_freight'],
+            'local_collection' => ['tr_local_collection', 'local_collection'],
+            'door_delivery' => ['tr_door_delivery', 'door_delivery'],
+            'hamali' => ['tr_hamali', 'hamali'],
+            'docket_charge' => ['tr_docket_charge', 'docket_charge'],
+            'other_charge' => ['tr_other_charge', 'other_charge'],
+            'fov' => ['tr_fov', 'fov'],
+            'net_amount' => ['tr_net_amount', 'net_amount'],
+            'mode_of_payment' => ['tr_mode_of_payment', 'mode_of_payment'],
+            'gst_tax_payable_by' => ['tr_gst_payable_by', 'gst_payable_by', 'gst_tax_payable_by'],
+            'gst_payable_by' => ['tr_gst_payable_by', 'gst_payable_by', 'gst_tax_payable_by'],
+            'consignor' => ['tr_consignor', 'consignor'],
+            'consignee' => ['tr_consignee', 'consignee'],
+            'consignor_phone' => ['tr_consignor_phone', 'consignor_phone', 'consignor_phone_no'],
+            'consignor_phone_no' => ['tr_consignor_phone', 'consignor_phone', 'consignor_phone_no'],
+            'consignee_phone' => ['tr_consignee_phone', 'consignee_phone', 'consignee_phone_no'],
+            'consignee_phone_no' => ['tr_consignee_phone', 'consignee_phone', 'consignee_phone_no'],
+            'consignor_gst' => ['tr_consignor_gst', 'consignor_gst', 'consignor_gst_no'],
+            'consignor_gst_no' => ['tr_consignor_gst', 'consignor_gst', 'consignor_gst_no'],
+            'consignee_gst' => ['tr_consignee_gst', 'consignee_gst', 'consignee_gst_no'],
+            'consignee_gst_no' => ['tr_consignee_gst', 'consignee_gst', 'consignee_gst_no'],
+            'gstin' => ['gstin', 'gst_no'],
+            'gst_no' => ['gst_no', 'gstin'],
+            'pan' => ['pan_no', 'pan'],
+            'pan_no' => ['pan_no', 'pan'],
+        ];
 
-            // Map common aliases to tr_ prefixed transport columns
-            $columnAliases = [
-                'e_way_bill_no' => 'tr_eway_bill_no',
-                'eway_bill_no' => 'tr_eway_bill_no',
-                'charge_weight' => 'tr_charged_weight',
-                'charged_weight' => 'tr_charged_weight',
-                'truck_no' => 'tr_truck_no',
-                'mode_of_payment' => 'tr_mode_of_payment',
-                'gst_tax_payable_by' => 'tr_gst_payable_by',
-                'description_of_goods' => 'tr_description_goods',
-                'hsn_code' => 'tr_hsn_code',
-                'actual_weight' => 'tr_actual_weight',
-                'no_of_articles' => 'tr_no_of_articles',
-                'packing' => 'tr_packing',
-                'basic_freight' => 'tr_basic_freight',
-                'hamali' => 'tr_hamali',
-                'fov' => 'tr_fov',
-                'local_collection' => 'tr_local_collection',
-                'door_delivery' => 'tr_door_delivery',
-                'docket_charge' => 'tr_docket_charge',
-                'other_charge' => 'tr_other_charge',
-                'net_amount' => 'tr_net_amount',
-                'from' => 'tr_from_code',
-                'to' => 'tr_to_code',
-            ];
-            $normalizedKey = $columnAliases[$normalizedKey] ?? $normalizedKey;
-            if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
-                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
-                    return $invoice->gstin;
-                }
-                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
-                    return $invoice->gst_no;
-                }
+        foreach ((array) $keys as $rawKey) {
+            $normalizedKey = strtolower(trim($rawKey));
+
+            $candidates = $aliases[$normalizedKey] ?? [];
+            array_unshift($candidates, $normalizedKey);
+            if (! str_starts_with($normalizedKey, 'tr_')) {
+                $candidates[] = 'tr_' . $normalizedKey;
             }
 
-            // Direct mapping for From / To location
-            if ($normalizedKey === 'from') {
-                if (isset($invoice->tr_from_name) && trim((string)$invoice->tr_from_name) !== '') {
-                    return $invoice->tr_from_name;
+            foreach ($candidates as $cand) {
+                if (isset($invoice->$cand) && trim((string) $invoice->$cand) !== '') {
+                    return $invoice->$cand;
                 }
-                if (isset($invoice->tr_from_code) && trim((string)$invoice->tr_from_code) !== '') {
-                    return $invoice->tr_from_code;
+                $camel = \Illuminate\Support\Str::camel($cand);
+                if (isset($invoice->$camel) && trim((string) $invoice->$camel) !== '') {
+                    return $invoice->$camel;
                 }
-            }
-            if ($normalizedKey === 'to') {
-                if (isset($invoice->tr_to_name) && trim((string)$invoice->tr_to_name) !== '') {
-                    return $invoice->tr_to_name;
-                }
-                if (isset($invoice->tr_to_code) && trim((string)$invoice->tr_to_code) !== '') {
-                    return $invoice->tr_to_code;
-                }
-            }
-
-            // Check if column exists directly on the invoice model
-            if (isset($invoice->$normalizedKey) && trim((string)$invoice->$normalizedKey) !== '') {
-                return $invoice->$normalizedKey;
-            }
-            
-            // Check camelCase versions
-            $camelKey = \Illuminate\Support\Str::camel($normalizedKey);
-            if (isset($invoice->$camelKey) && trim((string)$invoice->$camelKey) !== '') {
-                return $invoice->$camelKey;
             }
         }
 
         // Fallback to custom fields relationship
-        return $fieldValue($invoice->fields, $keys);
+        return $fieldValue($invoice->fields ?? [], $keys);
     };
 
-    $addressLines = function ($address) {
-        if (! $address) {
-            return [];
-        }
-
-        $cityState = collect([$address->city, $address->state])->filter()->implode(', ');
-        $cityStateZip = collect([$cityState, $address->zip])->filter()->implode(' ');
-
-        return collect([
-            $address->name,
-            $address->address_street_1,
-            $address->address_street_2,
-            $cityStateZip,
-        ])->filter()->values()->all();
-    };
-
-    $partyDetails = function ($customer, $fallback = '') use ($addressLines) {
+    $formatAddress = function ($customer) {
         if (! $customer) {
-            return $fallback;
+            return '';
         }
+        $address = $customer->billingAddress ?: ($customer->shippingAddress ?: $customer->addresses?->first());
+        if (! $address) {
+            return '';
+        }
+        $street = array_filter([$address->address_street_1, $address->address_street_2]);
+        $cityState = implode(', ', array_filter([$address->city, $address->state]));
+        $cityStateZip = trim($cityState . ($address->zip ? ' ' . $address->zip : ''));
 
-        $name = $customer->name ?: $customer->display_name;
-        $address = $customer->billingAddress ?: $customer->shippingAddress;
-        $lines = collect([$name])
-            ->merge($addressLines($address))
-            ->filter()
-            ->unique()
-            ->take(4)
+        $lines = array_merge($street, array_filter([$cityStateZip]));
+        return implode("\n", array_filter(array_map('trim', $lines)));
+    };
+
+    $parseParty = function ($partyText) {
+        $lines = collect(explode("\n", (string) $partyText))
+            ->map(fn($line) => trim($line))
+            ->filter(fn($line) => $line !== '')
             ->values();
 
-        return $lines->isNotEmpty() ? $lines->implode("\n") : $fallback;
+        $name = $lines->first() ?: '';
+        $addressLines = $lines->slice(1)->values()->all();
+
+        return [
+            'name' => $name,
+            'address' => implode("\n", $addressLines),
+        ];
     };
 
-    $fitPartyText = function ($value) {
-        return collect(preg_split('/\R/', (string) $value))
-            ->map(fn ($line) => trim($line))
-            ->filter()
-            ->take(4)
-            ->implode("\n");
-    };
-
-    $item = $invoice->items->first();
+    $item = $invoice->items?->first();
     $itemField = function ($keys) use ($item, $fieldValue) {
-        return $item ? $fieldValue($item->fields, $keys) : '';
+        return $item ? $fieldValue($item->fields ?? [], $keys) : '';
     };
 
     $moneyText = function ($paise) use ($invoice) {
@@ -655,35 +660,46 @@
         return format_money_pdf((int) round($paise), $currency);
     };
 
-    $companyName = $invoice->company?->name ?: '';
+    $companyName = $invoiceField(['company_name']) ?: ($invoice->company?->name ?: '');
     $companyInitials = collect(preg_split('/\s+/', trim($companyName)))
         ->filter()
         ->map(fn ($word) => mb_substr($word, 0, 1))
         ->take(2)
         ->implode('');
     $companyTagline = $invoice->company?->tagline ?: '';
-    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Vapi Jurisdiction';
-    $companyAddress = trim(strip_tags($company_address)) ? $company_address : '';
+    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Jurisdiction';
     $companyPhone = $invoice->company?->address?->phone;
-    // Use address email first (configured in Company Info settings), fall back to notification_email setting
     $companyEmail = $invoice->company?->address?->email ?: ($invoice->company?->notification_email ?: \App\Domains\Accounts\Models\CompanySetting::getSetting('notification_email', $invoice->company_id));
     $mobile = $companyPhone ?: ($invoiceField(['mobile', 'phone']) ?: '');
     $email = $invoiceField(['email']) ?: ($companyEmail ?: '');
-    $displayCompanyAddress = preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $companyAddress);
+    $displayCompanyAddress = trim(strip_tags((string) ($company_address ?? '')))
+        ? preg_replace('/^\s*<h[1-6][^>]*>.*?<\/h[1-6]>\s*/is', '', (string) $company_address)
+        : '';
     if ($companyName) {
         $cleanNamePattern = '/^\s*(?:<[^>]+>)*\s*' . preg_quote($companyName, '/') . '\s*(?:<\/[^>]+>)*\s*(?:<br\s*\/?>)?/i';
         $displayCompanyAddress = preg_replace($cleanNamePattern, '', $displayCompanyAddress);
     }
     $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*E-?mail\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
     $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*Mob(?:ile)?\.?\s*:?\s*[^<\r\n]+/i', '', $displayCompanyAddress);
-    if ($companyPhone) {
-        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($companyPhone, '/').'\s*/i', '', $displayCompanyAddress);
+    if ($mobile) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($mobile, '/').'\s*/i', '', $displayCompanyAddress);
     }
-    if ($companyEmail) {
-        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($companyEmail, '/').'\s*/i', '', $displayCompanyAddress);
+    if ($email) {
+        $displayCompanyAddress = preg_replace('/(?:<br\s*\/?>|\s)*'.preg_quote($email, '/').'\s*/i', '', $displayCompanyAddress);
     }
-    $panNo = $invoiceField(['pan_no', 'pan']) ?: ($invoice->company?->pan_no ?: '');
-    $companyGstin = $invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->gstin ?: '');
+    if ($displayCompanyAddress === '' && $invoice->company) {
+        $address = $invoice->company->address;
+        $displayCompanyAddress = implode('<br>', array_filter([
+            e($address?->address_street_1),
+            e($address?->address_street_2),
+            e(trim(implode(' ', array_filter([$address?->city, $address?->state, $address?->zip])))),
+            e($address?->country_name),
+        ]));
+    }
+    // PAN No: Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
+    $panNo = $invoiceField(['pan_no', 'pan']) ?: ($invoice->company?->tax_id ?: ($invoice->company?->pan_no ?: ''));
+    // GSTIN: VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
+    $companyGstin = $invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->vat_id ?: ($invoice->company?->gstin ?: ''));
     $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
     $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
@@ -695,7 +711,7 @@
     $docketCharge = $invoiceField(['docket_charge']) ?: 100;
     $otherCharge = $invoiceField(['other_charge']);
     $fov = $invoiceField(['fov']);
-    $netAmount = (
+    $calculatedNet = (
         $numericField($basicFreight)
         + $numericField($localCollection)
         + $numericField($doorDelivery)
@@ -704,6 +720,8 @@
         + $numericField($otherCharge)
         + $numericField($fov)
     ) * 100;
+    $storedNet = $numericField($invoiceField(['net_amount'])) * 100;
+    $netAmount = $calculatedNet > 0 ? $calculatedNet : ($storedNet > 0 ? $storedNet : 0);
 
     $modeOfPayment = $invoiceField(['mode_of_payment']) ?: 'TO PAY';
     $selectedMode = $normalize($modeOfPayment);
@@ -717,48 +735,40 @@
 
         return '<span class="mode-struck">'.e($label).'</span>';
     };
-    $formatAddress = function ($customer) {
-        if (!$customer) return '';
-        $billing = $customer->billingAddress;
-        if (!$billing) return '';
-        $lines = [
-            $billing->address_street_1,
-            $billing->address_street_2,
-            implode(', ', array_filter([$billing->city, $billing->state])) . ($billing->zip ? ' ' . $billing->zip : '')
-        ];
-        return implode("\n", array_filter(array_map('trim', $lines)));
-    };
 
-    $parseParty = function ($partyText) {
-        $lines = collect(explode("\n", (string) $partyText))
-            ->map(fn($line) => trim($line))
-            ->filter()
-            ->values();
+    $gstPayableBy = $invoiceField(['gst_tax_payable_by', 'gst_payable_by']) ?: 'Consignor / Consignee';
 
-        $name = $lines->first() ?: '';
-        $addressLines = $lines->slice(1)->values()->all();
+    // Consignor (Customer)
+    $consignorCustomer = $invoice->customer;
+    $parsedConsignor = $parseParty($invoiceField(['consignor', 'tr_consignor']));
+    $consignorName = $consignorCustomer?->name ?: ($parsedConsignor['name'] ?: '');
+    $consignorAddrFromCust = $formatAddress($consignorCustomer);
+    $consignorAddress = (strlen($consignorAddrFromCust) > strlen($parsedConsignor['address']))
+        ? $consignorAddrFromCust
+        : ($parsedConsignor['address'] ?: $consignorAddrFromCust);
+    $consignorPhone = $invoiceField(['consignor_phone', 'consignor_phone_no', 'tr_consignor_phone'])
+        ?: ($consignorCustomer?->phone ?: ($consignorCustomer?->billingAddress?->phone ?: ''));
+    $consignorGstin = $invoiceField(['consignor_gst', 'consignor_gst_no', 'tr_consignor_gst'])
+        ?: ($consignorCustomer?->tax_id ?: '');
 
-        return [
-            'name' => $name,
-            'address' => implode("\n", $addressLines),
-        ];
-    };
-
-    $gstPayableBy = $invoiceField(['gst_tax_payable_by']) ?: 'Consignor / Consignee';
-
-    $consignorName = $invoice->customer ? $invoice->customer->name : $parseParty($invoiceField(['consignor']))['name'];
-    $consignorAddress = $invoice->customer ? $formatAddress($invoice->customer) : $parseParty($invoiceField(['consignor']))['address'];
-    $consignorPhone = ($invoice->customer && $invoice->customer->phone) ? $invoice->customer->phone : $invoiceField(['consignor_phone_no']);
-    $consignorGstin = ($invoice->customer && $invoice->customer->tax_id) ? $invoice->customer->tax_id : $invoiceField(['consignor_gst_no']);
-
-    $consigneeName = $invoice->consigneeCustomer ? $invoice->consigneeCustomer->name : $parseParty($invoiceField(['consignee']))['name'];
-    $consigneeAddress = $invoice->consigneeCustomer ? $formatAddress($invoice->consigneeCustomer) : $parseParty($invoiceField(['consignee']))['address'];
-    $consigneePhone = ($invoice->consigneeCustomer && $invoice->consigneeCustomer->phone) ? $invoice->consigneeCustomer->phone : $invoiceField(['consignee_phone_no']);
-    $consigneeGstin = ($invoice->consigneeCustomer && $invoice->consigneeCustomer->tax_id) ? $invoice->consigneeCustomer->tax_id : $invoiceField(['consignee_gst_no']);
+    // Consignee
+    $consigneeCustomer = $invoice->relationLoaded('consigneeCustomer')
+        ? $invoice->consigneeCustomer
+        : ($invoice->tr_consignee_customer_id ? \App\Domains\Contacts\Models\Customer::with(['addresses', 'billingAddress', 'shippingAddress'])->find($invoice->tr_consignee_customer_id) : null);
+    $parsedConsignee = $parseParty($invoiceField(['consignee', 'tr_consignee']));
+    $consigneeName = $consigneeCustomer?->name ?: ($parsedConsignee['name'] ?: '');
+    $consigneeAddrFromCust = $formatAddress($consigneeCustomer);
+    $consigneeAddress = (strlen($consigneeAddrFromCust) > strlen($parsedConsignee['address']))
+        ? $consigneeAddrFromCust
+        : ($parsedConsignee['address'] ?: $consigneeAddrFromCust);
+    $consigneePhone = $invoiceField(['consignee_phone', 'consignee_phone_no', 'tr_consignee_phone'])
+        ?: ($consigneeCustomer?->phone ?: ($consigneeCustomer?->billingAddress?->phone ?: ''));
+    $consigneeGstin = $invoiceField(['consignee_gst', 'consignee_gst_no', 'tr_consignee_gst'])
+        ?: ($consigneeCustomer?->tax_id ?: '');
 
     $docketNumber = $invoice->invoice_number;
-    $descriptionOfGoods = trim((string) $invoiceField(['description_of_goods']));
-    $noOfArticles = trim((string) $invoiceField(['no_of_articles']));
+    $descriptionOfGoods = trim((string) $invoiceField(['description_of_goods', 'description_goods']));
+    $noOfArticles = trim((string) $invoiceField(['no_of_articles', 'articles', 'no_of_packages', 'packages']));
 
     if (preg_match('/^LR Receipt\s+\d+$/i', $descriptionOfGoods)) {
         $descriptionOfGoods = '';
@@ -771,7 +781,7 @@
 
     // Auto-fit font sizing: shrinks font size for text that would overflow
     // its container. Each block shrinks independently so other blocks are
-    // not disturbed. Uses the same pattern as lorry_receipt.blade.php.
+    // not disturbed.
     $getFontForWidth = function ($value, $widthLimit, $baseSize = 11.5, $minSize = 6.5) {
         $length = strlen((string) $value);
         if ($length === 0) {
@@ -786,23 +796,17 @@
     };
 
     // Pre-calculate auto-fit styles for key fields that commonly overflow.
-    // Landscape A4: 297mm ≈ 1123px. Party cell is 50% of party-table ≈ 540px.
-    // Consignor/Consignee name: after "Consignor" label + padding ≈ 420px usable.
     $consignorNameStyle = $getFontForWidth($consignorName, 420, 11.5, 6.5);
     $consigneeNameStyle = $getFontForWidth($consigneeName, 420, 11.5, 6.5);
-    // Company name: in brand-row company-cell (80% of 61% of page ≈ 548px, minus padding ≈ 500px usable).
     $companyNameStyle = $getFontForWidth($companyName, 500, 26, 10);
-    // GSTIN fields: after "GST No.:" label ≈ 380px usable.
     $consignorGstinStyle = $getFontForWidth($consignorGstin, 380, 11, 6.5);
     $consigneeGstinStyle = $getFontForWidth($consigneeGstin, 380, 11, 6.5);
-    // Description of goods: in goods table, full width ≈ 700px usable.
     $descriptionOfGoodsStyle = $getFontForWidth($descriptionOfGoods, 700, 11.8, 6.5);
 
-    // Party address: party cell is ~540px, minus padding ≈ 500px usable.
-    $consignorAddrStyle = $getFontForWidth($consignorAddress, 500, 12, 7);
-    $consigneeAddrStyle = $getFontForWidth($consigneeAddress, 500, 12, 7);
+    $consignorAddrStyle = '';
+    $consigneeAddrStyle = '';
 
-    // Top-detail-table fields: right column ≈ 300px usable after label.
+    // Top-detail-table fields
     $fromLocation = $invoiceField(['from']);
     $toLocation = $invoiceField(['to']);
     $truckNo = $invoiceField(['truck_no']);
@@ -810,11 +814,11 @@
     $toStyle = $getFontForWidth($toLocation, 250, 12, 7);
     $truckNoStyle = $getFontForWidth($truckNo, 400, 12, 7);
 
-    // Delivery At: in goods table left column ≈ 500px usable.
+    // Delivery At
     $deliveryAt = $invoiceField(['delivery_at']);
     $deliveryAtStyle = $getFontForWidth($deliveryAt, 480, 12, 7);
 
-    // PAN No and tax identity: in tax-line, full width ≈ 400px usable.
+    // PAN No and tax identity
     $panNoStyle = $getFontForWidth($panNo, 200, 13.5, 7);
     $taxIdentityStyle = $getFontForWidth($companyTaxIdentityValue, 200, 13.5, 7);
 
@@ -827,8 +831,12 @@
     $goodsValueStyle = $getFontForWidth($goodsValue, 200, 12, 7);
     $ewayBillNo = $invoiceField(['e_way_bill_no']);
     $ewayBillStyle = $getFontForWidth($ewayBillNo, 480, 12, 7);
+    $actualWeight = $invoiceField(['actual_weight']);
+    $chargedWeight = $invoiceField(['charged_weight']);
+    $packing = $invoiceField(['packing']);
+    $podRequired = $invoiceField(['pod_required']);
 
-    // Charges table: description column ≈ 180px, amount column ≈ 140px.
+    // Charges table
     $basicFreightStyle = $getFontForWidth($basicFreight, 140, 12, 7);
     $localCollectionStyle = $getFontForWidth($localCollection, 140, 12, 7);
     $doorDeliveryStyle = $getFontForWidth($doorDelivery, 140, 12, 7);
@@ -836,13 +844,8 @@
     $otherChargeStyle = $getFontForWidth($otherCharge, 140, 12, 7);
     $fovStyle = $getFontForWidth($fov, 140, 12, 7);
 
-    // GST payable by: right column ≈ 300px usable.
     $gstPayableByStyle = $getFontForWidth($gstPayableBy, 280, 13, 8);
-
-    // Company address: use CSS font-size: 18px directly — no auto-fit override.
     $companyAddrStyle = '';
-
-    // Docket number: right column ≈ 250px usable.
     $docketNoStyle = $getFontForWidth($docketNumber, 220, 12, 7);
 
     $consignorData = [
@@ -919,7 +922,7 @@
                     <table class="brand-row">
                         <tr>
                             <td class="logo-cell">
-                                @if ($logo)
+                                @if ($logo && file_exists($logo))
                                     <img class="company-logo" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($logo) }}" alt="Company Logo">
                                 @else
                                     <div class="brand-mark">
@@ -941,14 +944,14 @@
                             <td class="party-cell">
                                 <div style="margin-bottom: 4px;"><span class="label">Consignor</span></div>
                                 <div style="font-size: 14px; font-weight: bold; line-height: 18px; {{ $consignorNameStyle }}">{{ $consignorData['name'] }}</div>
-                                <div class="party-lines party-details" style="{{ $consignorAddrStyle }}">{!! nl2br(e($consignorData['address'])) !!}</div>
+                                <div class="party-lines party-details">{!! nl2br(e($consignorData['address'])) !!}</div>
                                 <div class="party-lines"><span class="label">Phone No.:</span> <span class="value">{{ $consignorPhone }}</span></div>
                                 <div class="party-lines" style="{{ $consignorGstinStyle }}"><span class="label">GST No.:</span> <span class="value">{{ $consignorGstin }}</span></div>
                             </td>
                             <td class="party-cell">
                                 <div style="margin-bottom: 4px;"><span class="label">Consignee</span></div>
                                 <div style="font-size: 14px; font-weight: bold; line-height: 18px; {{ $consigneeNameStyle }}">{{ $consigneeData['name'] }}</div>
-                                <div class="party-lines party-details" style="{{ $consigneeAddrStyle }}">{!! nl2br(e($consigneeData['address'])) !!}</div>
+                                <div class="party-lines party-details">{!! nl2br(e($consigneeData['address'])) !!}</div>
                                 <div class="party-lines"><span class="label">Phone No.:</span> <span class="value">{{ $consigneePhone }}</span></div>
                                 <div class="party-lines" style="{{ $consigneeGstinStyle }}"><span class="label">GST No.:</span> <span class="value">{{ $consigneeGstin }}</span></div>
                             </td>
@@ -959,32 +962,32 @@
                         <tr>
                             <td width="50%" class="large"><span class="label">Description of Goods</span><br><span class="value" style="{{ $descriptionOfGoodsStyle }}">{{ $descriptionOfGoods }}</span></td>
                             <td width="24%"><span class="label">No. of Articles</span><br><span class="value">{{ $noOfArticles }}</span></td>
-                            <td><span class="label">Packing</span><br><span class="value">{{ $invoiceField(['packing']) }}</span></td>
+                            <td><span class="label">Packing</span><br><span class="value">{{ $packing }}</span></td>
                         </tr>
                         <tr>
-                            <td><span class="label">HSN CODE</span><br><span class="value" style="{{ $hsnCodeStyle }}">{{ $invoiceField(['hsn_code']) }}</span></td>
+                            <td><span class="label">HSN CODE</span><br><span class="value" style="{{ $hsnCodeStyle }}">{{ $hsnCode }}</span></td>
                             <td><span class="label">Actual Weight</span></td>
-                            <td><span class="value">{{ $invoiceField(['actual_weight']) }}</span></td>
+                            <td><span class="value">{{ $actualWeight }}</span></td>
                         </tr>
                         <tr>
                             <td rowspan="3" class="delivery-cell">
                                 <span class="label">Delivery At.:</span><br>
-                                <span class="value" style="{{ $deliveryAtStyle }}">{{ $invoiceField(['delivery_at']) }}</span>
+                                <span class="value" style="{{ $deliveryAtStyle }}">{{ $deliveryAt }}</span>
                                 <div class="eway-inline">
                                     <span class="label">E-way Bill No.:</span><br>
-                                    <span class="value" style="{{ $ewayBillStyle }}">{{ $invoiceField(['e_way_bill_no']) }}</span>
+                                    <span class="value" style="{{ $ewayBillStyle }}">{{ $ewayBillNo }}</span>
                                 </div>
                             </td>
                             <td><span class="label">Charged Weight</span></td>
-                            <td><span class="value">{{ $invoiceField(['charged_weight']) }}</span></td>
+                            <td><span class="value">{{ $chargedWeight }}</span></td>
                         </tr>
                         <tr>
                             <td><span class="label">Goods Value</span></td>
-                            <td><span class="value" style="{{ $goodsValueStyle }}">{{ $invoiceField(['goods_value']) }}</span></td>
+                            <td><span class="value" style="{{ $goodsValueStyle }}">{{ $goodsValue }}</span></td>
                         </tr>
                         <tr>
                             <td class="goods-fill"><span class="label">POD Required</span></td>
-                            <td><span class="value">{{ $invoiceField(['pod_required']) }}</span></td>
+                            <td><span class="value">{{ $podRequired }}</span></td>
                         </tr>
                         <tr>
                             <td>&nbsp;</td>
@@ -997,10 +1000,9 @@
                         <tr>
                             <td width="50%" style="padding: 0;">
                                 <div class="declaration">
-                                    <span class="label">DECLARATION :</span> We Have Not Taken Gst Credit As Per The Provisions
-                                    Of Convat Credit Rule 2004 Of Only Paid On Inputs Or Capital Goods
-                                    Used For Providing Taxable's Service To You And Have Also Availed
-                                    The Benefits Of Notification No. 11 & 13/2017 Dated 28th June 2017
+                                    <div class="declaration-title">DECLARATION :</div>
+                                    <div class="declaration-item">• We Have Not Taken Gst Credit As Per The Provisions Of Cenvat Credit Rules 2004 On Inputs Or Capital Goods Used For Providing Taxable Service To You.</div>
+                                    <div class="declaration-item">• We Have Availed The Benefits Of Notification No. 11 &amp; 13/2017 Dated 28th June 2017.</div>
                                 </div>
                                 <div class="agreement">It is taken in to consideration that agrees with<br>all the terms and condition overleaf</div>
                             </td>
@@ -1038,13 +1040,13 @@
                         </tr>
                         <tr>
                             <td width="36%"><span class="label">Time :</span> <span class="value">{{ $invoiceField(['time']) }}</span></td>
-                            <td><span class="label">From :</span> <span class="value" style="{{ $fromStyle }}">{{ $invoiceField(['from']) }}</span></td>
+                            <td><span class="label">From :</span> <span class="value" style="{{ $fromStyle }}">{{ $fromLocation }}</span></td>
                         </tr>
                         <tr>
                             <td width="36%" class="owner-risk">OWNER'S RISK</td>
-                            <td><span class="label">To :</span> <span class="value" style="{{ $toStyle }}">{{ $invoiceField(['to']) }}</span></td>
+                            <td><span class="label">To :</span> <span class="value" style="{{ $toStyle }}">{{ $toLocation }}</span></td>
                         </tr>
-                        <tr><td colspan="2"><span class="label">Truck No.:</span> <span class="value" style="{{ $truckNoStyle }}">{{ $invoiceField(['truck_no']) }}</span></td></tr>
+                        <tr><td colspan="2"><span class="label">Truck No.:</span> <span class="value" style="{{ $truckNoStyle }}">{{ $truckNo }}</span></td></tr>
                         <tr><td colspan="2" class="tax-line"><span class="label">PAN No.:</span> <span class="value" style="{{ $panNoStyle }}">{{ $panNo }}</span><br><span class="label">{{ $companyTaxIdentityLabel }} :</span> <span class="value" style="{{ $taxIdentityStyle }}">{{ $companyTaxIdentityValue }}</span></td></tr>
                     </table>
 
