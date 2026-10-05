@@ -60,22 +60,6 @@
             }
         }
 
-        .jurisdiction {
-            font-size: 10px;
-            line-height: 12px;
-            margin-bottom: 4px;
-            text-align: right;
-            text-decoration: underline;
-        }
-
-        .jurisdiction-top {
-            font-size: 10px;
-            line-height: 12px;
-            margin-bottom: 4px;
-            text-align: right;
-            text-decoration: underline;
-        }
-
         .header-left {
             border-right: 2px solid #444 !important;
             padding: 0;
@@ -666,8 +650,8 @@
         ->map(fn ($word) => mb_substr($word, 0, 1))
         ->take(2)
         ->implode('');
+    $logo = $logo ?? ($invoice->company?->logo_path ?? null);
     $companyTagline = $invoice->company?->tagline ?: '';
-    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Jurisdiction';
     $companyPhone = $invoice->company?->address?->phone;
     $companyEmail = $invoice->company?->address?->email ?: ($invoice->company?->notification_email ?: \App\Domains\Accounts\Models\CompanySetting::getSetting('notification_email', $invoice->company_id));
     $mobile = $companyPhone ?: ($invoiceField(['mobile', 'phone']) ?: '');
@@ -914,7 +898,6 @@
 
 @foreach ($renderCopies as $index => $copy)
     <div style="background-color: {{ $copy['bg'] }}; @if(!$loop->last) page-break-after: always; @endif">
-    <div class="jurisdiction-top">{{ $companyTopHeading }}</div>
     <div class="wrapper" style="background-color: {{ $copy['bg'] }}; @if(!$loop->last) margin-bottom: 20px; @endif">
         <table>
             <tr>

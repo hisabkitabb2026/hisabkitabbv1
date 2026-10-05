@@ -54,14 +54,6 @@
             border: 2px solid #000;
         }
 
-        .jurisdiction {
-            font-size: 11px;
-            line-height: 13px;
-            margin-bottom: 2px;
-            text-align: right;
-            text-decoration: underline;
-        }
-
         .master {
             border: 0;
             table-layout: fixed;
@@ -194,7 +186,7 @@
 
         .tax-box div {
             font-size: 13px;
-            font-weight: bold;
+            font-weight: normal;
             line-height: 16px;
             overflow: hidden;
             overflow-wrap: anywhere;
@@ -715,6 +707,7 @@
         ->map(fn ($word) => mb_substr($word, 0, 1))
         ->take(2)
         ->implode('');
+    $logo = $logo ?? ($invoice->company?->logo_path ?? null);
     // Billing Branch: dynamically read from Address 2nd box (address_street_2),
     // or company billing_branch, or custom invoice field
     $billingBranch = $invoice->company?->address?->address_street_2
@@ -729,7 +722,6 @@
         ->filter()
         ->values();
     $companyTagline = $invoice->company?->tagline ?: '';
-    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Jurisdiction';
     // GSTIN: read from VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
     $companyGstin = $invoiceField(['company_gstin', 'gstin', 'gst_no'])
         ?: ($invoice->company?->vat_id
@@ -855,8 +847,6 @@
     $branchAddressStyle = '';
 @endphp
 
-
-    <div class="jurisdiction">{{ $companyTopHeading }}</div>
     <div class="invoice-shell">
         <table class="master">
             <tr>
@@ -903,20 +893,20 @@
                     </div>
                 </td>
                 <td class="tax-box">
-                    <div>PAN No.: <span class="highlight-value">{{ $panNo }}</span></div>
-                    <div>{{ $companyTaxIdentityLabel }} : <span class="highlight-value">{{ $companyTaxIdentityValue }}</span></div>
+                    <div>PAN No.: {{ $panNo }}</div>
+                    <div>{{ $companyTaxIdentityLabel }} : {{ $companyTaxIdentityValue }}</div>
                 </td>
             </tr>
             <tr>
                 <td>
                     <table class="bill-details">
                         <tr>
-                            <td width="50%"><b>Bill No.:</b> <span class="highlight-value">{{ $invoice->invoice_number }}</span></td>
-                            <td><b>Branch Code :</b> {{ $branchCode }}</td>
+                            <td width="50%">Bill No.: {{ $invoice->invoice_number }}</td>
+                            <td>Branch Code : {{ $branchCode }}</td>
                         </tr>
                         <tr>
-                            <td><b>Bill Date :</b> <span class="highlight-value">{{ $invoice->formattedInvoiceDate }}</span></td>
-                            <td><b>Due Date :</b> {{ $invoice->formattedDueDate }}</td>
+                            <td>Bill Date : {{ $invoice->formattedInvoiceDate }}</td>
+                            <td>Due Date : {{ $invoice->formattedDueDate }}</td>
                         </tr>
                     </table>
                 </td>
