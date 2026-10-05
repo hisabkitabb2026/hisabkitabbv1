@@ -42,7 +42,7 @@
 
         <router-link
           v-if="isFirstRun && canCreateInvoice"
-          to="/admin/invoices/create"
+          :to="newInvoiceLink"
           class="
             inline-flex items-center gap-1.5 self-start h-9 px-3.5 text-sm font-semibold transition-colors rounded-lg shrink-0
             bg-chrome-fg text-hero-from hover:bg-chrome-fg/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chrome-fg
@@ -54,7 +54,7 @@
 
         <router-link
           v-else-if="canViewInvoices"
-          to="/admin/invoices"
+          :to="viewInvoicesLink"
           class="
             inline-flex items-center self-start h-9 px-3.5 text-sm font-medium transition-colors border rounded-lg shrink-0
             border-chrome-fg/20 bg-chrome-fg/10 hover:bg-chrome-fg/15 focus-visible:outline-2 focus-visible:outline-chrome-fg
@@ -121,6 +121,9 @@ import { useI18n } from 'vue-i18n'
 import { useDashboardStore } from '../store'
 import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useUserStore } from '@/scripts/stores/user.store'
+// HisabKitab feature
+import { useGlobalStore } from '@/scripts/stores/global.store'
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
 import { formatMoney } from '@/scripts/utils/format-money'
 import { ABILITIES } from '@/scripts/config/abilities'
 
@@ -138,6 +141,8 @@ const headingId = 'dashboard-receivables'
 const dashboardStore = useDashboardStore()
 const companyStore = useCompanyStore()
 const userStore = useUserStore()
+// HisabKitab feature
+const globalStore = useGlobalStore()
 const { t } = useI18n()
 
 const loaded = computed<boolean>(() => dashboardStore.isDashboardDataLoaded)
@@ -147,6 +152,30 @@ const canCreateInvoice = computed<boolean>(() => userStore.hasAbilities(ABILITIE
 
 // No invoice at all yet, as for a new company
 const isFirstRun = computed<boolean>(() => loaded.value && !dashboardStore.stats.totalInvoiceCount)
+
+// HisabKitab feature — when the core Invoices menu is hidden, the receivables
+// hero links to the first registered receipt view instead of the core invoice pages
+const invoiceMenuVisible = computed(() =>
+  globalStore.menuGroups.flat().some((m) => m.name === 'Invoices'),
+)
+
+const registeredInvoiceViews = computed(() =>
+  extensionItems(extensionRegistry.invoiceViewModes.value).filter(
+    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
+  ),
+)
+
+const firstReceiptView = computed(() => registeredInvoiceViews.value[0] ?? null)
+
+const newInvoiceLink = computed(() => {
+  if (invoiceMenuVisible.value) return '/admin/invoices/create'
+  return firstReceiptView.value ? `/admin/${firstReceiptView.value.createLink}` : '/admin/invoices/create'
+})
+
+const viewInvoicesLink = computed(() => {
+  if (invoiceMenuVisible.value) return '/admin/invoices'
+  return firstReceiptView.value ? firstReceiptView.value.listLink : '/admin/invoices'
+})
 
 const buckets = computed<Bucket[]>(() => {
   const total = summary.value.outstanding || 1

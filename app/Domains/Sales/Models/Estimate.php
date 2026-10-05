@@ -246,6 +246,17 @@ class Estimate extends Model implements HasMedia
             }
         }
 
+        // HisabKitab feature — template_name filter, no hardcoded template list
+        $templateName = $filters['template_name'] ?? null;
+
+        if ($templateName) {
+            if ($templateName === 'estimates') {
+                $query->whereNull($this->qualifyColumn('template_name'));
+            } else {
+                $query->where($this->qualifyColumn('template_name'), $templateName);
+            }
+        }
+
         $from = $filters['from_date'] ?? null;
         $to = $filters['to_date'] ?? null;
 

@@ -1,0 +1,19 @@
+{
+    "name": "invoiceshelf/trips-module",
+    "type": "invoiceshelf-module",
+    "description": "Trip board for transport operations.",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Trips\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Trips\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^8.4"
+    }
+}

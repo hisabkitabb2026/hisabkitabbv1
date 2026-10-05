@@ -1,0 +1,11 @@
+{
+    "name": "invoiceshelf/invoice-receipt",
+    "description": "Invoice Receipt (office invoice) module for formal invoicing.",
+    "type": "invoiceshelf-module",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\InvoiceReceipt\\": "app/"
+        }
+    }
+}

@@ -1,5 +1,7 @@
 <?php
 
+// HisabKitab feature
+
 namespace App\Domains\Sales\Models;
 
 use App\Domains\Accounts\Models\Company;
@@ -531,6 +533,18 @@ class Invoice extends Model implements HasMedia
             'paid_status' => fn ($value) => $query->wherePaidStatus($value),
             'invoice_id' => fn ($value) => $query->whereInvoice($value),
             'invoice_number' => fn ($value) => $query->whereInvoiceNumber($value),
+            // HisabKitab feature — template_name filter delegates to module-registered handlers
+            'template_name' => function ($value) use ($query) {
+                if ($value === 'one-time') {
+                    // Standard invoices: null template_name or the default 'invoice1'.
+                    $query->where(function ($q) {
+                        $q->whereNull($this->qualifyColumn('template_name'))
+                            ->orWhere($this->qualifyColumn('template_name'), 'invoice1');
+                    });
+                } else {
+                    $query->where($this->qualifyColumn('template_name'), $value);
+                }
+            },
         ];
 
         foreach ($clauses as $filter => $clause) {

@@ -1,0 +1,11 @@
+{
+    "name": "invoiceshelf/lr-receipt",
+    "description": "LR Receipt (consignment docket) module for transport logistics.",
+    "type": "invoiceshelf-module",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\LrReceipt\\": "app/"
+        }
+    }
+}

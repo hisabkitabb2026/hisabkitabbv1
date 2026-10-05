@@ -1,0 +1,11 @@
+{
+    "name": "invoiceshelf/quotation",
+    "description": "Quotation module — estimates with a redesigned consignment-style items table.",
+    "type": "invoiceshelf-module",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Quotation\\": "app/"
+        }
+    }
+}

@@ -548,7 +548,12 @@ export const useEstimateStore = defineStore('estimate', {
           Promise.resolve(), // placeholder for items fetch
           this.resetSelectedNote(),
           this.fetchEstimateTemplates(),
-          this.getNextNumber(),
+          // HisabKitab feature — pass template_name as key if set, for serial number scoping
+          this.getNextNumber(
+            this.newEstimate.template_name
+              ? { key: this.newEstimate.template_name as string }
+              : undefined,
+          ),
           Promise.resolve(), // placeholder for tax types fetch
           ...editActions,
         ])

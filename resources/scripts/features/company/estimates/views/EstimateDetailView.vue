@@ -2,9 +2,10 @@
   <div v-if="estimateData" class="flex min-h-full">
 
     <BasePage class="min-w-0">
+      <!-- HisabKitab feature -->
       <BasePageHeader :help="$t('page_help.estimates')" :title="pageTitle">
         <BaseBreadcrumb>
-          <BaseBreadcrumbItem :title="$t('estimates.estimate', 2)" to="/admin/estimates" />
+          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
         </BaseBreadcrumb>
 
         <div class="flex flex-wrap items-center gap-1.5 mt-2">
@@ -196,6 +197,9 @@ import { useUserStore } from '../../../../stores/user.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
 import { useModalStore } from '../../../../stores/modal.store'
 import type { Estimate } from '../../../../types/domain/estimate'
+// HisabKitab feature
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
 import { scrollBehavior } from '@/scripts/utils/motion'
 
 interface Props {
@@ -283,6 +287,19 @@ const searchData = reactive<SearchData>({
 })
 
 const pageTitle = computed<string>(() => estimateData.value?.estimate_number ?? '')
+
+// HisabKitab feature — breadcrumb from registered estimate document meta
+const { currentDocMeta } = useEstimateDocumentMeta(() => estimateData.value?.template_name as string | undefined)
+
+const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('estimates.estimate', 2))
+
+const breadcrumbLink = computed<string>(() => {
+  const tpl = estimateData.value?.template_name as string | undefined
+  if (!tpl) return '/admin/estimates'
+  const vm = extensionItems(extensionRegistry.estimateViewModes.value)
+    .find((v) => v.value === tpl)
+  return vm ? vm.listLink : '/admin/estimates'
+})
 
 const { isPhone } = useBreakpoints()
 const pdfPreview = ref<InstanceType<typeof BasePdfPreview> | null>(null)

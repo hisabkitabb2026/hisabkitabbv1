@@ -1,0 +1,90 @@
+/**
+ * Every string the module renders, in one bundle.
+ *
+ * The host merges these into its own i18n catalogue, so templates reach them
+ * with `$t('tasks_projects....')` and a later locale only has to add a sibling
+ * key here.
+ */
+export const messages = {
+  en: {
+    tasks_projects: {
+      general: {
+        home: 'Home',
+        close: 'Close',
+        actions_for: 'Actions for {name}',
+        select_named: 'Select {name}',
+        colours: {
+          light_grey: 'Light grey',
+          grey: 'Grey',
+          blue: 'Blue',
+          teal: 'Teal',
+          green: 'Green',
+          yellow: 'Yellow',
+          amber: 'Amber',
+          orange: 'Orange',
+          red: 'Red',
+          purple: 'Purple',
+          violet: 'Violet',
+          custom: 'Custom colour',
+        },
+        filter: 'Filter',
+        search: 'Search',
+        actions: 'Actions',
+        edit: 'Edit',
+        delete: 'Delete',
+        cancel: 'Cancel',
+        save: 'Save',
+        update: 'Update',
+      },
+      projects: {
+        title: 'Projects',
+        new_project: 'New project',
+        edit_project: 'Edit project',
+        internal: 'Internal',
+        archive: 'Archive',
+        unarchive: 'Restore',
+        search_placeholder: 'Search by name or identifier',
+        empty_title: 'No projects yet',
+        empty_description: 'Create a project to group its tasks, time and billing.',
+        status: {
+          active: 'Active',
+          archived: 'Archived',
+          all: 'All',
+        },
+        columns: {
+          name: 'Name',
+          status: 'Status',
+          customer: 'Customer',
+          default_rate: 'Rate / hour',
+          due_date: 'Due date',
+        },
+        fields: {
+          name: 'Name',
+          identifier: 'Identifier',
+          identifier_help: 'A short code, used as the task number prefix.',
+          customer: 'Customer',
+          customer_help: 'Leave empty for an internal project.',
+          customer_placeholder: 'No customer',
+          due_date: 'Due date',
+          default_rate: 'Default rate',
+          default_rate_help: 'Per hour, in the customer currency.',
+          budget_hours: 'Budget (hours)',
+          colour: 'Colour',
+          colour_none: 'None',
+          description: 'Description',
+        },
+        created: '{name} was created.',
+        updated: '{name} was updated.',
+        archived: '{name} was archived.',
+        unarchived: '{name} was restored.',
+        deleted: '{name} was deleted.',
+        delete_confirm: 'Delete {name}? Its tasks and time entries go with it.',
+        name_required: 'Enter a project name.',
+        load_failed: 'Unable to load the projects.',
+        save_failed: 'Unable to save the project.',
+        delete_failed: 'Unable to delete the project.',
+        customers_failed: 'Unable to load the customers.',
+      },
+    },
+  },
+}

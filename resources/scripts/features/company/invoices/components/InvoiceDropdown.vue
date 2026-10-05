@@ -1,3 +1,4 @@
+<!-- HisabKitab feature -->
 <template>
   <BaseDropdown :label="$t('general.actions_for', { name: row.invoice_number })">
     <template #activator>
@@ -15,7 +16,7 @@
         name="PencilIcon"
         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('general.edit') }}
+      {{ $t('general.edit') }} {{ docLabel }}
     </BaseDropdownItem>
 
     <!-- Copy PDF url -->
@@ -42,7 +43,7 @@
         name="PaperAirplaneIcon"
         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('invoices.send_invoice') }}
+      {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
     </BaseDropdownItem>
 
     <!-- Resend Invoice -->
@@ -51,7 +52,7 @@
         name="PaperAirplaneIcon"
         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('invoices.resend_invoice') }}
+      {{ $t('invoices.resend_invoice').replace('Invoice', docLabel) }}
     </BaseDropdownItem>
 
     <!-- Record Payment -->
@@ -77,7 +78,7 @@
         name="CheckCircleIcon"
         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('invoices.mark_as_sent') }}
+      {{ $t('invoices.mark_as_sent').replace('invoice', docLabel.toLowerCase()) }}
     </BaseDropdownItem>
 
     <!-- Clone Invoice -->
@@ -86,7 +87,7 @@
         name="DocumentTextIcon"
         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
       />
-      {{ $t('invoices.clone_invoice') }}
+      {{ $t('invoices.clone_invoice').replace('Invoice', docLabel) }}
     </BaseDropdownItem>
 
     <!-- Convert to Estimate -->
@@ -132,6 +133,8 @@ import {
   getErrorTranslationKey,
 } from '../../../../utils/error-handling'
 import type { Invoice } from '../../../../types/domain/invoice'
+// HisabKitab feature
+import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 
 interface TableRef {
   refresh: () => void
@@ -171,6 +174,10 @@ const route = useRoute()
 const router = useRouter()
 
 const isDetailView = computed<boolean>(() => route.name === 'invoices.view')
+
+// HisabKitab feature — doc label from registered document meta
+const { currentDocMeta } = useDocumentMeta(() => props.row?.template_name as string | undefined)
+const docLabel = computed<string>(() => currentDocMeta.value?.label ?? t('invoices.invoice'))
 
 const canReSendInvoice = computed<boolean>(() => {
   return (
@@ -315,7 +322,7 @@ function onMarkAsSent(): void {
 
 function sendInvoice(): void {
   modalStore.openModal({
-    title: t('invoices.send_invoice'),
+    title: t('invoices.send_invoice').replace('Invoice', docLabel.value),
     componentName: 'SendInvoiceModal',
     id: props.row.id,
     data: props.row,

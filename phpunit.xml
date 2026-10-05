@@ -6,6 +6,9 @@
     </testsuite>
     <testsuite name="Feature">
       <directory suffix="Test.php">./tests/Feature</directory>
+      <!-- HisabKitab feature — module-host integration tests live in their modules -->
+      <directory suffix="Test.php">./Modules/LorryReceipt/tests/Feature</directory>
+      <directory suffix="Test.php">./Modules/Trips/tests/Feature</directory>
     </testsuite>
   </testsuites>
   <php>

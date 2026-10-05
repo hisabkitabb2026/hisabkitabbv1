@@ -1,20 +1,28 @@
 <template>
   <BasePage class="relative estimate-create-page">
     <form @submit.prevent="submitForm">
+      <!-- HisabKitab feature -->
       <BasePageHeader :help="$t('page_help.estimates')" :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
+          <!-- HisabKitab feature — breadcrumb from registered document meta -->
           <BaseBreadcrumbItem
-            :title="$t('estimates.estimate', 2)"
-            to="/admin/estimates"
+            :title="currentDocMeta?.labelPlural ?? $t('estimates.estimate', 2)"
+            :to="currentDocMeta ? currentDocMeta.listLink : '/admin/estimates'"
           />
           <BaseBreadcrumbItem
             v-if="isEdit"
-            :title="$t('estimates.edit_estimate')"
+            :title="isQuotation ? `Edit ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.edit_estimate')"
             to="#"
             active
           />
-          <BaseBreadcrumbItem v-else :title="$t('estimates.new_estimate')" to="#" active />
+          <!-- HisabKitab feature -->
+          <BaseBreadcrumbItem
+            v-else
+            :title="isQuotation ? `New ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.new_estimate')"
+            to="#"
+            active
+          />
         </BaseBreadcrumb>
 
         <!-- Phones get these in the bottom bar instead -->
@@ -46,7 +54,8 @@
                 name="ArrowDownOnSquareIcon"
               />
             </template>
-            {{ $t('estimates.save_estimate') }}
+            <!-- HisabKitab feature — save label from registered document meta -->
+            {{ isQuotation ? `Save ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.save_estimate') }}
           </BaseButton>
         </template>
       </BasePageHeader>
@@ -54,7 +63,7 @@
       <DocumentFormActionBar
         :total="estimateStore.getTotal"
         :currency="estimateStore.newEstimate.selectedCurrency"
-        :save-label="$t('estimates.save_estimate')"
+        :save-label="isQuotation ? `Save ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.save_estimate')"
         :saving="isSaving"
         :loading="isLoadingContent"
         :pdf-url="isEdit ? `/estimates/pdf/${estimateStore.newEstimate.unique_hash}` : null"
@@ -68,8 +77,17 @@
       />
 
       <BaseScrollPane>
-        <!-- Estimate Items -->
+        <!-- HisabKitab feature -->
+        <ExtensionSlot
+          name="estimate-form-sections"
+          :template-name="estimateStore.newEstimate.template_name"
+          :store="estimateStore"
+        />
+
+        <!-- Estimate Items — hidden for the Quotation module, which uses its own
+             redesigned consignment-style items table instead of line items -->
         <DocumentItemsTable
+          v-if="!isQuotation"
           :currency="estimateStore.newEstimate.selectedCurrency"
           :is-loading="isLoadingContent"
           :item-validation-scope="estimateValidationScope"
@@ -130,11 +148,14 @@ import { useEstimateStore } from '../store'
 import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { useBreakpoints } from '@/scripts/composables/use-breakpoints'
+// HisabKitab feature
+import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
 import {
   handleApiError,
   getErrorTranslationKey,
 } from '@/scripts/utils/error-handling'
 import EstimateBasicFields from '../components/EstimateBasicFields.vue'
+import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
 import {
   DocumentItemsTable,
   DocumentFormActionBar,
@@ -162,11 +183,20 @@ const isLoadingContent = computed<boolean>(
   () => estimateStore.isFetchingInitialSettings,
 )
 
-const pageTitle = computed<string>(() =>
-  isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate'),
-)
+// HisabKitab feature — document meta from registered estimate view modes
+const { currentDocMeta } = useEstimateDocumentMeta(() => estimateStore.newEstimate.template_name)
+
+const isQuotation = computed<boolean>(() => currentDocMeta.value !== null)
 
 const isEdit = computed<boolean>(() => route.name === 'estimates.edit')
+
+// HisabKitab feature — page title from registered document meta
+const pageTitle = computed<string>(() => {
+  if (currentDocMeta.value) {
+    return isEdit.value ? `Edit ${currentDocMeta.value.label}` : `New ${currentDocMeta.value.label}`
+  }
+  return isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate')
+})
 
 const rules = {
   estimate_date: {
@@ -195,10 +225,21 @@ const v$ = useVuelidate(
 // Initialization
 estimateStore.resetCurrentEstimate()
 v$.value.$reset
+
+// HisabKitab feature
+if (route.query.template) {
+  estimateStore.setTemplate(route.query.template as string)
+}
+
 estimateStore.fetchEstimateInitialSettings(
   isEdit.value,
   { id: route.params.id as string, query: route.query as Record<string, string> },
-)
+).then(() => {
+  // HisabKitab feature
+  if (route.query.template) {
+    estimateStore.setTemplate(route.query.template as string)
+  }
+})
 
 watch(
   () => estimateStore.newEstimate.customer,

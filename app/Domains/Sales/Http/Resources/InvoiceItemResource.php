@@ -1,10 +1,14 @@
 <?php
 
+// HisabKitab feature
+
 namespace App\Domains\Sales\Http\Resources;
 
 use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
 use App\Domains\Taxation\Http\Resources\TaxResource;
+use App\Support\ModuleExtensions;
 use Illuminate\Http\Request;
+// HisabKitab feature
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -53,6 +57,28 @@ class InvoiceItemResource extends JsonResource
                 $item->fields()->exists(),
                 fn () => CustomFieldValueResource::collection($item->fields)
             ),
+
+            // HisabKitab feature — module-registered extra item fields (tr_*, etc.)
+            ...ModuleExtensions::invoiceItemResourceFields($item),
+
+            // Invoice Receipt (office invoice) module: per-item consignment
+            // fields are stored in tr_ prefixed columns. Expose them with the
+            // non-prefixed names the edit form expects.
+            'consignment_number' => $item->tr_consignment_number,
+            'consignment_date' => $item->tr_consignment_date,
+            'party_inv_no' => $item->tr_party_inv_no,
+            'from_code' => $item->tr_from_code,
+            'from_name' => $item->tr_from_name,
+            'to_code' => $item->tr_to_code,
+            'to_name' => $item->tr_to_name,
+            'truck_no' => $item->tr_truck_no,
+            'pkg' => $item->tr_pkg_weight,
+            'weight' => $item->tr_charged_weight,
+            'rate' => $item->tr_rate,
+            'other_charge' => $item->tr_other_charge,
+            'lr_charge' => $item->tr_lr_charge,
+            'dd_charge' => $item->tr_dd_charge,
+            'amount' => $item->tr_rate,
         ];
     }
 }

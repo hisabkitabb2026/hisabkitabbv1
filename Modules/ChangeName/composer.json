@@ -1,0 +1,11 @@
+{
+    "name": "invoiceshelf/change-name",
+    "description": "Rebrands the application from InvoiceShelf to HisabKitab across all user-visible surfaces.",
+    "type": "invoiceshelf-module",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\ChangeName\\": "app/"
+        }
+    }
+}

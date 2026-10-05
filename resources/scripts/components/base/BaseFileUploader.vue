@@ -1,3 +1,4 @@
+<!-- HisabKitab feature -->
 <template>
   <div
     class="
@@ -128,9 +129,10 @@
       v-else-if="localFiles.length && avatar && !multiple"
       class="flex w-full h-full border border-line-default rounded justify-center items-center"
     >
+      <!-- HisabKitab feature -->
       <img
         v-if="localFiles[0].image"
-        :alt="localFile.name ?? ''"
+        :alt="localFiles[0].name ?? ''"
         :src="localFiles[0].image"
         class="block object-cover w-full h-full rounded opacity-100"
         style="animation: fadeIn 2s ease"

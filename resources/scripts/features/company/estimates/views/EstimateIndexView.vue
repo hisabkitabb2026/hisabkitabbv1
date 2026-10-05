@@ -1,6 +1,16 @@
 <template>
   <BasePage>
-    <BasePageHeader :help="$t('page_help.estimates')" :title="$t('estimates.title')">
+    <!-- HisabKitab feature -->
+    <BasePageHeader :help="$t('page_help.estimates')" :title="$t('estimates.estimate', 2)">
+      <template v-if="estimateViews.length > 1" #title-suffix>
+        <BaseViewSwitcher
+          :model-value="viewMode"
+          primary-value="estimates"
+          :label="$t('estimates.estimate', 2)"
+          :options="estimateViews"
+          @update:model-value="setViewMode"
+        />
+      </template>
       <BaseBreadcrumb>
         <BaseBreadcrumbItem :title="$t('general.home')" to="dashboard" />
         <BaseBreadcrumbItem :title="$t('estimates.estimate', 2)" to="#" active />
@@ -24,12 +34,13 @@
           </template>
         </BaseButton>
 
-        <router-link v-if="canCreate" to="estimates/create" class="inline-flex rounded-lg ms-4">
+        <router-link v-if="canCreate" :to="newEstimateLink" class="inline-flex rounded-lg ms-4">
           <BaseButton tag="span" variant="primary">
             <template #left="slotProps">
               <BaseIcon name="PlusIcon" :class="slotProps.class" />
             </template>
-            {{ $t('estimates.new_estimate') }}
+            <!-- HisabKitab feature - label from registered view mode -->
+            {{ currentDocMeta ? `New ${currentDocMeta.label}` : $t('estimates.new_estimate') }}
           </BaseButton>
         </router-link>
       </template>
@@ -91,22 +102,24 @@
     </BaseFilterWrapper>
 
     <!-- Empty State -->
+    <!-- HisabKitab feature -->
     <BaseEmptyPlaceholder
       v-show="showEmptyScreen"
       art="estimate"
       :ghost="6"
-      :title="$t('estimates.no_estimates')"
-      :description="$t('estimates.empty_description')"
+      :title="currentDocMeta ? `No ${currentDocMeta.labelPlural.toLowerCase()} yet` : $t('estimates.no_estimates')"
+      :description="currentDocMeta ? `Create a ${currentDocMeta.label.toLowerCase()} with station-wise capacity rates.` : $t('estimates.empty_description')"
     >
       <template v-if="canCreate" #actions>
         <BaseButton
           variant="primary"
-          @click="$router.push('/admin/estimates/create')"
+          @click="$router.push(newEstimateLink)"
         >
           <template #left="slotProps">
             <BaseIcon name="PlusIcon" :class="slotProps.class" />
           </template>
-          {{ $t('estimates.add_new_estimate') }}
+          <!-- HisabKitab feature - label from registered view mode -->
+          {{ currentDocMeta ? `New ${currentDocMeta.label}` : $t('estimates.add_new_estimate') }}
         </BaseButton>
       </template>
     </BaseEmptyPlaceholder>
@@ -217,15 +230,21 @@
 
 <script setup lang="ts">
 import type { ColumnDef } from '@/scripts/components/table/DataTable.vue'
-import { computed, onUnmounted, reactive, ref } from 'vue'
+// HisabKitab feature
+import BaseViewSwitcher, { type ViewSwitcherOption } from '@/scripts/components/base/BaseViewSwitcher.vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { debouncedWatch } from '@vueuse/core'
 import { useEstimateStore } from '../store'
 import EstimateDropdown from '../components/EstimateDropdown.vue'
 import SendEstimateModal from '../components/SendEstimateModal.vue'
 import { useUserStore } from '../../../../stores/user.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
+import { useGlobalStore } from '../../../../stores/global.store'
 import type { Estimate } from '../../../../types/domain/estimate'
+// HisabKitab feature
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
 
 interface Props {
   canCreate?: boolean
@@ -254,7 +273,117 @@ const ABILITIES = {
 const estimateStore = useEstimateStore()
 const userStore = useUserStore()
 const dialogStore = useDialogStore()
+const globalStore = useGlobalStore()
+const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
+
+// ----------------------------------------------------------------
+// View mode toggle (module-driven via extensionRegistry)
+// ----------------------------------------------------------------
+
+type EstimateViewMode = string
+
+// HisabKitab feature - registered estimate view modes from modules, filtered by ability
+const registeredViewModes = computed(() =>
+  extensionItems(extensionRegistry.estimateViewModes.value).filter(
+    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
+  ),
+)
+
+const registeredViewModeValues = computed(() =>
+  new Set(registeredViewModes.value.map((vm) => vm.value)),
+)
+
+// HisabKitab feature - document meta for the current view mode
+const currentDocMeta = computed(() => {
+  const items = extensionItems(extensionRegistry.estimateDocumentMeta.value)
+  return items.find((m) => m.templateName === viewMode.value) ?? null
+})
+
+function initialViewMode(): EstimateViewMode {
+  // HisabKitab feature - check registered view modes dynamically
+  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
+  if (vm) return vm.value
+  return 'estimates'
+}
+
+const viewMode = ref<EstimateViewMode>(initialViewMode())
+
+// HisabKitab feature - view switcher options from registered view modes
+const estimateViews = computed<ViewSwitcherOption[]>(() => [
+  { value: 'estimates', label: t('estimates.title'), icon: 'DocumentTextIcon' },
+  ...registeredViewModes.value.map((vm) => ({
+    value: vm.value,
+    label: vm.label,
+    icon: vm.icon,
+  })),
+])
+
+// HisabKitab feature - label from registered view mode
+const viewModeLabel = computed<string>(() => {
+  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (vm) return `${vm.label}s`
+  return t('estimates.title')
+})
+
+// HisabKitab feature - create link from registered view mode
+const newEstimateLink = computed<string>(() => {
+  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (vm) return vm.createLink
+  return 'estimates/create'
+})
+
+function setViewMode(mode: EstimateViewMode): void {
+  viewMode.value = mode
+  // HisabKitab feature - reflect registered view modes in the URL
+  if (mode !== 'estimates') {
+    router.replace({ query: { view: mode } })
+  } else if (route.query.view) {
+    router.replace({ query: {} })
+  }
+  // Force the table to re-mount and re-fetch with the new template_name filter.
+  filters.customer_id = ''
+  filters.status = ''
+  filters.from_date = ''
+  filters.to_date = ''
+  filters.estimate_number = ''
+  estimateStore.selectedEstimates = []
+  estimateStore.selectAllField = false
+  tableKey.value += 1
+  isRequestOngoing.value = true
+}
+
+// HisabKitab feature - data-driven route-based view mode detection
+function updateViewModeFromRoute(): void {
+  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
+  const newMode = vm ? vm.value : 'estimates'
+  if (viewMode.value !== newMode) {
+    viewMode.value = newMode
+    filters.customer_id = ''
+    filters.status = ''
+    filters.from_date = ''
+    filters.to_date = ''
+    filters.estimate_number = ''
+    estimateStore.selectedEstimates = []
+    estimateStore.selectAllField = false
+    tableKey.value += 1
+    isRequestOngoing.value = true
+  }
+}
+
+onMounted(() => {
+  updateViewModeFromRoute()
+})
+
+// Watch for route query changes (when navigating between estimate types via
+// the sidebar - Estimates ↔ Quotation share the same path).
+watch(
+  () => route.query.view,
+  () => {
+    updateViewModeFromRoute()
+  },
+)
 
 const tableRef = ref<{ refresh: () => void } | null>(null)
 const tableKey = ref<number>(0)
@@ -345,7 +474,8 @@ const estimateColumns = computed<TableColumn[]>(() => [
   },
   {
     key: 'estimate_number',
-    label: t('estimates.number', 2),
+    // HisabKitab feature - column label from registered document meta
+    label: currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('estimates.number', 2),
     mobile: 'subtitle',
   },
   { key: 'name', label: t('estimates.customer'), mobile: 'title' },
@@ -410,6 +540,10 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
     from_date: filters.from_date || undefined,
     to_date: filters.to_date || undefined,
     estimate_number: filters.estimate_number || undefined,
+    // HisabKitab feature - template_name from registered view mode, or 'estimates'
+    template_name: registeredViewModeValues.value.has(viewMode.value)
+      ? viewMode.value
+      : 'estimates',
     orderByField: sort.fieldName || 'created_at',
     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
     page,

@@ -24,19 +24,19 @@ class DemoSeeder extends Seeder
     {
         // Create demo user
         $user = User::factory()->create([
-            'email' => 'demo@invoiceshelf.com',
-            'name' => 'Demo User',
+            'email' => 'mukesh@gmail.com',
+            'name' => 'Mukesh',
             'role' => 'super admin',
-            'password' => 'demo',
+            'password' => 'prachi',
         ]);
 
         // Create demo company
         $company = Company::factory()->create([
-            'name' => 'Acme Inc',
+            'name' => 'HisabKitabb',
             'owner_id' => $user->id,
-            'slug' => 'acme-inc',
-            'vat_id' => 'US123456789',
-            'tax_id' => '84-1234567',
+            'slug' => 'hisabKitabb',
+            'vat_id' => 'IND123456789',
+            'tax_id' => '12-1234567',
         ]);
 
         $company->unique_hash = Hashids::connection(HashidConnection::Company->value)->encode($company->id);
@@ -53,7 +53,7 @@ class DemoSeeder extends Seeder
         // from 2.x carries whatever order its own migrations produced, and on
         // one of those id 1 is the Algerian Dinar, so the demo would price
         // everything in "DA".
-        $currencyId = Currency::where('code', 'USD')->value('id') ?? 1;
+        $currencyId = Currency::where('code', 'INR')->value('id') ?? 1;
 
         // Set default user settings
         $user->setSettings([

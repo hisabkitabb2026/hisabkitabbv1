@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sodium
+          coverage: none
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Verify PHP and package contracts
+        run: |
+          composer run lint
+          composer run test
+          vendor/bin/invoiceshelf-module validate-module module.json
+          vendor/bin/invoiceshelf-module validate-package .
+
+      - name: Verify frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run lint
+          pnpm exec tsc --noEmit
+          pnpm run build
+          git diff --exit-code -- dist

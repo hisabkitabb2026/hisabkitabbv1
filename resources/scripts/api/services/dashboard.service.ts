@@ -1,3 +1,5 @@
+// HisabKitab feature
+
 import { client } from '../client'
 import { API } from '../endpoints'
 import type { PurchasePayables } from '@/scripts/types/domain/purchase'
@@ -38,6 +40,8 @@ export interface DashboardResponse {
   payables?: PurchasePayables | null
   total_customer_count: number
   total_invoice_count: number
+  // HisabKitab feature — module-registered dashboard counts
+  module_counts: Array<{ key: string; label: string; to: string; value: number }>
   total_estimate_count: number
   chart_data: ChartData
   total_sales: string

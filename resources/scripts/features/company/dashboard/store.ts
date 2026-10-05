@@ -1,3 +1,5 @@
+// HisabKitab feature
+
 import { defineStore } from 'pinia'
 import type { PurchasePayables } from '@/scripts/types/domain/purchase'
 import { ref, computed } from 'vue'
@@ -12,6 +14,8 @@ export interface DashboardStats {
   totalAmountDue: number
   totalCustomerCount: number
   totalInvoiceCount: number
+  // HisabKitab feature — module-registered counts replace hardcoded receipt fields
+  moduleCounts: Array<{ key: string; label: string; to: string; value: number }>
   totalEstimateCount: number
 }
 
@@ -64,6 +68,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     totalAmountDue: 0,
     totalCustomerCount: 0,
     totalInvoiceCount: 0,
+    // HisabKitab feature
+    moduleCounts: [],
     totalEstimateCount: 0,
   })
 
@@ -121,6 +127,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       stats.value.totalAmountDue = response.total_amount_due ?? 0
       stats.value.totalCustomerCount = response.total_customer_count ?? 0
       stats.value.totalInvoiceCount = response.total_invoice_count ?? 0
+      // HisabKitab feature — module-registered dashboard counts
+      stats.value.moduleCounts = response.module_counts ?? []
       stats.value.totalEstimateCount = response.total_estimate_count ?? 0
 
       if (response.receivables) {
