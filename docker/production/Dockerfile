@@ -6,7 +6,7 @@ FROM --platform=$BUILDPLATFORM node:24 AS static_builder
 
 FROM serversideup/php:8.4-fpm-nginx-alpine AS base
     USER root
-    RUN apk add --no-cache bash nano mariadb-client postgresql-client sqlite
+    RUN apk add --no-cache bash nano mariadb-client postgresql-client sqlite git
     # One invocation, not twelve: the tool sets up and tears down its build
     # environment per call, and several of these compile from source.
     RUN install-php-extensions \

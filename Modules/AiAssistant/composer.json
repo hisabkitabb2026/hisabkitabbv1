@@ -39,11 +39,5 @@
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": {
-        "invoiceshelf-modules": {
-            "type": "vcs",
-            "url": "https://github.com/InvoiceShelf/modules.git"
-        }
-    }
+    "prefer-stable": true
 }
