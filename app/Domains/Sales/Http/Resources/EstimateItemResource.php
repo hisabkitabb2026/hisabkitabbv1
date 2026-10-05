@@ -4,7 +4,9 @@ namespace App\Domains\Sales\Http\Resources;
 
 use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
 use App\Domains\Taxation\Http\Resources\TaxResource;
+use App\Support\ModuleExtensions;
 use Illuminate\Http\Request;
+// HisabKitab feature
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -45,6 +47,8 @@ class EstimateItemResource extends JsonResource
             'base_price' => $item->base_price,
             'base_tax' => $item->base_tax,
             'base_total' => $item->base_total,
+            // HisabKitab feature — module-registered extra item fields (tr_*, etc.)
+            ...ModuleExtensions::estimateItemResourceFields($item),
             'taxes' => $this->when(
                 $item->taxes()->exists(),
                 fn () => TaxResource::collection($item->taxes)

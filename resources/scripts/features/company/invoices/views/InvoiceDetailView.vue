@@ -1,10 +1,11 @@
+<!-- HisabKitab feature -->
 <template>
   <div v-if="invoiceData" class="flex min-h-full">
 
     <BasePage class="min-w-0">
       <BasePageHeader :help="$t(invoiceData?.type === 'CREDIT_NOTE' ? 'page_help.credit_notes' : 'page_help.invoices')" :title="pageTitle">
         <BaseBreadcrumb>
-          <BaseBreadcrumbItem :title="$t('invoices.invoice', 2)" to="/admin/invoices" />
+          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
         </BaseBreadcrumb>
 
         <div class="flex flex-wrap items-center gap-1.5 mt-2">
@@ -29,7 +30,7 @@
             variant="white"
             @click="onMarkAsSent"
           >
-            {{ $t('invoices.mark_as_sent') }}
+            {{ $t('invoices.mark_as_sent').replace('invoice', docLabel.toLowerCase()) }}
           </BaseButton>
 
           <BaseButton
@@ -40,7 +41,7 @@
             <template #left="slotProps">
               <BaseIcon name="PaperAirplaneIcon" :class="slotProps.class" />
             </template>
-            {{ $t('invoices.send_invoice') }}
+            {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
           </BaseButton>
 
           <router-link
@@ -87,7 +88,7 @@
             {{ invoiceData.customer.name }}
           </router-link>
         </BaseStat>
-        <BaseStat :label="$t('invoices.invoice_date')">
+        <BaseStat :label="docLabel === 'Lorry Receipt' ? 'Challan Date' : docLabel === 'LR Receipt' ? 'Docket Date' : $t('invoices.invoice_date')">
           {{ invoiceData.formatted_invoice_date }}
         </BaseStat>
         <BaseStat :label="$t('invoices.due_date')">
@@ -186,7 +187,7 @@
           <template #left="slotProps">
             <BaseIcon name="PaperAirplaneIcon" :class="slotProps.class" />
           </template>
-          {{ $t('invoices.send_invoice') }}
+          {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
         </BaseButton>
         <BaseButton
           v-else-if="canRecordPayment"
@@ -288,6 +289,9 @@ import { useDialogStore } from '../../../../stores/dialog.store'
 import { useModalStore } from '../../../../stores/modal.store'
 import type { Invoice, InvoicePaymentAllocation } from '../../../../types/domain/invoice'
 import { scrollBehavior } from '@/scripts/utils/motion'
+// HisabKitab feature
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 
 interface Props {
   canEdit?: boolean
@@ -377,6 +381,34 @@ const searchData = reactive<SearchData>({
 
 const pageTitle = computed<string>(() => invoiceData.value?.invoice_number ?? '')
 
+// HisabKitab feature — document meta from registered modules
+const { currentDocMeta } = useDocumentMeta(() => invoiceData.value?.template_name as string | undefined)
+
+const docLabel = computed<string>(() => currentDocMeta.value?.label ?? t('invoices.invoice'))
+
+// HisabKitab feature — sidebar filter from registered view mode values
+const sidebarTemplateFilter = computed<string>(() => {
+  const tpl = invoiceData.value?.template_name as string | undefined
+  if (!tpl) return 'one-time'
+  const registered = extensionItems(extensionRegistry.invoiceViewModes.value)
+  return registered.some((vm) => vm.value === tpl) ? tpl : 'one-time'
+})
+
+// The filter the currently loaded sidebar list was fetched with, so we can
+// detect a type change when navigating between documents
+const listTemplateFilter = ref<string>('')
+
+// HisabKitab feature — breadcrumb from registered document meta
+const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('invoices.invoice', 2))
+
+const breadcrumbLink = computed<string>(() => {
+  const tpl = invoiceData.value?.template_name as string | undefined
+  if (!tpl) return '/admin/invoices'
+  const vm = extensionItems(extensionRegistry.invoiceViewModes.value)
+    .find((v) => v.value === tpl)
+  return vm ? vm.listLink : '/admin/invoices'
+})
+
 const { isPhone } = useBreakpoints()
 const pdfPreview = ref<InstanceType<typeof BasePdfPreview> | null>(null)
 
@@ -437,7 +469,12 @@ const shareableLink = computed<string>(() => {
 
 watch(route, (to) => {
   if (to.name === 'invoices.view') {
-    loadInvoice()
+    loadInvoice().finally(() => {
+      // HisabKitab feature
+      if (listTemplateFilter.value !== sidebarTemplateFilter.value) {
+        refreshInvoiceList()
+      }
+    })
   }
 })
 
@@ -466,7 +503,7 @@ function onMarkAsSent(): void {
 
 function onSendInvoice(): void {
   modalStore.openModal({
-    title: t('invoices.send_invoice'),
+    title: t('invoices.send_invoice').replace('Invoice', docLabel.value),
     componentName: 'SendInvoiceModal',
     id: invoiceData.value!.id,
     data: invoiceData.value,
@@ -497,8 +534,12 @@ async function loadInvoices(
   }
 
   isLoading.value = true
+  // HisabKitab feature
+  const templateFilter = sidebarTemplateFilter.value
+  listTemplateFilter.value = templateFilter
   const response = await invoiceStore.fetchInvoices({
     page: pageNumber,
+    template_name: templateFilter,
     ...params,
   } as never).catch(() => null)
   isLoading.value = false
@@ -595,7 +636,7 @@ function sortData(): void {
   onSearched()
 }
 
-// Initialize
-loadInvoices()
-loadInvoice()
+// Initialize — the invoice loads first so the sidebar list can be scoped to
+// the same document type (template_name) as the one on screen
+loadInvoice().finally(() => loadInvoices())
 </script>

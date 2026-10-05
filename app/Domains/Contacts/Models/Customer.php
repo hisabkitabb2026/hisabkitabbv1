@@ -252,6 +252,11 @@ class Customer extends Authenticatable implements HasMedia
             'phone' => 'wherePhone',
         ];
 
+        // HisabKitab feature — filter by customer type (CUSTOMER, CONSIGNEE, etc.)
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
         foreach ($scopes as $filter => $scope) {
             $value = $filters[$filter] ?? null;
 

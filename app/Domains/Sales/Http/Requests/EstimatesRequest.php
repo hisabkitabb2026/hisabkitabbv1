@@ -83,6 +83,15 @@ class EstimatesRequest extends FormRequest
     {
         $rule = Rule::unique('estimates')->where('company_id', $this->header('company'));
 
+        // HisabKitab feature — uniqueness scoped by template_name, no hardcoded template
+        $templateName = $this->input('template_name');
+
+        if ($templateName) {
+            $rule->where('template_name', $templateName);
+        } else {
+            $rule->whereNull('template_name');
+        }
+
         return $this->isMethod('PUT')
             ? $rule->ignore($this->route('estimate')->id)
             : $rule;

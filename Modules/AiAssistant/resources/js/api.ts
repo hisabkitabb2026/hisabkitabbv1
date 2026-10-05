@@ -1,0 +1,13 @@
+export const AI_API = {
+  adminCapabilities: '/api/v1/ai/admin-capabilities',
+  capabilities: '/api/v1/ai/capabilities',
+  drivers: '/api/v1/ai/drivers',
+  globalConfig: '/api/v1/ai/config',
+  globalTest: '/api/v1/ai/test',
+  companyConfig: '/api/v1/company/ai/config',
+  companyTest: '/api/v1/company/ai/test',
+  chat: '/api/v1/ai/chat',
+  conversations: '/api/v1/ai/conversations',
+  conversation: (id: number): string => `/api/v1/ai/conversations/${id}`,
+  generate: '/api/v1/ai/generate',
+} as const

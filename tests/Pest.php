@@ -12,6 +12,8 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class)->in('Feature');
 uses(TestCase::class, RefreshDatabase::class)->in('Unit');
+// HisabKitab feature — module-host integration tests live in their modules
+uses(TestCase::class, RefreshDatabase::class)->in('../Modules/LorryReceipt/tests/Feature', '../Modules/Trips/tests/Feature');
 
 // Module-system tests scaffold, install, and remove real directories under
 // Modules. Paratest isolates the database but not that shared filesystem path,

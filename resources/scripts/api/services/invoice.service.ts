@@ -1,3 +1,5 @@
+// HisabKitab feature
+
 import { client } from '../client'
 import { API } from '../endpoints'
 import type {
@@ -17,6 +19,7 @@ import type {
 export interface InvoiceListParams extends ListParams, DateRangeParams {
   status?: string
   customer_id?: number
+  template_name?: string
 }
 
 export interface InvoiceListMeta {

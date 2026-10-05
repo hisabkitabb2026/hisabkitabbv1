@@ -1,11 +1,17 @@
 <template>
   <div class="grid grid-cols-12 gap-4 mt-5 mb-6 md:gap-8 md:mb-8">
-    <BaseCustomerSelectPopup
-      :valid="v.customer_id"
-      :content-loading="isLoading"
-      type="invoice"
-      class="col-span-12 lg:col-span-6 pe-0"
-    />
+    <div class="col-span-12 lg:col-span-6 pe-0 space-y-4">
+      <BaseCustomerSelectPopup
+        :valid="v.customer_id"
+        :content-loading="isLoading"
+        type="invoice"
+      />
+
+      <!-- HisabKitab feature — Consignee picker for LR Receipt, sits below customer picker -->
+      <ConsigneeSelectPopup
+        :content-loading="isLoading"
+      />
+    </div>
 
     <RecurringFields
       v-if="isRecurring"
@@ -17,7 +23,7 @@
 
     <BaseInputGrid
       v-else
-      class="col-span-12 p-4 border lg:col-span-6 glass rounded-xl md:p-5"
+      class="col-span-12 p-4 border lg:col-span-6 glass rounded-xl md:p-5 self-start"
     >
       <BaseInputGroup
         :label="$t('invoices.invoice_date')"
@@ -86,6 +92,7 @@ import { computed } from 'vue'
 import { ExchangeRateConverter } from '../../../shared/document-form'
 import { useInvoiceStore } from '../store'
 import RecurringFields from './RecurringFields.vue'
+import ConsigneeSelectPopup from './ConsigneeSelectPopup.vue'
 import CustomFieldInput from '@/scripts/features/shared/custom-fields/CustomFieldInput.vue'
 import { useCustomFields } from '@/scripts/features/shared/custom-fields/use-custom-fields'
 

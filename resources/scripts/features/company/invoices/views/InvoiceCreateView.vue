@@ -1,10 +1,11 @@
+<!-- HisabKitab feature -->
 <template>
   <BasePage class="relative invoice-create-page">
     <form @submit.prevent="submitForm">
       <BasePageHeader :help="$t(isRecurring ? 'page_help.recurring_invoices' : 'page_help.invoices')" :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
-          <BaseBreadcrumbItem :title="$t('invoices.invoice', 2)" to="/admin/invoices" />
+          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
           <BaseBreadcrumbItem
             v-if="isEdit"
             :title="$t('invoices.edit_invoice')"
@@ -81,9 +82,19 @@
         :is-recurring="isRecurring"
       />
 
+      <!-- Transport receipt modules (LR Receipt, Lorry Receipt) inject their
+           template-specific form sections here. No-op if no module registered. -->
+      <ExtensionSlot
+        name="invoice-form-sections"
+        :template-name="invoiceStore.newInvoice.template_name"
+        :store="invoiceStore"
+      />
+
       <BaseScrollPane>
-        <!-- Invoice Items -->
+        <!-- Invoice Items — hidden for transport receipt modules (LR/Lorry Receipt)
+             which use their own hire-particulars fields instead of line items -->
         <DocumentItemsTable
+          v-if="!isTransportReceipt"
           :currency="invoiceStore.newInvoice.selectedCurrency"
           :is-loading="isLoadingContent"
           :item-validation-scope="invoiceValidationScope"
@@ -146,11 +157,15 @@ import { useRecurringInvoiceStore } from '@/scripts/features/company/recurring-i
 import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { useBreakpoints } from '@/scripts/composables/use-breakpoints'
+// HisabKitab feature
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 import {
   handleApiError,
   getErrorTranslationKey,
 } from '@/scripts/utils/error-handling'
 import InvoiceBasicFields from '../components/InvoiceBasicFields.vue'
+import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
 import {
   DocumentItemsTable,
   DocumentFormActionBar,
@@ -168,6 +183,22 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { isPhone } = useBreakpoints()
+
+// HisabKitab feature — document meta from registered modules
+const { currentDocMeta } = useDocumentMeta(() => invoiceStore.newInvoice.template_name)
+
+const isTransportReceipt = computed<boolean>(() => currentDocMeta.value !== null)
+
+// HisabKitab feature — breadcrumb from registered document meta
+const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('invoices.invoice', 2))
+
+const breadcrumbLink = computed<string>(() => {
+  const tpl = invoiceStore.newInvoice.template_name
+  if (!tpl) return '/admin/invoices'
+  const vm = extensionItems(extensionRegistry.invoiceViewModes.value)
+    .find((v) => v.value === tpl)
+  return vm ? vm.listLink : '/admin/invoices'
+})
 
 const invoiceValidationScope = 'newInvoice'
 const isSaving = ref<boolean>(false)
@@ -242,6 +273,11 @@ if (route.query.recurring === '1' || isRecurringEdit.value) {
   isRecurring.value = true
 }
 
+// HisabKitab feature
+if (route.query.template) {
+  invoiceStore.setTemplate(route.query.template as string)
+}
+
 // Initialize recurring store
 recurringInvoiceStore.initFrequencies(t)
 
@@ -275,7 +311,12 @@ if (isRecurringEdit.value) {
   invoiceStore.fetchInvoiceInitialSettings(
     isEdit.value,
     { id: route.params.id as string, query: route.query as Record<string, string> },
-  )
+  ).then(() => {
+    // HisabKitab feature
+    if (route.query.template) {
+      invoiceStore.setTemplate(route.query.template as string)
+    }
+  })
 } else {
   // New recurring invoice — just initialize
   recurringInvoiceStore.resetCurrentRecurringInvoice()
@@ -430,6 +471,22 @@ async function submitForm(): Promise<void> {
         sub_total: Math.round(invoiceStore.getSubTotal),
         total: Math.round(invoiceStore.getTotal),
         tax: Math.round(invoiceStore.getTotalTax),
+      }
+
+      // HisabKitab feature — hide line items for receipt types that don't use them.
+      // Uses registered document meta to determine if this template has items.
+      if (isTransportReceipt.value && !currentDocMeta.value?.label?.includes('Invoice')) {
+        // LR Receipt uses tr_net_amount (sum of freight charges), Lorry Receipt uses tr_net_amount_payable
+        const netAmount = Number(data.tr_net_amount) || 0
+        const netPayable = Number(data.tr_net_amount_payable) || 0
+        const amount = netAmount || netPayable
+        const cents = Math.round(amount * 100)
+        data.sub_total = cents
+        data.total = cents
+        data.due_amount = cents
+        data.base_sub_total = cents
+        data.base_total = cents
+        data.base_due_amount = cents
       }
 
       const items = data.items as Array<Record<string, unknown>>

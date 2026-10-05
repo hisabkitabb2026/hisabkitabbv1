@@ -1,3 +1,5 @@
+// HisabKitab feature
+
 import { defineStore } from 'pinia'
 import { useNotificationStore } from '../../../stores/notification.store'
 import { useCompanyStore } from '../../../stores/company.store'
@@ -94,6 +96,8 @@ export interface InvoiceFormData {
   unique_hash?: string
   exchange_rate?: number | null
   currency_id?: number
+  // Invoice Receipt (office invoice) module: GST Tax Through selector
+  gst_tax_payable_by?: string | null
 }
 
 function createInvoiceStub(): InvoiceFormData {
@@ -549,7 +553,12 @@ export const useInvoiceStore = defineStore('invoice', {
           Promise.resolve(), // placeholder for items fetch
           this.resetSelectedNote(),
           this.fetchInvoiceTemplates(),
-          this.getNextNumber(),
+          // HisabKitab feature — pass template_name as key if set, for serial number scoping
+          this.getNextNumber(
+            this.newInvoice.template_name
+              ? { key: this.newInvoice.template_name as string }
+              : undefined,
+          ),
           Promise.resolve(), // placeholder for tax types fetch
           ...editActions,
         ])

@@ -7,7 +7,9 @@ use App\Domains\Sales\Application\SerialNumberService;
 use App\Domains\Sales\Models\Estimate;
 use App\Domains\Sales\Models\Invoice;
 use App\Platform\Http\Controller;
+use App\Support\ModuleExtensions;
 use Illuminate\Http\JsonResponse;
+// HisabKitab feature
 use Illuminate\Http\Request;
 
 /**
@@ -55,7 +57,15 @@ class SerialNumberController extends Controller
 
                 break;
 
+                // HisabKitab feature — module-registered serial number types
             default:
+                $registered = ModuleExtensions::getSerialNumberType($request->key);
+                if ($registered !== null) {
+                    $model = $registered['model'] === Invoice::class ? $invoice : $estimate;
+                    $serial->setModel($model)->setSequenceScope($registered['scope']);
+                    break;
+                }
+
                 return response()->json([
                     'success' => false,
                 ]);

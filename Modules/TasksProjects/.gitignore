@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+/.phpunit.cache/
+/coverage/
+/*.zip
+/release-manifest.json
+/release-manifest.canonical.json
+/release-manifest.sig

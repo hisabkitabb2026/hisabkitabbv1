@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '../../../../stores/user.store'
+import { useGlobalStore } from '../../../../stores/global.store'
 import { useDashboardStore } from '../store'
 import { ABILITIES } from '@/scripts/config/abilities'
 import { formatPeriodRange, periodParams, yearPresets } from '@/scripts/utils/period'
@@ -24,9 +25,11 @@ interface Count {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const globalStore = useGlobalStore()
 const dashboardStore = useDashboardStore()
 const { t } = useI18n()
 
+// HisabKitab feature — receipt count cards come from the dashboard store (module_counts)
 const presets = computed(() => yearPresets(t))
 
 // The dates behind the current choice, e.g. what "This year" means for a
@@ -39,6 +42,9 @@ const periodSummary = computed<string>(() => {
     : ''
 })
 
+// HisabKitab feature — only show a core count card when its sidebar menu entry is visible
+const visibleMenuNames = computed(() => new Set(globalStore.menuGroups.flat().map((m) => m.name)))
+
 // The customer, invoice and estimate counts: context, so they stay quiet
 const counts = computed<Count[]>(() => {
   const stats = dashboardStore.stats
@@ -47,10 +53,16 @@ const counts = computed<Count[]>(() => {
   if (userStore.hasAbilities(ABILITIES.VIEW_CUSTOMER)) {
     list.push({ key: 'customers', to: '/admin/customers', value: stats.totalCustomerCount, label: t('dashboard.counts.customers', stats.totalCustomerCount) })
   }
-  if (userStore.hasAbilities(ABILITIES.VIEW_INVOICE)) {
+  // HisabKitab feature — hide the core invoice card when a module replaced the Invoices menu
+  if (userStore.hasAbilities(ABILITIES.VIEW_INVOICE) && visibleMenuNames.value.has('Invoices')) {
     list.push({ key: 'invoices', to: '/admin/invoices', value: stats.totalInvoiceCount, label: t('dashboard.counts.invoices', stats.totalInvoiceCount) })
   }
-  if (userStore.hasAbilities(ABILITIES.VIEW_ESTIMATE)) {
+  // HisabKitab feature — module-registered dashboard count cards
+  for (const dc of dashboardStore.stats.moduleCounts) {
+    list.push({ key: dc.key, to: dc.to, value: dc.value, label: dc.label })
+  }
+  // HisabKitab feature — hide the core estimate card when a module replaced the Estimates menu
+  if (userStore.hasAbilities(ABILITIES.VIEW_ESTIMATE) && visibleMenuNames.value.has('Estimates')) {
     list.push({ key: 'estimates', to: '/admin/estimates', value: stats.totalEstimateCount, label: t('dashboard.counts.estimates', stats.totalEstimateCount) })
   }
 
@@ -76,6 +88,7 @@ onMounted(() => {
 })
 </script>
 
+<!-- HisabKitab feature -->
 <template>
   <BasePage>
     <BasePageHeader :help="$t('page_help.dashboard')" :title="$t('navigation.dashboard')" phone-actions="inline">

@@ -13,6 +13,8 @@ use App\Platform\Http\Controller;
 use App\Platform\Modules\Models\Module;
 use App\Platform\Operations\Http\Concerns\GeneratesMenu;
 use App\Platform\Operations\Models\Setting;
+// HisabKitab feature
+use App\Support\ModuleExtensions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvoiceShelf\Modules\Registry as ModuleRegistry;
@@ -138,7 +140,8 @@ class BootstrapController extends Controller
         return array_merge($this->envelope($user, $currency), [
             'current_user_abilities' => $user->getAbilities(),
             'companies' => CompanyResource::collection($memberships),
-            'current_company' => new CompanyResource($company),
+            // HisabKitab feature
+            'current_company' => new CompanyResource($company->load('owner')),
             'current_company_settings' => $companySettings,
             'main_menu' => $mainMenu,
             'setting_menu' => $settingMenu,
@@ -169,6 +172,9 @@ class BootstrapController extends Controller
     private function mainMenuWithModules($user): array
     {
         $menu = $this->generateMenu('main_menu', $user);
+
+        // HisabKitab feature — let modules filter the core menu (hide/replace entries)
+        $menu = ModuleExtensions::applyMenuFilters($menu);
 
         foreach (ModuleRegistry::allMenu() as $slug => $entry) {
             $menu[] = [

@@ -1,11 +1,14 @@
 <?php
 
+// HisabKitab feature
+
 namespace App\Domains\Reporting\Http\Controllers\Company;
 
 use App\Domains\Accounts\Models\Company;
 use App\Domains\Accounts\Models\CompanySetting;
 use App\Domains\Contacts\Models\Customer;
 use App\Domains\Purchases\Models\Bill;
+// HisabKitab feature
 use App\Domains\Reporting\Http\Requests\DashboardRequest;
 use App\Domains\Reporting\Queries\CashflowQuery;
 use App\Domains\Reporting\Queries\PurchasesQuery;
@@ -13,6 +16,7 @@ use App\Domains\Reporting\Queries\ReceivablesAgingQuery;
 use App\Domains\Sales\Models\Estimate;
 use App\Domains\Sales\Models\Invoice;
 use App\Platform\Http\Controller;
+use App\Support\ModuleExtensions;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Silber\Bouncer\BouncerFacade;
@@ -56,10 +60,15 @@ class DashboardController extends Controller
         // out. The outstanding sum below keeps them too, which is a quirk
         // rather than a decision — a credit note's due amount is always zero,
         // so it adds nothing, and the sum has always been taken over the lot.
+        // HisabKitab feature — invoice count excludes module-registered template types
         $invoiceCount = Invoice::query()
             ->whereCompany()
             ->where('type', Invoice::TYPE_INVOICE)
+            ->whereNull('template_name')
             ->count();
+
+        // HisabKitab feature — receipt counts come from registered module providers
+        $moduleCounts = ModuleExtensions::dashboardCounts((int) $companyId);
 
         $estimateCount = Estimate::query()->whereCompany()->count();
 
@@ -95,6 +104,8 @@ class DashboardController extends Controller
             'receivables' => $receivables->summary($companyId, Carbon::now()),
             'total_customer_count' => $customerCount,
             'total_invoice_count' => $invoiceCount,
+            // HisabKitab feature — module-registered dashboard counts
+            'module_counts' => $moduleCounts,
             'total_estimate_count' => $estimateCount,
 
             'recent_due_invoices' => BouncerFacade::can('view-invoice', Invoice::class) ? $recentDueInvoices : [],

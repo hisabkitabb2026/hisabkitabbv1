@@ -53,6 +53,7 @@ class CustomPathGenerator implements PathGenerator
             ModelIdentityMap::INVOICE_ALIAS => 'Invoices',
             ModelIdentityMap::ESTIMATE_ALIAS => 'Estimates',
             ModelIdentityMap::PAYMENT_ALIAS => 'Payments',
+            'trip' => 'Trips', // Local change Required for Trip modulul
             default => $media->getKey(),
         };
     }

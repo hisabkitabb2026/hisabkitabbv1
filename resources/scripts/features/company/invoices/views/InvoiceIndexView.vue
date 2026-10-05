@@ -1,10 +1,12 @@
+<!-- HisabKitab feature -->
 <template>
   <BasePage>
+    <!-- HisabKitab feature -->
     <BasePageHeader :title="$t('invoices.title')" :help="$t(viewMode === 'recurring' ? 'page_help.recurring_invoices' : 'page_help.invoices')" :help-title="$t(viewMode === 'recurring' ? 'recurring_invoices.title' : 'invoices.title')">
       <template v-if="invoiceViews.length > 1" #title-suffix>
         <BaseViewSwitcher
           :model-value="viewMode"
-          primary-value="one-time"
+          :primary-value="invoicePrimaryValue"
           :label="$t('invoices.title')"
           :options="invoiceViews"
           @update:model-value="setViewMode"
@@ -17,7 +19,7 @@
 
       <template #actions>
         <BaseButton
-          v-show="viewMode === 'one-time' ? invoiceStore.invoiceTotalCount : recurringInvoiceStore.totalRecurringInvoices"
+          v-show="viewMode !== 'recurring' ? invoiceStore.invoiceTotalCount : recurringInvoiceStore.totalRecurringInvoices"
           variant="primary-outline"
           :aria-expanded="showFilters"
           @click="toggleFilter"
@@ -35,7 +37,7 @@
 
         <router-link
           v-if="canCreate"
-          :to="viewMode === 'recurring' ? 'invoices/create?recurring=1' : 'invoices/create'"
+          :to="newInvoiceLink"
           class="inline-flex rounded-lg"
         >
           <BaseButton tag="span" variant="primary">
@@ -50,7 +52,7 @@
 
     <!-- Filters (one-time) -->
     <BaseFilterWrapper
-      v-show="showFilters && viewMode === 'one-time'"
+      v-show="showFilters && viewMode !== 'recurring'"
       :row-on-xl="true"
       @clear="clearFilter"
     >
@@ -150,8 +152,38 @@
       </BaseInputGroup>
     </BaseFilterWrapper>
 
-    <!-- One-time invoices section -->
-    <template v-if="viewMode === 'one-time'">
+    <!-- HisabKitab feature -->
+    <div
+      v-if="receiptPermissionMissing"
+      class="flex flex-col items-center justify-center gap-4 py-16 text-center"
+    >
+      <span class="flex items-center justify-center w-14 h-14 rounded-full bg-surface-secondary">
+        <BaseIcon name="LockClosedIcon" class="w-7 h-7 text-muted" />
+      </span>
+      <div>
+        <h2 class="text-lg font-semibold text-heading">{{ viewModeLabel }}s</h2>
+        <p class="max-w-md mt-1 text-sm text-muted">
+          You don't have permission to view {{ viewModeLabel }}s. Ask the company owner for access.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <BaseButton variant="primary" @click="openRequestModal">
+          <template #left="slotProps">
+            <BaseIcon name="EnvelopeIcon" :class="slotProps.class" />
+          </template>
+          Request Access
+        </BaseButton>
+        <BaseButton variant="white" @click="copyRequestMessage">
+          <template #left="slotProps">
+            <BaseIcon name="ClipboardDocumentIcon" :class="slotProps.class" />
+          </template>
+          Copy Request
+        </BaseButton>
+      </div>
+    </div>
+
+    <!-- One-time invoices section (also used for LR Receipt & Lorry Receipt modes) -->
+    <template v-if="viewMode !== 'recurring' && !receiptPermissionMissing">
       <!-- Empty State -->
       <BaseEmptyPlaceholder
         v-show="showEmptyScreen"
@@ -163,7 +195,7 @@
         <template v-if="canCreate" #actions>
           <BaseButton
             variant="primary"
-            @click="$router.push('/admin/invoices/create')"
+            @click="$router.push(newInvoiceLink)"
           >
             <template #left="slotProps">
               <BaseIcon name="PlusIcon" :class="slotProps.class" />
@@ -247,6 +279,11 @@
             >
               {{ $t('invoices.credit_note') }}
             </span>
+          </template>
+
+          <!-- HisabKitab feature — Paid To cell for lorry_receipt view -->
+          <template #cell-tr_paid_to="{ row }">
+            <span class="text-sm text-heading">{{ row.data.tr_paid_to ?? '-' }}</span>
           </template>
 
           <template #cell-invoice_date="{ row }">
@@ -473,7 +510,7 @@
 <script setup lang="ts">
 import BaseViewSwitcher, { type ViewSwitcherOption } from '@/scripts/components/base/BaseViewSwitcher.vue'
 import type { ColumnDef } from '@/scripts/components/table/DataTable.vue'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { debouncedWatch } from '@vueuse/core'
@@ -484,7 +521,13 @@ import SendInvoiceModal from '../components/SendInvoiceModal.vue'
 import CreditNoteModal from '../components/CreditNoteModal.vue'
 import RecurringInvoiceDropdown from '../../recurring-invoices/components/RecurringInvoiceDropdown.vue'
 import { useUserStore } from '../../../../stores/user.store'
+import { useGlobalStore } from '../../../../stores/global.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
+import { useCompanyStore } from '../../../../stores/company.store'
+import { useNotificationStore } from '../../../../stores/notification.store'
+// HisabKitab feature
+import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 import type { Invoice } from '../../../../types/domain/invoice'
 import type { RecurringInvoice } from '../../../../types/domain/recurring-invoice'
 
@@ -522,6 +565,9 @@ const RECURRING_ABILITIES = {
 const invoiceStore = useInvoiceStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
 const userStore = useUserStore()
+const globalStore = useGlobalStore()
+const companyStore = useCompanyStore()
+const notificationStore = useNotificationStore()
 const dialogStore = useDialogStore()
 const route = useRoute()
 const router = useRouter()
@@ -539,31 +585,216 @@ const canViewRecurring = computed<boolean>(() => {
 // View mode toggle
 // ----------------------------------------------------------------
 
-const storedViewMode = localStorage.getItem('invoiceViewMode') as 'one-time' | 'recurring' | null
-const viewMode = ref<'one-time' | 'recurring'>(
-  storedViewMode === 'recurring' && !canViewRecurring.value ? 'one-time' : (storedViewMode ?? 'one-time')
+// HisabKitab feature — view modes are now module-driven via extensionRegistry
+type InvoiceViewMode = string
+
+// HisabKitab feature — registered view modes from modules, filtered by ability
+const registeredViewModes = computed(() =>
+  extensionItems(extensionRegistry.invoiceViewModes.value).filter(
+    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
+  ),
 )
 
-onMounted(() => {
+const registeredViewModeValues = computed(() =>
+  new Set(registeredViewModes.value.map((vm) => vm.value)),
+)
+
+// HisabKitab feature — document meta (labels) for the current view mode
+const { currentDocMeta } = useDocumentMeta(() => viewMode.value)
+
+// True when the current view mode is a receipt type the member may not see.
+const receiptPermissionMissing = computed<boolean>(() => {
+  if (viewMode.value === 'one-time' || viewMode.value === 'recurring') return false
+  return !registeredViewModeValues.value.has(viewMode.value)
+})
+
+// "Request access" message the member can mail or paste to the company owner.
+const requestAccessMessage = computed<string>(() => {
+  const companyName = companyStore.selectedCompany?.name ?? ''
+  const label = viewModeLabel.value
+  const userName = userStore.currentUser?.name ?? ''
+  return [
+    'Hello,',
+    '',
+    `I need access to ${label}s in ${companyName}.`,
+    '',
+    'Could you grant me the permission to view them? You can do this under Settings → Roles → my role.',
+    '',
+    'Thank you,',
+    userName,
+  ].join('\n')
+})
+
+// HisabKitab feature — access request modal is handled by the AccessRequest module
+// via a companyLayoutOverlay. The host just dispatches a DOM event.
+function openRequestModal(): void {
+  window.dispatchEvent(new CustomEvent('access-request:open', {
+    detail: {
+      subject: `Request: Access to ${viewModeLabel.value}s`,
+      message: requestAccessMessage.value,
+      recipient: companyStore.selectedCompany?.owner?.email ?? 'the company owner',
+    },
+  }))
+}
+
+async function copyRequestMessage(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(requestAccessMessage.value)
+    notificationStore.showNotification({ type: 'success', message: 'Request copied — paste it to the owner in chat or email' })
+  } catch {
+    notificationStore.showNotification({ type: 'error', message: 'Could not copy the request' })
+  }
+}
+
+// The ?view= query param must win at setup time: the table fetches its first
+// page in a child onMounted hook that runs before this view's onMounted, so
+// viewMode has to be correct here or the first fetch uses the wrong
+// template_name filter and the list comes up empty until a manual refresh.
+function initialViewMode(): InvoiceViewMode {
+  // HisabKitab feature — check registered view modes dynamically
+  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
+  if (vm) return vm.value
+
+  switch (route.query.view) {
+    case 'recurring':
+      return canViewRecurring.value ? 'recurring' : 'one-time'
+    default: {
+      // HisabKitab feature — when the core Invoices menu is hidden, default to
+      // the first registered receipt view instead of 'one-time'
+      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
+        return registeredViewModes.value[0].value as InvoiceViewMode
+      }
+      const storedViewMode = localStorage.getItem('invoiceViewMode') as InvoiceViewMode | null
+      return storedViewMode === 'recurring' && !canViewRecurring.value
+        ? 'one-time'
+        : (storedViewMode ?? 'one-time')
+    }
+  }
+}
+
+const viewMode = ref<InvoiceViewMode>(initialViewMode())
+
+// HisabKitab feature — label from registered view mode, or i18n for built-in modes
+const viewModeLabel = computed(() => {
+  if (viewMode.value === 'recurring') return t('recurring_invoices.recurring')
+  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (vm) return vm.label
+  return t('invoices.one_time')
+})
+
+// HisabKitab feature — create link from registered view mode
+const newInvoiceLink = computed(() => {
+  if (viewMode.value === 'recurring') return 'invoices/create?recurring=1'
+  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (vm) return vm.createLink
+  return 'invoices/create'
+})
+
+function updateViewModeFromRoute(): void {
   if (route.query.view === 'recurring' && canViewRecurring.value) {
     viewMode.value = 'recurring'
+    localStorage.setItem('invoiceViewMode', 'recurring')
+  } else {
+    // HisabKitab feature — check registered view modes dynamically
+    const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
+    if (vm) {
+      viewMode.value = vm.value
+      localStorage.setItem('invoiceViewMode', vm.value)
+    } else if (!route.query.view) {
+      // HisabKitab feature — when the core Invoices menu is hidden, default to
+      // the first registered receipt view instead of 'one-time'
+      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
+        viewMode.value = registeredViewModes.value[0].value as InvoiceViewMode
+        localStorage.setItem('invoiceViewMode', viewMode.value)
+      } else {
+        viewMode.value = 'one-time'
+        localStorage.setItem('invoiceViewMode', 'one-time')
+      }
+    }
   }
+}
+
+onMounted(() => {
+  updateViewModeFromRoute()
   recurringInvoiceStore.initFrequencies(t)
 })
 
+// HisabKitab feature — view switcher options from registered view modes.
+// When a module has replaced the core Invoices menu (e.g. InvoiceReceipt),
+// hide the one-time/recurring options and show only the registered receipt views.
+const invoiceMenuVisible = computed(() =>
+  globalStore.menuGroups.flat().some((m) => m.name === 'Invoices'),
+)
+
+// HisabKitab feature — primary value for the view switcher: 'one-time' when the
+// core Invoices menu is visible, otherwise the first registered receipt view.
+const invoicePrimaryValue = computed(() =>
+  invoiceMenuVisible.value
+    ? 'one-time'
+    : (registeredViewModes.value[0]?.value ?? 'one-time'),
+)
+
 const invoiceViews = computed<ViewSwitcherOption[]>(() => [
-  {value: 'one-time', label: t('view_switcher.one_time'), icon: 'DocumentTextIcon'},
-  ...(canViewRecurring.value ? [{value: 'recurring', label: t('view_switcher.recurring'), icon: 'ArrowPathIcon'}] : []),
+  ...(invoiceMenuVisible.value
+    ? [{value: 'one-time', label: t('view_switcher.one_time'), icon: 'DocumentTextIcon'}]
+    : []),
+  ...(invoiceMenuVisible.value && canViewRecurring.value
+    ? [{value: 'recurring', label: t('view_switcher.recurring'), icon: 'ArrowPathIcon'}]
+    : []),
+  ...registeredViewModes.value.map((vm) => ({
+    value: vm.value,
+    label: vm.label,
+    icon: vm.icon,
+  })),
 ])
 
+// HisabKitab feature
+watch(
+  () => route.query.view,
+  () => {
+    updateViewModeFromRoute()
+    if (viewMode.value !== 'recurring') {
+      filters.customer_id = ''
+      filters.status = ''
+      filters.from_date = ''
+      filters.to_date = ''
+      filters.invoice_number = ''
+      invoiceStore.selectedInvoices = []
+      invoiceStore.selectAllField = false
+      tableKey.value += 1
+      isRequestOngoing.value = true
+    }
+  },
+)
+
 function setViewMode(mode: string): void {
-  if (mode !== 'one-time' && mode !== 'recurring') return
   if (mode === 'recurring' && !canViewRecurring.value) return
   viewMode.value = mode
   localStorage.setItem('invoiceViewMode', mode)
-  router.replace({
-    query: mode === 'recurring' ? { view: 'recurring' } : {},
-  })
+
+  // Only 'recurring' mode is reflected in the URL (onMounted reads it to
+  // restore state on page reload). LR/Lorry modes are view-only filters —
+  // changing the URL for them causes a route re-evaluation that flickers
+  // the table, so we skip router.replace entirely for non-recurring modes.
+  if (mode === 'recurring') {
+    router.replace({ query: { view: 'recurring' } })
+  } else if (route.query.view) {
+    // Clear the ?view=recurring query when switching away from recurring
+    router.replace({ query: {} })
+  }
+
+  // HisabKitab feature
+  if (mode !== 'recurring') {
+    filters.customer_id = ''
+    filters.status = ''
+    filters.from_date = ''
+    filters.to_date = ''
+    filters.invoice_number = ''
+    invoiceStore.selectedInvoices = []
+    invoiceStore.selectAllField = false
+    tableKey.value += 1
+    isRequestOngoing.value = true
+  }
 }
 
 // ----------------------------------------------------------------
@@ -682,8 +913,13 @@ const invoiceColumns = computed<TableColumn[]>(() => [
     thClass: 'extra',
     mobile: 'subtitle',
   },
-  { key: 'invoice_number', label: t('invoices.number'), mobile: 'subtitle' },
-  { key: 'name', label: t('invoices.customer'), mobile: 'title' },
+  // HisabKitab feature — column labels from registered document meta
+  { key: 'invoice_number', label: currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('invoices.number'), mobile: 'subtitle' },
+  { key: 'name', label: currentDocMeta.value?.labelPlural ? currentDocMeta.value.labelPlural.replace(/s$/, '') : t('invoices.customer'), mobile: 'title' },
+  // HisabKitab feature — Paid To column for lorry_receipt view
+  ...(viewMode.value === 'lorry_receipt'
+    ? [{ key: 'tr_paid_to', label: 'Paid To' }]
+    : []),
   { key: 'status', label: t('invoices.status') },
   {
     key: 'due_amount',
@@ -747,12 +983,21 @@ interface FetchResult {
 }
 
 async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
+  // HisabKitab feature
+  if (receiptPermissionMissing.value) {
+    return { data: [], pagination: { totalPages: 0, currentPage: 1, totalCount: 0, limit: 0 } }
+  }
+
   const data = {
     customer_id: filters.customer_id ? Number(filters.customer_id) : undefined,
     status: filters.status || undefined,
     from_date: filters.from_date || undefined,
     to_date: filters.to_date || undefined,
     invoice_number: filters.invoice_number || undefined,
+    // HisabKitab feature — template_name from registered view mode, or 'one-time'
+    template_name: registeredViewModeValues.value.has(viewMode.value)
+      ? viewMode.value
+      : 'one-time',
     orderByField: sort.fieldName || 'created_at',
     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
     page,

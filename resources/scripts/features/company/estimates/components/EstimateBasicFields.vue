@@ -10,8 +10,9 @@
     <BaseInputGrid
       class="col-span-6 p-4 border glass rounded-xl md:p-5"
     >
+      <!-- HisabKitab feature — label from registered estimate document meta -->
       <BaseInputGroup
-        :label="$t('reports.estimates.estimate_date')"
+        :label="currentDocMeta?.label ? `${currentDocMeta.label} Date` : $t('reports.estimates.estimate_date')"
         :content-loading="isLoading"
         required
         :error="v.estimate_date.$error && v.estimate_date.$errors[0].$message"
@@ -36,8 +37,9 @@
         />
       </BaseInputGroup>
 
+      <!-- HisabKitab feature — label from registered estimate document meta -->
       <BaseInputGroup
-        :label="$t('estimates.estimate_number')"
+        :label="currentDocMeta?.label ? `${currentDocMeta.label} Number` : $t('estimates.estimate_number')"
         :content-loading="isLoading"
         required
         :error="
@@ -71,10 +73,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ExchangeRateConverter } from '../../../shared/document-form'
 import { useEstimateStore } from '../store'
 import CustomFieldInput from '@/scripts/features/shared/custom-fields/CustomFieldInput.vue'
 import { useCustomFields } from '@/scripts/features/shared/custom-fields/use-custom-fields'
+// HisabKitab feature
+import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
 
 interface ValidationField {
   $error: boolean
@@ -96,6 +101,9 @@ const props = withDefaults(defineProps<Props>(), {
 const estimateStore = useEstimateStore()
 
 const customFieldScope = 'newEstimate'
+
+// HisabKitab feature — document meta from registered estimate view modes
+const { currentDocMeta } = useEstimateDocumentMeta(() => estimateStore.newEstimate.template_name)
 
 const customFields = useCustomFields({
   store: estimateStore,

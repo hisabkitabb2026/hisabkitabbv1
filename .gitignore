@@ -1,4 +1,7 @@
-/Modules
+# Modules directory tracked
+Modules/**/node_modules/
+Modules/**/vendor/
+/services
 /node_modules
 /public/storage
 /public/hot

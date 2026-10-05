@@ -1,8 +1,11 @@
+// HisabKitab feature
+
 import { markRaw, shallowRef } from 'vue'
 import type { ShallowRef } from 'vue'
 import type { RouteMeta, RouteRecordRaw, Router } from 'vue-router'
 import { client } from '@/scripts/api/client'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
+import { useUserStore } from '@/scripts/stores/user.store'
 import { registerAdditionalMessages } from '@/scripts/plugins/i18n'
 import type {
   BootstrapCompletedEvent,
@@ -16,11 +19,29 @@ import type {
   SettingsNavigationContribution,
   SettingsPageContribution,
 } from './types'
+// HisabKitab feature
+import type {
+  ViewModeContribution,
+  DashboardCountContribution,
+  DocumentMetaContribution,
+  ActiveMenuContribution,
+} from '../../../vendor/invoiceshelf/modules/frontend/index'
 
 type ComponentSlot =
   | 'headerActions'
   | 'companyLayoutOverlays'
   | 'richEditorToolbarActions'
+  | 'invoiceFormSections'
+  | 'estimateFormSections'
+
+// HisabKitab feature — data-only slots (no component, just structured data)
+type DataSlot =
+  | 'invoiceViewModes'
+  | 'estimateViewModes'
+  | 'dashboardCounts'
+  | 'invoiceDocumentMeta'
+  | 'estimateDocumentMeta'
+  | 'activeMenuResolvers'
 
 interface RegisteredComponentContribution extends ComponentExtensionContribution {
   component: ComponentExtensionContribution['component']
@@ -98,8 +119,19 @@ export class ExtensionRegistry {
   readonly headerActions = shallowRef<RegisteredComponentContribution[]>([])
   readonly companyLayoutOverlays = shallowRef<RegisteredComponentContribution[]>([])
   readonly richEditorToolbarActions = shallowRef<RegisteredComponentContribution[]>([])
+  // Transport receipt modules inject form field sections into the host invoice form
+  readonly invoiceFormSections = shallowRef<RegisteredComponentContribution[]>([])
+  // Quotation module injects form field sections into the host estimate form
+  readonly estimateFormSections = shallowRef<RegisteredComponentContribution[]>([])
   readonly companySettingsNavigation = shallowRef<SettingsNavigationContribution[]>([])
   readonly adminSettingsNavigation = shallowRef<SettingsNavigationContribution[]>([])
+  // HisabKitab feature — module-driven data registries
+  readonly invoiceViewModes = shallowRef<ViewModeContribution[]>([])
+  readonly estimateViewModes = shallowRef<ViewModeContribution[]>([])
+  readonly dashboardCounts = shallowRef<DashboardCountContribution[]>([])
+  readonly invoiceDocumentMeta = shallowRef<DocumentMetaContribution[]>([])
+  readonly estimateDocumentMeta = shallowRef<DocumentMetaContribution[]>([])
+  readonly activeMenuResolvers = shallowRef<ActiveMenuContribution[]>([])
 
   private readonly teardowns = new Set<() => void>()
 
@@ -116,6 +148,22 @@ export class ExtensionRegistry {
 
     return this.track(() => {
       target.value = [...target.value.filter((item) => item.id !== entry.id), entry]
+        .sort(comparePriority)
+
+      return () => {
+        target.value = target.value.filter((item) => item !== entry)
+      }
+    })
+  }
+
+  // HisabKitab feature — generic data-only registration (no component, no markRaw)
+  registerData(slot: DataSlot, contribution: ViewModeContribution | DashboardCountContribution | DocumentMetaContribution | ActiveMenuContribution): () => void {
+    assertContributionId(contribution.id)
+    const target = this[slot] as ShallowRef<never[]>
+    const entry = { ...contribution } as never
+
+    return this.track(() => {
+      target.value = [...target.value.filter((item) => (item as { id: string }).id !== contribution.id), entry]
         .sort(comparePriority)
 
       return () => {
@@ -182,6 +230,11 @@ class ExtensionApi implements InvoiceShelfExtensionApi {
 
   readonly client = client
 
+  // HisabKitab feature
+  hasAbilities(ability: string | string[]): boolean {
+    return useUserStore().hasAbilities(ability)
+  }
+
   registerHeaderAction(contribution: ComponentExtensionContribution): () => void {
     return extensionRegistry.registerComponent('headerActions', contribution)
   }
@@ -192,6 +245,41 @@ class ExtensionApi implements InvoiceShelfExtensionApi {
 
   registerRichEditorToolbarAction(contribution: ComponentExtensionContribution): () => void {
     return extensionRegistry.registerComponent('richEditorToolbarActions', contribution)
+  }
+
+  // HisabKitab feature
+  registerInvoiceFormSection(contribution: ComponentExtensionContribution): () => void {
+    return extensionRegistry.registerComponent('invoiceFormSections', contribution)
+  }
+
+  // HisabKitab feature
+  registerEstimateFormSection(contribution: ComponentExtensionContribution): () => void {
+    return extensionRegistry.registerComponent('estimateFormSections', contribution)
+  }
+
+  // HisabKitab feature — module-driven view modes, dashboard counts, document meta, menu links
+  registerInvoiceViewMode(contribution: ViewModeContribution): () => void {
+    return extensionRegistry.registerData('invoiceViewModes', contribution)
+  }
+
+  registerEstimateViewMode(contribution: ViewModeContribution): () => void {
+    return extensionRegistry.registerData('estimateViewModes', contribution)
+  }
+
+  registerDashboardCount(contribution: DashboardCountContribution): () => void {
+    return extensionRegistry.registerData('dashboardCounts', contribution)
+  }
+
+  registerInvoiceDocumentMeta(contribution: DocumentMetaContribution): () => void {
+    return extensionRegistry.registerData('invoiceDocumentMeta', contribution)
+  }
+
+  registerEstimateDocumentMeta(contribution: DocumentMetaContribution): () => void {
+    return extensionRegistry.registerData('estimateDocumentMeta', contribution)
+  }
+
+  registerActiveMenuResolver(contribution: ActiveMenuContribution): () => void {
+    return extensionRegistry.registerData('activeMenuResolvers', contribution)
   }
 
   registerCompanySettingsNavigation(contribution: SettingsNavigationContribution): () => void {

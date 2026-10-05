@@ -1,5 +1,7 @@
 <?php
 
+// HisabKitab feature
+
 use App\Domains\Accounts\Models\Company;
 use App\Domains\Accounts\Models\CompanySetting;
 use App\Domains\Accounts\Models\User;
@@ -54,6 +56,35 @@ test('testGetInvoices', function () {
     $response = getJson('api/v1/invoices?page=1&type=OVERDUE&limit=20');
 
     $response->assertOk();
+});
+
+test('list filters invoices by template_name', function () {
+    $standard = Invoice::factory()->create(['template_name' => null]);
+    $standardTemplate = Invoice::factory()->create();
+    $invoiceReceipt = Invoice::factory()->create(['template_name' => 'invoice_receipt']);
+    $lrReceipt = Invoice::factory()->create(['template_name' => 'lr_receipt']);
+    $lorryReceipt = Invoice::factory()->create(['template_name' => 'lorry_receipt']);
+
+    // 'one-time' returns standard invoices only — no receipt documents
+    $response = getJson('api/v1/invoices?page=1&template_name=one-time');
+
+    $response->assertOk();
+    $ids = collect($response->json('data'))->pluck('id');
+    expect($ids)->toContain($standard->id)
+        ->toContain($standardTemplate->id)
+        ->not->toContain($invoiceReceipt->id)
+        ->not->toContain($lrReceipt->id)
+        ->not->toContain($lorryReceipt->id);
+
+    // A receipt template returns only documents of that type
+    $response = getJson('api/v1/invoices?page=1&template_name=invoice_receipt');
+
+    $response->assertOk();
+    $ids = collect($response->json('data'))->pluck('id');
+    expect($ids)->toContain($invoiceReceipt->id)
+        ->not->toContain($standard->id)
+        ->not->toContain($lrReceipt->id)
+        ->not->toContain($lorryReceipt->id);
 });
 
 test('cannot convert an invoice belonging to another company', function () {

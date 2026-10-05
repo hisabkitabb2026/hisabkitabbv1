@@ -1,0 +1,14 @@
+{
+    "name": "invoiceshelf/access-request",
+    "description": "Access Request module for InvoiceShelf",
+    "type": "library",
+    "license": "AGPL-3.0-only",
+    "autoload": {
+        "psr-4": {
+            "Modules\\AccessRequest\\": "app/"
+        }
+    },
+    "require": {
+        "php": "^8.4"
+    }
+}
