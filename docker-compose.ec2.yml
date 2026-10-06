@@ -1,0 +1,64 @@
+services:
+  database:
+    container_name: invoiceshelf-mysql
+    image: mariadb:10
+    environment:
+      - MYSQL_DATABASE=invoiceshelf
+      - MYSQL_USER=invoiceshelf
+      - MYSQL_PASSWORD=somepass
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=true
+    expose:
+      - 3306
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - invoiceshelf_mysql:/var/lib/mysql
+    networks:
+      - invoiceshelf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  webapp:
+    container_name: invoiceshelf-variant-mariadb
+    image: hisabkitabb-app:latest
+    environment:
+      - APP_NAME=HisabKitab
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=base64:tu+xcVsAeEeciPFf2KnmBnzLQ9RQkvR9DB1qNjL2TS4=
+      - APP_URL=http://100.53.240.111:8090
+      - DB_CONNECTION=mariadb
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=invoiceshelf
+      - DB_USERNAME=invoiceshelf
+      - DB_PASSWORD=somepass
+      - DB_PASSWORD_FILE=
+      - CACHE_STORE=file
+      - SESSION_DRIVER=file
+      - SESSION_LIFETIME=240
+      - SESSION_DOMAIN=
+      - SANCTUM_STATEFUL_DOMAINS=100.53.240.111:8090,100.53.240.111,ec2-100-53-240-111.compute-1.amazonaws.com:8090,ec2-100-53-240-111.compute-1.amazonaws.com,localhost:8090,localhost:80,127.0.0.1:8090,127.0.0.1
+    volumes:
+      - invoiceshelf_storage:/var/www/html/storage/
+      - invoiceshelf_modules:/var/www/html/Modules
+    ports:
+      - "8090:8080"
+      - "80:8080"
+    networks:
+      - invoiceshelf
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+
+networks:
+  invoiceshelf:
+
+volumes:
+  invoiceshelf_mysql:
+  invoiceshelf_storage:
+  invoiceshelf_modules:

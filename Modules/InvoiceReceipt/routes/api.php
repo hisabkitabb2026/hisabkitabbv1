@@ -1,13 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\InvoiceReceipt\Http\Controllers\ConsignmentLookupController;
 
 /*
- * Invoice Receipt module API routes (placeholder).
- * Invoice Receipts use the core Invoice APIs with template_name = 'invoice_receipt'.
+ * Invoice Receipt module API routes.
  */
 Route::prefix('api/v1/invoice-receipts')
     ->middleware(['api', 'auth:sanctum', 'company', 'bouncer'])
     ->group(function (): void {
-        // API endpoints can be added here if needed in the future
+        Route::get('/consignments/search', [ConsignmentLookupController::class, 'search']);
+        Route::get('/consignments/{number}', [ConsignmentLookupController::class, 'show']);
     });
+

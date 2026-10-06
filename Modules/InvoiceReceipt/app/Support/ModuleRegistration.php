@@ -52,6 +52,8 @@ final class ModuleRegistration
      */
     private static function registerModuleExtensions(): void
     {
+        ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
+
         ModuleExtensions::registerSerialNumberType('invoice_receipt', Invoice::class, [
             'type' => Invoice::TYPE_INVOICE,
             'template_name' => 'invoice_receipt',

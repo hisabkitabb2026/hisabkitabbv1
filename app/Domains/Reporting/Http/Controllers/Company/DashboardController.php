@@ -64,7 +64,11 @@ class DashboardController extends Controller
         $invoiceCount = Invoice::query()
             ->whereCompany()
             ->where('type', Invoice::TYPE_INVOICE)
-            ->whereNull('template_name')
+            ->when(
+                ModuleExtensions::salesTemplates() !== [],
+                fn ($q) => $q->whereIn('template_name', ModuleExtensions::salesTemplates()),
+                fn ($q) => $q->whereNull('template_name'),
+            )
             ->count();
 
         // HisabKitab feature — receipt counts come from registered module providers

@@ -7,6 +7,7 @@ use App\Domains\Contacts\Http\Resources\CustomerPortal\CustomerResource;
 use App\Domains\Metadata\Http\Resources\CustomerPortal\CustomFieldValueResource;
 use App\Domains\Money\Http\Resources\CustomerPortal\CurrencyResource;
 use App\Domains\Taxation\Http\Resources\CustomerPortal\TaxResource;
+use App\Support\ModuleExtensions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -96,6 +97,16 @@ class InvoiceResource extends JsonResource
                 $invoice->currency()->exists(),
                 fn () => new CurrencyResource($invoice->currency)
             ),
+            'consignee_customer' => $this->when(
+                $invoice->consigneeCustomer()->exists(),
+                fn () => new CustomerResource($invoice->consigneeCustomer)
+            ),
+            'consignee_customer_id' => $invoice->tr_consignee_customer_id,
+            'gst_tax_payable_by' => $invoice->gst_tax_payable_by,
+            'tr_gst_payable_by' => $invoice->tr_gst_payable_by,
+
+            // Module-registered extra fields (tr_*, etc.)
+            ...ModuleExtensions::invoiceResourceFields($invoice),
         ];
     }
 }

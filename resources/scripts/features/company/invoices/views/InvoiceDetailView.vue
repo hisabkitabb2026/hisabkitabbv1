@@ -21,6 +21,12 @@
           >
             <BaseInvoiceStatusLabel :status="invoiceData.paid_status" />
           </BasePaidStatusBadge>
+          <span
+            v-if="(invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200"
+          >
+            GST Tax Payable By: {{ (invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by }}
+          </span>
         </div>
 
         <template v-if="!isPhone" #actions>
@@ -94,6 +100,14 @@
         <BaseStat :label="$t('invoices.due_date')">
           <span :class="invoiceData.overdue ? 'text-status-red' : ''">
             {{ invoiceData.formatted_due_date || '-' }}
+          </span>
+        </BaseStat>
+        <BaseStat
+          v-if="(invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by"
+          label="GST Tax Payable By"
+        >
+          <span class="font-semibold text-primary-600">
+            {{ (invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by }}
           </span>
         </BaseStat>
       </BaseStatStrip>

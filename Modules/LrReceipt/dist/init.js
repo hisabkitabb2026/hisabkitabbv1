@@ -69,7 +69,7 @@ var h = {
 			let o = d("BaseInput"), u = d("BaseInputGroup"), f = d("BaseSelectInput"), p = d("BaseCard"), y = d("BaseTextarea");
 			return l.value && s.value ? (c(), r("div", h, [
 				a(p, { class: "mb-4" }, {
-					header: m(() => [...t[24] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Trip Details", -1)]]),
+					header: m(() => [...t[25] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Trip Details", -1)]]),
 					default: m(() => [i("div", g, [
 						a(u, { label: "From" }, {
 							default: m(() => [a(o, {
@@ -135,7 +135,7 @@ var h = {
 					_: 1
 				}),
 				a(p, { class: "mb-4" }, {
-					header: m(() => [...t[25] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Consignment Details", -1)]]),
+					header: m(() => [...t[26] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Consignment Details", -1)]]),
 					default: m(() => [i("div", _, [
 						a(u, {
 							label: "Description of Goods",
@@ -176,38 +176,46 @@ var h = {
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
+						a(u, { label: "Party Invoice No." }, {
+							default: m(() => [a(o, {
+								modelValue: s.value.tr_party_invoice_no,
+								"onUpdate:modelValue": t[11] ||= (e) => s.value.tr_party_invoice_no = e,
+								placeholder: "Party invoice number"
+							}, null, 8, ["modelValue"])]),
+							_: 1
+						}),
 						a(u, { label: "No of Articles" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_no_of_articles,
-								"onUpdate:modelValue": t[11] ||= (e) => s.value.tr_no_of_articles = e
+								"onUpdate:modelValue": t[12] ||= (e) => s.value.tr_no_of_articles = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						a(u, { label: "Packing" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_packing,
-								"onUpdate:modelValue": t[12] ||= (e) => s.value.tr_packing = e
+								"onUpdate:modelValue": t[13] ||= (e) => s.value.tr_packing = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						a(u, { label: "Delivery At" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_delivery_at,
-								"onUpdate:modelValue": t[13] ||= (e) => s.value.tr_delivery_at = e
+								"onUpdate:modelValue": t[14] ||= (e) => s.value.tr_delivery_at = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						a(u, { label: "Goods Value" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_goods_value,
-								"onUpdate:modelValue": t[14] ||= (e) => s.value.tr_goods_value = e
+								"onUpdate:modelValue": t[15] ||= (e) => s.value.tr_goods_value = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						a(u, { label: "POD Required" }, {
 							default: m(() => [a(f, {
 								modelValue: s.value.tr_pod_required,
-								"onUpdate:modelValue": t[15] ||= (e) => s.value.tr_pod_required = e,
+								"onUpdate:modelValue": t[16] ||= (e) => s.value.tr_pod_required = e,
 								options: C.map((e) => ({
 									id: e,
 									label: e
@@ -222,12 +230,12 @@ var h = {
 					_: 1
 				}),
 				a(p, { class: "mb-4" }, {
-					header: m(() => [...t[26] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Freight Details", -1)]]),
+					header: m(() => [...t[27] ||= [i("h3", { class: "text-base font-semibold text-heading" }, "Freight Details", -1)]]),
 					default: m(() => [i("div", v, [
 						a(u, { label: "Basic Freight" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_basic_freight,
-								"onUpdate:modelValue": t[16] ||= (e) => s.value.tr_basic_freight = e,
+								"onUpdate:modelValue": t[17] ||= (e) => s.value.tr_basic_freight = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -235,7 +243,7 @@ var h = {
 						a(u, { label: "Hamali" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_hamali,
-								"onUpdate:modelValue": t[17] ||= (e) => s.value.tr_hamali = e,
+								"onUpdate:modelValue": t[18] ||= (e) => s.value.tr_hamali = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -243,7 +251,7 @@ var h = {
 						a(u, { label: "FOV" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_fov,
-								"onUpdate:modelValue": t[18] ||= (e) => s.value.tr_fov = e,
+								"onUpdate:modelValue": t[19] ||= (e) => s.value.tr_fov = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -251,7 +259,7 @@ var h = {
 						a(u, { label: "Local Collection" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_local_collection,
-								"onUpdate:modelValue": t[19] ||= (e) => s.value.tr_local_collection = e,
+								"onUpdate:modelValue": t[20] ||= (e) => s.value.tr_local_collection = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -259,7 +267,7 @@ var h = {
 						a(u, { label: "Door Delivery" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_door_delivery,
-								"onUpdate:modelValue": t[20] ||= (e) => s.value.tr_door_delivery = e,
+								"onUpdate:modelValue": t[21] ||= (e) => s.value.tr_door_delivery = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -267,7 +275,7 @@ var h = {
 						a(u, { label: "Docket Charge" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_docket_charge,
-								"onUpdate:modelValue": t[21] ||= (e) => s.value.tr_docket_charge = e,
+								"onUpdate:modelValue": t[22] ||= (e) => s.value.tr_docket_charge = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -275,7 +283,7 @@ var h = {
 						a(u, { label: "Other Charge" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_other_charge,
-								"onUpdate:modelValue": t[22] ||= (e) => s.value.tr_other_charge = e,
+								"onUpdate:modelValue": t[23] ||= (e) => s.value.tr_other_charge = e,
 								type: "number"
 							}, null, 8, ["modelValue"])]),
 							_: 1
@@ -283,7 +291,7 @@ var h = {
 						a(u, { label: "Net Amount" }, {
 							default: m(() => [a(o, {
 								modelValue: s.value.tr_net_amount,
-								"onUpdate:modelValue": t[23] ||= (e) => s.value.tr_net_amount = e,
+								"onUpdate:modelValue": t[24] ||= (e) => s.value.tr_net_amount = e,
 								type: "number",
 								readonly: ""
 							}, null, 8, ["modelValue"])]),
@@ -304,7 +312,13 @@ var h = {
 }, S = {
 	key: 2,
 	class: "bg-surface border border-line-default rounded-xl overflow-hidden"
-}, C = { class: "w-full text-sm" }, w = { class: "px-4 py-3 font-medium text-heading" }, T = { class: "px-4 py-3 text-body" }, E = { class: "px-4 py-3 text-body" }, D = { class: "px-4 py-3 text-body" }, O = { class: "px-4 py-3" }, k = { class: "px-2 py-1 text-xs rounded-full bg-primary-50 text-primary-600" }, A = /* @__PURE__ */ o({
+}, C = { class: "w-full text-sm" }, w = { class: "px-4 py-3 font-medium text-heading" }, T = { class: "px-4 py-3 text-body" }, E = { class: "px-4 py-3 text-body" }, D = { class: "px-4 py-3 text-body" }, O = {
+	key: 0,
+	class: "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700"
+}, k = {
+	key: 1,
+	class: "text-muted"
+}, A = { class: "px-4 py-3 text-body" }, j = { class: "px-4 py-3" }, M = { class: "px-2 py-1 text-xs rounded-full bg-primary-50 text-primary-600" }, N = /* @__PURE__ */ o({
 	__name: "CustomerLrReceiptsView",
 	props: { client: {} },
 	setup(t) {
@@ -326,6 +340,7 @@ var h = {
 			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "Docket No"),
 			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "Consignor"),
 			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "Consignee"),
+			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "GST Tax Payable By"),
 			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "Date"),
 			i("th", { class: "px-4 py-3 text-left font-medium text-muted" }, "Status")
 		])], -1), i("tbody", null, [(c(!0), r(e, null, u(a.value, (e) => (c(), r("tr", {
@@ -335,8 +350,9 @@ var h = {
 			i("td", w, f(e.invoice_number), 1),
 			i("td", T, f(e.customer?.name || "—"), 1),
 			i("td", E, f(e.consigneeCustomer?.name || "—"), 1),
-			i("td", D, f(p(e.invoice_date)), 1),
-			i("td", O, [i("span", k, f(e.status), 1)])
+			i("td", D, [e.gst_tax_payable_by || e.tr_gst_payable_by ? (c(), r("span", O, f(e.gst_tax_payable_by || e.tr_gst_payable_by), 1)) : (c(), r("span", k, "—"))]),
+			i("td", A, f(p(e.invoice_date)), 1),
+			i("td", j, [i("span", M, f(e.status), 1)])
 		]))), 128))])])]))]));
 	}
 });
@@ -361,6 +377,7 @@ window.InvoiceShelf.booting((e, t, n) => {
 		eway_bill_no: "E-way Bill No",
 		actual_weight: "Actual Weight",
 		charged_weight: "Charged Weight",
+		party_invoice_no: "Party Invoice No.",
 		no_of_articles: "No of Articles",
 		packing: "Packing",
 		basic_freight: "Basic Freight",
@@ -394,7 +411,7 @@ window.InvoiceShelf.booting((e, t, n) => {
 		id: "customer-lr-receipts",
 		module: "lr-receipt",
 		path: "customer",
-		component: A,
+		component: N,
 		meta: { title: "My LR Receipts" }
 	});
 });
