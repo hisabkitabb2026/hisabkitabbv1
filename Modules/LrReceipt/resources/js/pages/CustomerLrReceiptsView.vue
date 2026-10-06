@@ -18,6 +18,8 @@ interface LrReceipt {
   total: number
   customer?: { name: string }
   consigneeCustomer?: { name: string }
+  gst_tax_payable_by?: string
+  tr_gst_payable_by?: string
 }
 
 const receipts = ref<LrReceipt[]>([])
@@ -62,6 +64,7 @@ function formatDate(date: string): string {
             <th class="px-4 py-3 text-left font-medium text-muted">Docket No</th>
             <th class="px-4 py-3 text-left font-medium text-muted">Consignor</th>
             <th class="px-4 py-3 text-left font-medium text-muted">Consignee</th>
+            <th class="px-4 py-3 text-left font-medium text-muted">GST Tax Payable By</th>
             <th class="px-4 py-3 text-left font-medium text-muted">Date</th>
             <th class="px-4 py-3 text-left font-medium text-muted">Status</th>
           </tr>
@@ -75,6 +78,15 @@ function formatDate(date: string): string {
             <td class="px-4 py-3 font-medium text-heading">{{ receipt.invoice_number }}</td>
             <td class="px-4 py-3 text-body">{{ receipt.customer?.name || '—' }}</td>
             <td class="px-4 py-3 text-body">{{ receipt.consigneeCustomer?.name || '—' }}</td>
+            <td class="px-4 py-3 text-body">
+              <span
+                v-if="receipt.gst_tax_payable_by || receipt.tr_gst_payable_by"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700"
+              >
+                {{ receipt.gst_tax_payable_by || receipt.tr_gst_payable_by }}
+              </span>
+              <span v-else class="text-muted">—</span>
+            </td>
             <td class="px-4 py-3 text-body">{{ formatDate(receipt.invoice_date) }}</td>
             <td class="px-4 py-3">
               <span class="px-2 py-1 text-xs rounded-full bg-primary-50 text-primary-600">{{ receipt.status }}</span>

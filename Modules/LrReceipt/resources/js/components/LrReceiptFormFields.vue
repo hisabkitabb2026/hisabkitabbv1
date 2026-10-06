@@ -150,6 +150,9 @@ const podOptions = ['YES', 'NO']
         <BaseInputGroup label="Charged Weight">
           <BaseInput v-model="invoiceData.tr_charged_weight" />
         </BaseInputGroup>
+        <BaseInputGroup label="Party Invoice No.">
+          <BaseInput v-model="invoiceData.tr_party_invoice_no" placeholder="Party invoice number" />
+        </BaseInputGroup>
         <BaseInputGroup label="No of Articles">
           <BaseInput v-model="invoiceData.tr_no_of_articles" />
         </BaseInputGroup>

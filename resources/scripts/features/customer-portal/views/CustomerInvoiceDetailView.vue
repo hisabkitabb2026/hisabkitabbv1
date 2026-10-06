@@ -24,6 +24,12 @@
           <BasePaidStatusBadge v-else :status="currentInvoice.paid_status">
             <BaseInvoiceStatusLabel :status="currentInvoice.paid_status" />
           </BasePaidStatusBadge>
+          <span
+            v-if="gstTaxPayableBy"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200"
+          >
+            GST Tax Payable By: {{ gstTaxPayableBy }}
+          </span>
         </div>
 
         <template #actions>
@@ -51,7 +57,7 @@
       </BasePageHeader>
 
       <!-- What the invoice says, without opening it -->
-      <BaseStatStrip v-if="currentInvoice" :columns="4">
+      <BaseStatStrip v-if="currentInvoice" :columns="gstTaxPayableBy ? 5 : 4">
         <BaseStat :label="$t('dashboard.recent_invoices_card.amount_due')" emphasis>
           <BaseFormatMoney :amount="currentInvoice.due_amount" :currency="currentInvoice.currency" />
         </BaseStat>
@@ -65,6 +71,9 @@
           <span :class="currentInvoice.overdue ? 'text-status-red' : ''">
             {{ currentInvoice.formatted_due_date || '-' }}
           </span>
+        </BaseStat>
+        <BaseStat v-if="gstTaxPayableBy" label="GST Tax Payable By">
+          <span class="font-semibold text-primary-600">{{ gstTaxPayableBy }}</span>
         </BaseStat>
       </BaseStatStrip>
 
@@ -144,6 +153,12 @@ const pageTitle = computed<string>(() => {
 })
 
 const currentInvoice = computed<Invoice | null>(() => store.selectedViewInvoice)
+
+const gstTaxPayableBy = computed<string | null>(() => {
+  const inv = (currentInvoice.value || invoice.value) as any
+  if (!inv) return null
+  return inv.gst_tax_payable_by || inv.tr_gst_payable_by || inv.tr_gst_through || null
+})
 
 const sortOptions = computed(() => [
   { value: 'invoice_date', label: t('invoices.invoice_date') },

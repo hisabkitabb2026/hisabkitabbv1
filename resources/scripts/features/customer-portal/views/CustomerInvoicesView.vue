@@ -99,6 +99,12 @@
           >
             {{ row.data.invoice_number }}
           </router-link>
+          <div
+            v-if="row.data.gst_tax_payable_by || row.data.tr_gst_payable_by"
+            class="text-xs text-muted mt-0.5"
+          >
+            GST: <span class="font-medium text-body">{{ row.data.gst_tax_payable_by || row.data.tr_gst_payable_by }}</span>
+          </div>
         </template>
 
         <template #cell-due_amount="{ row }">

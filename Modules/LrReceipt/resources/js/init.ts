@@ -92,6 +92,7 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
         eway_bill_no: 'E-way Bill No',
         actual_weight: 'Actual Weight',
         charged_weight: 'Charged Weight',
+        party_invoice_no: 'Party Invoice No.',
         no_of_articles: 'No of Articles',
         packing: 'Packing',
         basic_freight: 'Basic Freight',

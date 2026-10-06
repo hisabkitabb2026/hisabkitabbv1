@@ -50,6 +50,8 @@ declare global {
 }
 
 window.InvoiceShelf.booting((_app, _router, extensions) => {
+  ;(window as any).__invoiceReceiptClient = extensions.client
+
   extensions.addMessages({
     en: {
       invoice_receipt: {

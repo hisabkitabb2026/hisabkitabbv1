@@ -572,6 +572,8 @@
             'gst_no' => ['gst_no', 'gstin'],
             'pan' => ['pan_no', 'pan'],
             'pan_no' => ['pan_no', 'pan'],
+            'party_invoice_no' => ['tr_party_invoice_no', 'party_invoice_no', 'tr_party_inv_no', 'party_inv_no', 'invoice_no'],
+            'invoice_no' => ['tr_party_invoice_no', 'party_invoice_no', 'tr_party_inv_no', 'party_inv_no', 'invoice_no'],
         ];
 
         foreach ((array) $keys as $rawKey) {
@@ -809,8 +811,10 @@
     // Goods table secondary fields
     $hsnCode = $invoiceField(['hsn_code']);
     $hsnCodeStyle = $getFontForWidth($hsnCode, 480, 12, 7);
-    $invoiceNo = $invoiceField(['invoice_no']);
-    $invoiceNoStyle = $getFontForWidth($invoiceNo, 200, 12, 7);
+    $partyInvoiceNo = $invoiceField(['party_invoice_no', 'invoice_no']) ?: $itemField(['party_inv_no', 'invoice_no']);
+    $partyInvoiceNoStyle = $getFontForWidth($partyInvoiceNo, 200, 12, 7);
+    $invoiceNo = $partyInvoiceNo;
+    $invoiceNoStyle = $partyInvoiceNoStyle;
     $goodsValue = $invoiceField(['goods_value']);
     $goodsValueStyle = $getFontForWidth($goodsValue, 200, 12, 7);
     $ewayBillNo = $invoiceField(['e_way_bill_no']);
@@ -953,7 +957,7 @@
                             <td><span class="value">{{ $actualWeight }}</span></td>
                         </tr>
                         <tr>
-                            <td rowspan="3" class="delivery-cell">
+                            <td rowspan="4" class="delivery-cell">
                                 <span class="label">Delivery At.:</span><br>
                                 <span class="value" style="{{ $deliveryAtStyle }}">{{ $deliveryAt }}</span>
                                 <div class="eway-inline">
@@ -963,6 +967,10 @@
                             </td>
                             <td><span class="label">Charged Weight</span></td>
                             <td><span class="value">{{ $chargedWeight }}</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="label">Party Invoice No.</span></td>
+                            <td><span class="value" style="{{ $partyInvoiceNoStyle }}">{{ $partyInvoiceNo }}</span></td>
                         </tr>
                         <tr>
                             <td><span class="label">Goods Value</span></td>

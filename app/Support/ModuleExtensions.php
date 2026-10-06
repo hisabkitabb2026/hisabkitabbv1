@@ -43,6 +43,20 @@ final class ModuleExtensions
     /** @var array<string, callable> */
     private static array $menuFilters = [];
 
+    /** @var array<string, string> */
+    private static array $salesTemplates = [];
+
+    public static function registerSalesTemplate(string $module, string $templateName): void
+    {
+        self::$salesTemplates[$module] = $templateName;
+    }
+
+    /** @return list<string> */
+    public static function salesTemplates(): array
+    {
+        return array_values(self::$salesTemplates);
+    }
+
     public static function registerDashboardCountProvider(string $module, callable $callback): void
     {
         self::$dashboardCountProviders[$module] = $callback;
@@ -106,6 +120,11 @@ final class ModuleExtensions
     }
 
     /** @return array{model: string, scope: array<string, mixed>}|null */
+    public static function getSerialNumberType(string $type): ?array
+    {
+        return self::$serialNumberTypes[$type] ?? null;
+    }
+
     public static function registerInvoiceResourceFields(string $module, callable $callback): void
     {
         self::$invoiceResourceFields[$module] = $callback;
@@ -235,5 +254,6 @@ final class ModuleExtensions
         self::$invoiceUniquenessRules = [];
         self::$estimateUniquenessRules = [];
         self::$menuFilters = [];
+        self::$salesTemplates = [];
     }
 }

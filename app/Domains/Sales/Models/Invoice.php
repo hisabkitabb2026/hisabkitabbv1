@@ -241,6 +241,14 @@ class Invoice extends Model implements HasMedia
     }
 
     /**
+     * Consignee customer for transport receipts (LR Receipt, etc.).
+     */
+    public function consigneeCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'tr_consignee_customer_id');
+    }
+
+    /**
      * Schedule that generated this document, when it was not raised by hand.
      */
     public function recurringInvoice(): BelongsTo
@@ -424,6 +432,51 @@ class Invoice extends Model implements HasMedia
         }
 
         return Carbon::parse($this->invoice_date)->translatedFormat($format);
+    }
+
+    /**
+     * Resolved GST Tax Payable By ("Consignor" or "Consignee").
+     */
+    public function getGstTaxPayableByAttribute(): ?string
+    {
+        if (! empty($this->attributes['tr_gst_payable_by'])) {
+            return $this->attributes['tr_gst_payable_by'];
+        }
+
+        if (! empty($this->attributes['tr_gst_through'])) {
+            return $this->attributes['tr_gst_through'];
+        }
+
+        $fields = $this->relationLoaded('fields') ? $this->fields : $this->fields()->with('customField')->get();
+        $field = $fields->first(function ($f) {
+            $slug = $f->customField?->slug ?? '';
+            $name = strtolower($f->customField?->name ?? '');
+
+            return in_array($slug, ['CUSTOM_Invoice_GST_TAX_PAYABLE_BY', 'CUSTOM_Invoice_GST_TAX_THROUGH'])
+                || in_array($name, ['gst tax payable by', 'gst tax through', 'gst payable by']);
+        });
+
+        if ($field && ! empty($field->value)) {
+            return is_array($field->value) ? ($field->value['name'] ?? null) : (string) $field->value;
+        }
+
+        return null;
+    }
+
+    /**
+     * Alias for tr_gst_payable_by with fallback to gst_tax_payable_by.
+     */
+    public function getTrGstPayableByAttribute(): ?string
+    {
+        return $this->attributes['tr_gst_payable_by'] ?? $this->gst_tax_payable_by;
+    }
+
+    /**
+     * Mutator for gst_tax_payable_by writes to tr_gst_payable_by column.
+     */
+    public function setGstTaxPayableByAttribute($value): void
+    {
+        $this->attributes['tr_gst_payable_by'] = $value;
     }
 
     /*
