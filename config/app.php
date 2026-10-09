@@ -18,6 +18,8 @@ return [
 
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
+    'version' => env('APP_VERSION', is_file(base_path('version.md')) ? trim((string) file_get_contents(base_path('version.md'))) : '3.0.0-alpha.10'),
+
     /*
     |--------------------------------------------------------------------------
     | Force HTTPS
