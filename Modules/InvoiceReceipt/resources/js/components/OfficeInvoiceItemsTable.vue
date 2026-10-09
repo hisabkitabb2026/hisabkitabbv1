@@ -48,7 +48,7 @@
           <div class="relative">
             <BaseInputGroup label="Consignment No" required>
               <BaseInput
-                :model-value="item.consignment_number"
+                :model-value="item.tr_consignment_number"
                 type="text"
                 placeholder="Enter consignment number"
                 :loading="loadingStates[index] || false"
@@ -104,7 +104,7 @@
           <!-- Consignment Date -->
           <BaseInputGroup label="Consignment Date">
             <BaseInput
-              v-model="item.consignment_date"
+              v-model="item.tr_consignment_date"
               type="date"
             />
           </BaseInputGroup>
@@ -112,7 +112,7 @@
           <!-- Party Inv No -->
           <BaseInputGroup label="Party Inv No">
             <BaseInput
-              v-model="item.party_inv_no"
+              v-model="item.tr_party_inv_no"
               type="text"
               placeholder="Party invoice number"
             />
@@ -121,25 +121,25 @@
           <!-- From (Origin) -->
           <BaseInputGroup label="From">
             <BaseInput
-              v-model="item.from_code"
+              v-model="item.tr_from_name"
               type="text"
-              placeholder="Origin code"
+              placeholder="Origin"
             />
           </BaseInputGroup>
 
           <!-- To (Destination) -->
           <BaseInputGroup label="Destination">
             <BaseInput
-              v-model="item.to_code"
+              v-model="item.tr_to_name"
               type="text"
-              placeholder="Destination code"
+              placeholder="Destination"
             />
           </BaseInputGroup>
 
           <!-- Vehicle No -->
           <BaseInputGroup label="Vehicle No">
             <BaseInput
-              v-model="item.truck_no"
+              v-model="item.tr_truck_no"
               type="text"
               placeholder="Truck/vehicle number"
             />
@@ -148,7 +148,7 @@
           <!-- Pkg (Package Type) -->
           <BaseInputGroup label="Pkg">
             <BaseInput
-              v-model="item.pkg"
+              v-model="item.tr_pkg_weight"
               type="text"
               placeholder="Package type"
             />
@@ -157,7 +157,7 @@
           <!-- Weight -->
           <BaseInputGroup label="Weight">
             <BaseInput
-              v-model="item.weight"
+              v-model="item.tr_charged_weight"
               type="text"
               placeholder="Shipment weight"
             />
@@ -166,7 +166,7 @@
           <!-- Rate -->
           <BaseInputGroup label="Rate">
             <BaseInput
-              v-model.number="item.rate"
+              v-model.number="item.tr_rate"
               type="number"
               placeholder="Freight rate"
             />
@@ -175,7 +175,7 @@
           <!-- Other Charge -->
           <BaseInputGroup label="Other Charge">
             <BaseInput
-              v-model.number="item.other_charge"
+              v-model.number="item.tr_other_charge"
               type="number"
               placeholder="0.00"
             />
@@ -184,7 +184,7 @@
           <!-- LR Charge -->
           <BaseInputGroup label="LR Charge">
             <BaseInput
-              v-model.number="item.lr_charge"
+              v-model.number="item.tr_lr_charge"
               type="number"
               placeholder="0.00"
             />
@@ -193,7 +193,7 @@
           <!-- DD Charge -->
           <BaseInputGroup label="DD Charge">
             <BaseInput
-              v-model.number="item.dd_charge"
+              v-model.number="item.tr_dd_charge"
               type="number"
               placeholder="0.00"
             />
@@ -228,18 +228,18 @@ import { computed, ref, watch } from 'vue'
 import type { InvoiceItem } from '@/scripts/types/domain/invoice'
 
 interface TransportItem extends Partial<InvoiceItem> {
-  consignment_number?: string | null
-  consignment_date?: string | null
-  party_inv_no?: string | null
-  from_code?: string | null
-  to_code?: string | null
-  truck_no?: string | null
-  pkg?: string | null
-  weight?: string | null
-  rate?: string | number | null
-  other_charge?: string | number | null
-  lr_charge?: string | number | null
-  dd_charge?: string | number | null
+  tr_consignment_number?: string | null
+  tr_consignment_date?: string | null
+  tr_party_inv_no?: string | null
+  tr_from_name?: string | null
+  tr_to_name?: string | null
+  tr_truck_no?: string | null
+  tr_pkg_weight?: string | null
+  tr_charged_weight?: string | null
+  tr_rate?: string | number | null
+  tr_other_charge?: string | number | null
+  tr_lr_charge?: string | number | null
+  tr_dd_charge?: string | number | null
 }
 
 interface ConsignmentData {
@@ -322,18 +322,18 @@ const addNewItem = () => {
     discount_type: 'fixed',
     discount_val: 0,
     taxes: [],
-    consignment_number: '',
-    consignment_date: '',
-    party_inv_no: '',
-    from_code: '',
-    to_code: '',
-    truck_no: '',
-    pkg: '',
-    weight: '',
-    rate: 0,
-    other_charge: 0,
-    lr_charge: 0,
-    dd_charge: 0,
+    tr_consignment_number: '',
+    tr_consignment_date: '',
+    tr_party_inv_no: '',
+    tr_from_name: '',
+    tr_to_name: '',
+    tr_truck_no: '',
+    tr_pkg_weight: '',
+    tr_charged_weight: '',
+    tr_rate: 0,
+    tr_other_charge: 0,
+    tr_lr_charge: 0,
+    tr_dd_charge: 0,
     amount: 0,
   }
   props.store[props.storeProp].items.push(newItem)
@@ -356,10 +356,10 @@ const getNum = (value: string | number | null | undefined): number => {
 }
 
 const calculateAmount = (item: TransportItem): number => {
-  const rate = getNum(item.rate)
-  const otherCharge = getNum(item.other_charge)
-  const lrCharge = getNum(item.lr_charge)
-  const ddCharge = getNum(item.dd_charge)
+  const rate = getNum(item.tr_rate)
+  const otherCharge = getNum(item.tr_other_charge)
+  const lrCharge = getNum(item.tr_lr_charge)
+  const ddCharge = getNum(item.tr_dd_charge)
   return rate + otherCharge + lrCharge + ddCharge
 }
 
@@ -375,22 +375,22 @@ const syncItem = (item: TransportItem) => {
   item.price = minor
   item.total = minor
   item.quantity = 1
-  item.name = item.consignment_number || 'Consignment'
+  item.name = item.tr_consignment_number || 'Consignment'
 }
 
 function applyConsignmentData(item: TransportItem, data: ConsignmentData, index: number) {
-  item.consignment_number = data.consignment_number
-  if (data.consignment_date) item.consignment_date = data.consignment_date
-  if (data.party_inv_no) item.party_inv_no = data.party_inv_no
-  if (data.from_code) item.from_code = data.from_code
-  if (data.to_code) item.to_code = data.to_code
-  if (data.truck_no) item.truck_no = data.truck_no
-  if (data.pkg) item.pkg = data.pkg
-  if (data.weight) item.weight = data.weight
-  if (data.rate !== undefined && data.rate !== null) item.rate = Number(data.rate)
-  if (data.other_charge !== undefined && data.other_charge !== null) item.other_charge = Number(data.other_charge)
-  if (data.lr_charge !== undefined && data.lr_charge !== null) item.lr_charge = Number(data.lr_charge)
-  if (data.dd_charge !== undefined && data.dd_charge !== null) item.dd_charge = Number(data.dd_charge)
+  item.tr_consignment_number = data.consignment_number
+  if (data.consignment_date) item.tr_consignment_date = data.consignment_date
+  if (data.party_inv_no) item.tr_party_inv_no = data.party_inv_no
+  if (data.from_code) item.tr_from_name = data.from_code
+  if (data.to_code) item.tr_to_name = data.to_code
+  if (data.truck_no) item.tr_truck_no = data.truck_no
+  if (data.pkg) item.tr_pkg_weight = data.pkg
+  if (data.weight) item.tr_charged_weight = data.weight
+  if (data.rate !== undefined && data.rate !== null) item.tr_rate = Number(data.rate)
+  if (data.other_charge !== undefined && data.other_charge !== null) item.tr_other_charge = Number(data.other_charge)
+  if (data.lr_charge !== undefined && data.lr_charge !== null) item.tr_lr_charge = Number(data.lr_charge)
+  if (data.dd_charge !== undefined && data.dd_charge !== null) item.tr_dd_charge = Number(data.dd_charge)
 
   syncItem(item)
 
@@ -481,7 +481,7 @@ async function fetchConsignmentExact(item: TransportItem, index: number, number:
 }
 
 function onConsignmentInput(item: TransportItem, index: number, val: string) {
-  item.consignment_number = val
+  item.tr_consignment_number = val
 
   if (debounceTimers[index]) {
     clearTimeout(debounceTimers[index])
@@ -530,8 +530,8 @@ function onConsignmentBlur(item: TransportItem, index: number) {
   // Allow time for suggestion mousedown to fire
   setTimeout(() => {
     suggestions.value[index] = []
-    if (item.consignment_number && !lookupStatus.value[index]) {
-      fetchConsignmentExact(item, index, item.consignment_number)
+    if (item.tr_consignment_number && !lookupStatus.value[index]) {
+      fetchConsignmentExact(item, index, item.tr_consignment_number)
     }
   }, 200)
 }
@@ -539,8 +539,8 @@ function onConsignmentBlur(item: TransportItem, index: number) {
 function onConsignmentEnter(item: TransportItem, index: number) {
   if (suggestions.value[index]?.length) {
     applyConsignmentData(item, suggestions.value[index][0], index)
-  } else if (item.consignment_number) {
-    fetchConsignmentExact(item, index, item.consignment_number)
+  } else if (item.tr_consignment_number) {
+    fetchConsignmentExact(item, index, item.tr_consignment_number)
   }
 }
 

@@ -37,6 +37,8 @@ export const useGlobalStore = defineStore('global', () => {
   const mainMenu = ref<MenuItem[]>([])
   const settingMenu = ref<MenuItem[]>([])
   const userMenu = ref<Array<{ title: string; link: string; icon: string; name: string }>>([])
+  // HisabKitab feature — enabled module names from bootstrap (e.g. 'InvoiceReceipt')
+  const modules = ref<string[]>([])
   const isAppLoaded = ref<boolean>(false)
   // On phones the navigation lives in the More sheet; this is its open state.
   const isSidebarOpen = ref<boolean>(false)
@@ -75,6 +77,8 @@ export const useGlobalStore = defineStore('global', () => {
       userMenu.value = response.user_menu ?? []
       config.value = response.config
       globalSettings.value = response.global_settings
+      // HisabKitab feature — capture enabled module names from bootstrap
+      modules.value = response.modules ?? []
 
       // user store
       userStore.currentUser = response.current_user
@@ -321,6 +325,8 @@ export const useGlobalStore = defineStore('global', () => {
     mainMenu,
     settingMenu,
     userMenu,
+    // HisabKitab feature
+    modules,
     isAppLoaded,
     isSidebarOpen,
     isSidebarCollapsed,

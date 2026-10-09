@@ -84,6 +84,52 @@ const tabs = computed<MenuItem[]>(() => {
     return items.slice(0, TAB_COUNT)
   }
 
+  // HisabKitab feature — custom mobile tabs when receipt modules are enabled.
+  // Replace the default Invoice/Customer/Expense tabs with receipt-specific
+  // shortcuts: Invoice Receipt (labeled "Invoice"), Lorry Receipt (labeled
+  // "Lorry"), and Trips.
+  const RECEIPT_MODULES = ['InvoiceReceipt', 'LrReceipt', 'LorryReceipt']
+  const hasReceiptModule = globalStore.modules.some((m) => RECEIPT_MODULES.includes(m))
+
+  if (hasReceiptModule) {
+    const customTabs: MenuItem[] = []
+
+    // Tab 1: Dashboard
+    const dashboard = items.find((i) => i.link === '/admin/dashboard')
+    if (dashboard) customTabs.push(dashboard)
+
+    // Tab 2: Invoice Receipt (labeled "Invoice") or LR Receipt,
+    // falling back to core Invoices if neither receipt module is enabled
+    const receipt =
+      items.find((i) => i.link === '/admin/invoices?view=invoice_receipt') ??
+      items.find((i) => i.link === '/admin/invoices?view=lr_receipt') ??
+      items.find((i) => i.link === '/admin/invoices')
+    if (receipt) {
+      const isReceiptLink = receipt.link.includes('?view=')
+      customTabs.push(isReceiptLink ? { ...receipt, title: 'Invoice' } : receipt)
+    }
+
+    // Tab 3: Lorry Receipt (labeled "Lorry"), or fall back to Customer
+    const lorry = items.find((i) => i.link === '/admin/invoices?view=lorry_receipt')
+    if (lorry) {
+      customTabs.push({ ...lorry, title: 'Lorry' })
+    } else {
+      const customer = items.find((i) => i.link === '/admin/customers')
+      if (customer) customTabs.push(customer)
+    }
+
+    // Tab 4: Trips, or fall back to Expenses
+    const trips = items.find((i) => i.link === '/admin/modules/trips')
+    if (trips) {
+      customTabs.push(trips)
+    } else {
+      const expenses = items.find((i) => i.link === '/admin/expenses')
+      if (expenses) customTabs.push(expenses)
+    }
+
+    return customTabs.slice(0, TAB_COUNT)
+  }
+
   const preferred = PREFERRED_LINKS.map((link) =>
     items.find((item) => item.link === link),
   ).filter((item): item is MenuItem => !!item)

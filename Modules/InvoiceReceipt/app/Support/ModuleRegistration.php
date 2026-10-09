@@ -52,6 +52,7 @@ final class ModuleRegistration
      */
     private static function registerModuleExtensions(): void
     {
+        ModuleExtensions::registerReceiptModule('invoice-receipt');
         ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
 
         ModuleExtensions::registerSerialNumberType('invoice_receipt', Invoice::class, [
@@ -84,8 +85,31 @@ final class ModuleRegistration
 
         // Invoice Receipt exposes tr_ fields for the edit form
         ModuleExtensions::registerInvoiceResourceFields('invoice-receipt', function ($invoice): array {
+            // HisabKitab feature — GST Tax Payable By resolver: checks tr_ columns
+            // first, then falls back to custom fields. Moved here from the host's
+            // Invoice model accessor so the host stays module-agnostic.
+            $gstPayableBy = null;
+            if (! empty($invoice->attributes['tr_gst_payable_by'])) {
+                $gstPayableBy = $invoice->attributes['tr_gst_payable_by'];
+            } elseif (! empty($invoice->attributes['tr_gst_through'])) {
+                $gstPayableBy = $invoice->attributes['tr_gst_through'];
+            } else {
+                $fields = $invoice->relationLoaded('fields') ? $invoice->fields : $invoice->fields()->with('customField')->get();
+                $field = $fields->first(function ($f) {
+                    $slug = $f->customField?->slug ?? '';
+                    $name = strtolower($f->customField?->name ?? '');
+
+                    return in_array($slug, ['CUSTOM_Invoice_GST_TAX_PAYABLE_BY', 'CUSTOM_Invoice_GST_TAX_THROUGH'])
+                        || in_array($name, ['gst tax payable by', 'gst tax through', 'gst payable by']);
+                });
+
+                if ($field && ! empty($field->value)) {
+                    $gstPayableBy = is_array($field->value) ? ($field->value['name'] ?? null) : (string) $field->value;
+                }
+            }
+
             return [
-                'gst_tax_payable_by' => $invoice->gst_tax_payable_by,
+                'gst_tax_payable_by' => $gstPayableBy,
                 'tr_gst_through' => $invoice->tr_gst_through,
                 'tr_from_name' => $invoice->tr_from_name,
                 'tr_from_code' => $invoice->tr_from_code,
@@ -118,6 +142,27 @@ final class ModuleRegistration
                 'tr_docket_charge' => $invoice->tr_docket_charge,
                 'tr_other_charge' => $invoice->tr_other_charge,
                 'tr_net_amount' => $invoice->tr_net_amount,
+            ];
+        });
+
+        // HisabKitab feature — Invoice Receipt per-item consignment fields.
+        // Stored in tr_ prefixed columns, exposed with the same tr_ names
+        // the edit form uses so loading and saving use the same key.
+        ModuleExtensions::registerInvoiceItemResourceFields('invoice-receipt', function ($item): array {
+            return [
+                'tr_consignment_number' => $item->tr_consignment_number,
+                'tr_consignment_date' => $item->tr_consignment_date,
+                'tr_party_inv_no' => $item->tr_party_inv_no,
+                'tr_from_name' => $item->tr_from_name,
+                'tr_to_name' => $item->tr_to_name,
+                'tr_truck_no' => $item->tr_truck_no,
+                'tr_pkg_weight' => $item->tr_pkg_weight,
+                'tr_charged_weight' => $item->tr_charged_weight,
+                'tr_rate' => $item->tr_rate,
+                'tr_other_charge' => $item->tr_other_charge,
+                'tr_lr_charge' => $item->tr_lr_charge,
+                'tr_dd_charge' => $item->tr_dd_charge,
+                'amount' => $item->tr_rate,
             ];
         });
     }

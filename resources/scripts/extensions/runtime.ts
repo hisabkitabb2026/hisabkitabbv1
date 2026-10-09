@@ -33,6 +33,7 @@ type ComponentSlot =
   | 'richEditorToolbarActions'
   | 'invoiceFormSections'
   | 'estimateFormSections'
+  | 'invoicePermissionMissing'
 
 // HisabKitab feature — data-only slots (no component, just structured data)
 type DataSlot =
@@ -123,6 +124,8 @@ export class ExtensionRegistry {
   readonly invoiceFormSections = shallowRef<RegisteredComponentContribution[]>([])
   // Quotation module injects form field sections into the host estimate form
   readonly estimateFormSections = shallowRef<RegisteredComponentContribution[]>([])
+  // HisabKitab feature — permission-missing UI for receipt view modes
+  readonly invoicePermissionMissing = shallowRef<RegisteredComponentContribution[]>([])
   readonly companySettingsNavigation = shallowRef<SettingsNavigationContribution[]>([])
   readonly adminSettingsNavigation = shallowRef<SettingsNavigationContribution[]>([])
   // HisabKitab feature — module-driven data registries
@@ -255,6 +258,11 @@ class ExtensionApi implements InvoiceShelfExtensionApi {
   // HisabKitab feature
   registerEstimateFormSection(contribution: ComponentExtensionContribution): () => void {
     return extensionRegistry.registerComponent('estimateFormSections', contribution)
+  }
+
+  // HisabKitab feature — permission-missing UI for receipt view modes
+  registerInvoicePermissionMissing(contribution: ComponentExtensionContribution): () => void {
+    return extensionRegistry.registerComponent('invoicePermissionMissing', contribution)
   }
 
   // HisabKitab feature — module-driven view modes, dashboard counts, document meta, menu links

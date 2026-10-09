@@ -94,7 +94,7 @@
             {{ invoiceData.customer.name }}
           </router-link>
         </BaseStat>
-        <BaseStat :label="docLabel === 'Lorry Receipt' ? 'Challan Date' : docLabel === 'LR Receipt' ? 'Docket Date' : $t('invoices.invoice_date')">
+        <BaseStat :label="currentDocMeta?.dateLabel ?? $t('invoices.invoice_date')">
           {{ invoiceData.formatted_invoice_date }}
         </BaseStat>
         <BaseStat :label="$t('invoices.due_date')">

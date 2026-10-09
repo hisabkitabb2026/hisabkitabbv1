@@ -1,0 +1,2345 @@
+diff --git a/resources/scripts/api/services/dashboard.service.ts b/resources/scripts/api/services/dashboard.service.ts
+index cbbdfa06..06c96fc4 100644
+--- a/resources/scripts/api/services/dashboard.service.ts
++++ b/resources/scripts/api/services/dashboard.service.ts
+@@ -1,3 +1,5 @@
++// HisabKitab feature
++
+ import { client } from '../client'
+ import { API } from '../endpoints'
+ import type { PurchasePayables } from '@/scripts/types/domain/purchase'
+@@ -38,6 +40,8 @@ export interface DashboardResponse {
+   payables?: PurchasePayables | null
+   total_customer_count: number
+   total_invoice_count: number
++  // HisabKitab feature — module-registered dashboard counts
++  module_counts: Array<{ key: string; label: string; to: string; value: number }>
+   total_estimate_count: number
+   chart_data: ChartData
+   total_sales: string
+diff --git a/resources/scripts/api/services/invoice.service.ts b/resources/scripts/api/services/invoice.service.ts
+index cf260de5..9d0f3606 100644
+--- a/resources/scripts/api/services/invoice.service.ts
++++ b/resources/scripts/api/services/invoice.service.ts
+@@ -1,3 +1,5 @@
++// HisabKitab feature
++
+ import { client } from '../client'
+ import { API } from '../endpoints'
+ import type {
+@@ -17,6 +19,7 @@ import type {
+ export interface InvoiceListParams extends ListParams, DateRangeParams {
+   status?: string
+   customer_id?: number
++  template_name?: string
+ }
+ 
+ export interface InvoiceListMeta {
+diff --git a/resources/scripts/components/base/BaseCustomerSelectPopup.vue b/resources/scripts/components/base/BaseCustomerSelectPopup.vue
+index 453a4393..c7dc72b8 100644
+--- a/resources/scripts/components/base/BaseCustomerSelectPopup.vue
++++ b/resources/scripts/components/base/BaseCustomerSelectPopup.vue
+@@ -29,6 +29,9 @@ interface Props {
+   customerId?: number | null
+   type?: DocumentType | null
+   contentLoading?: boolean
++  // HisabKitab feature — consignee picker support (LR Receipt)
++  label?: string | null
++  consigneeMode?: boolean
+ }
+ 
+ const props = withDefaults(defineProps<Props>(), {
+@@ -36,6 +39,8 @@ const props = withDefaults(defineProps<Props>(), {
+   customerId: null,
+   type: null,
+   contentLoading: false,
++  label: null,
++  consigneeMode: false,
+ })
+ 
+ const userStore = useUserStore()
+@@ -54,6 +59,10 @@ const isSearchingCustomer = ref<boolean>(false)
+ const isLoadingCustomers = ref<boolean>(true)
+ 
+ const selectedCustomer = computed(() => {
++  // HisabKitab feature — consignee picker support (LR Receipt)
++  if (props.consigneeMode) {
++    return invoiceStore.newInvoice.consignee
++  }
+   switch (props.type) {
+     case 'invoice':
+       return invoiceStore.newInvoice.customer
+@@ -69,10 +78,15 @@ const selectedCustomer = computed(() => {
+ // Fetch initial customers on setup
+ async function fetchInitialCustomers(): Promise<void> {
+   try {
+-    await customerStore.fetchCustomers({
++    // HisabKitab feature — Lorry Receipt: only show party-profile customers
++    const params: Record<string, unknown> = {
+       orderByField: '',
+       orderBy: '',
+-    })
++    }
++    if (invoiceStore.newInvoice.template_name === 'lorry_receipt') {
++      params.lorry_party_only = 1
++    }
++    await customerStore.fetchCustomers(params)
+   } finally {
+     isLoadingCustomers.value = false
+   }
+@@ -98,16 +112,28 @@ const debounceSearchCustomer = useDebounceFn(() => {
+ 
+ async function searchCustomer(): Promise<void> {
+   try {
+-    await customerStore.fetchCustomers({
++    // HisabKitab feature — Lorry Receipt: only show party-profile customers
++    const params: Record<string, unknown> = {
+       display_name: search.value ?? '',
+       page: 1,
+-    })
++    }
++    if (invoiceStore.newInvoice.template_name === 'lorry_receipt') {
++      params.lorry_party_only = 1
++    }
++    await customerStore.fetchCustomers(params)
+   } finally {
+     isSearchingCustomer.value = false
+   }
+ }
+ 
+ function selectNewCustomer(id: number): void {
++  // HisabKitab feature — consignee picker support (LR Receipt)
++  if (props.consigneeMode) {
++    invoiceStore.selectConsignee(id)
++    search.value = null
++    return
++  }
++
+   const params: Record<string, unknown> = { userId: id }
+   if (route.params.id) params.model_id = route.params.id
+ 
+@@ -125,6 +151,11 @@ function selectNewCustomer(id: number): void {
+ }
+ 
+ function resetSelectedCustomer(): void {
++  // HisabKitab feature — consignee picker support (LR Receipt)
++  if (props.consigneeMode) {
++    invoiceStore.resetSelectedConsignee()
++    return
++  }
+   if (props.type === 'invoice') {
+     invoiceStore.resetSelectedCustomer()
+   } else if (props.type === 'estimate') {
+@@ -145,6 +176,10 @@ async function editCustomer(): Promise<void> {
+ 
+ function openCustomerModal(): void {
+   customerStore.resetCurrentCustomer()
++  // HisabKitab feature — consignee picker support (LR Receipt)
++  if (props.consigneeMode) {
++    invoiceStore.isConsigneeMode = true
++  }
+   modalStore.openModal({
+     title: t('customers.add_customer'),
+     componentName: 'CustomerModal',
+@@ -219,7 +254,7 @@ function onSearch(value: string) {
+     <BaseContactPicker
+       :selected="selected"
+       :choices="choices"
+-      :label="$t('invoices.customer')"
++      :label="label ?? $t('invoices.customer')"
+       :placeholder="$t('customers.select_a_customer')"
+       :create-label="$t('customers.add_new_customer')"
+       :edit-label="$t('customers.edit_customer')"
+diff --git a/resources/scripts/components/base/BaseFileUploader.vue b/resources/scripts/components/base/BaseFileUploader.vue
+index 97ce8617..7fc28ced 100644
+--- a/resources/scripts/components/base/BaseFileUploader.vue
++++ b/resources/scripts/components/base/BaseFileUploader.vue
+@@ -1,3 +1,4 @@
++<!-- HisabKitab feature -->
+ <template>
+   <div
+     class="
+@@ -128,9 +129,10 @@
+       v-else-if="localFiles.length && avatar && !multiple"
+       class="flex w-full h-full border border-line-default rounded justify-center items-center"
+     >
++      <!-- HisabKitab feature -->
+       <img
+         v-if="localFiles[0].image"
+-        :alt="localFile.name ?? ''"
++        :alt="localFiles[0].name ?? ''"
+         :src="localFiles[0].image"
+         class="block object-cover w-full h-full rounded opacity-100"
+         style="animation: fadeIn 2s ease"
+diff --git a/resources/scripts/composables/use-active-menu-link.ts b/resources/scripts/composables/use-active-menu-link.ts
+index 8e4447bb..a7f4116e 100644
+--- a/resources/scripts/composables/use-active-menu-link.ts
++++ b/resources/scripts/composables/use-active-menu-link.ts
+@@ -1,6 +1,12 @@
++// HisabKitab feature
++
+ import { computed } from 'vue'
+ import type { RouteLocationNormalizedLoaded } from 'vue-router'
+ import { useGlobalStore } from '@/scripts/stores/global.store'
++import { useInvoiceStore } from '@/scripts/features/company/invoices/store'
++import { useEstimateStore } from '@/scripts/features/company/estimates/store'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+ 
+ /**
+  * Which main-menu entry the current route belongs to: the longest menu link
+@@ -10,17 +16,57 @@ import { useGlobalStore } from '@/scripts/stores/global.store'
+  */
+ export function useActiveMenuLink(route: RouteLocationNormalizedLoaded) {
+   const globalStore = useGlobalStore()
++  const invoiceStore = useInvoiceStore()
++  const estimateStore = useEstimateStore()
++
++  // HisabKitab feature — compute the active template_name from the current
++  // route and store, then check registered view modes for a match. This
++  // replaces per-module inline logic with a generic lookup.
++  function currentTemplateName(): string | null {
++    if (route.name === 'invoices.view' || route.name === 'invoices.edit') {
++      return invoiceStore.newInvoice.template_name || null
++    }
++    if (route.name === 'invoices.create') {
++      const tpl = route.query.template
++      return typeof tpl === 'string' ? tpl : null
++    }
++    if (route.name === 'estimates.view' || route.name === 'estimates.edit') {
++      return estimateStore.newEstimate.template_name || null
++    }
++    if (route.name === 'estimates.create') {
++      const tpl = route.query.template
++      return typeof tpl === 'string' ? tpl : null
++    }
++    return null
++  }
+ 
+   const activeMenuLink = computed<string | null>(() => {
+     const allLinks = globalStore.menuGroups.flat().map((item) => item.link)
++    // HisabKitab feature
+     const parent = route.path.startsWith('/admin/recurring-costs/')
+       ? (route.query.mode === 'EXPENSE' ? '/admin/expenses' : '/admin/bills')
+       : route.meta.menuParent
+     if (typeof parent === 'string' && allLinks.includes(parent)) return parent
++
++    // HisabKitab feature — check registered view modes for the current template
++    const tpl = currentTemplateName()
++    if (tpl) {
++      const allViewModes = [
++        ...extensionItems(extensionRegistry.invoiceViewModes.value),
++        ...extensionItems(extensionRegistry.estimateViewModes.value),
++      ]
++      const vm = allViewModes.find((v) => v.value === tpl)
++      if (vm && allLinks.includes(vm.listLink)) return vm.listLink
++    }
++
+     const matches = allLinks.filter(
+       (url) => route.path === url || route.path.startsWith(url + '/'),
+     )
+ 
++    // HisabKitab feature
++    const exactMatch = allLinks.find((url) => url === route.fullPath)
++    if (exactMatch) return exactMatch
++
+     return matches.sort((a, b) => b.length - a.length)[0] ?? null
+   })
+ 
+diff --git a/resources/scripts/composables/use-create-actions.ts b/resources/scripts/composables/use-create-actions.ts
+index 2c4509fd..024e0988 100644
+--- a/resources/scripts/composables/use-create-actions.ts
++++ b/resources/scripts/composables/use-create-actions.ts
+@@ -1,6 +1,9 @@
+ import { computed } from 'vue'
+ import { useUserStore } from '@/scripts/stores/user.store'
+ import { useCompanyStore } from '@/scripts/stores/company.store'
++// HisabKitab feature
++import { useGlobalStore } from '@/scripts/stores/global.store'
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+ import { ABILITIES } from '@/scripts/config/abilities'
+ 
+ export interface CreateAction {
+@@ -9,9 +12,9 @@ export interface CreateAction {
+   to: string
+ }
+ 
+-const ACTIONS: Array<CreateAction & { ability: string }> = [
+-  { label: 'invoices.new_invoice', icon: 'DocumentTextIcon', to: '/admin/invoices/create', ability: ABILITIES.CREATE_INVOICE },
+-  { label: 'estimates.new_estimate', icon: 'DocumentIcon', to: '/admin/estimates/create', ability: ABILITIES.CREATE_ESTIMATE },
++const ACTIONS: Array<CreateAction & { ability: string; menuName?: string }> = [
++  { label: 'invoices.new_invoice', icon: 'DocumentTextIcon', to: '/admin/invoices/create', ability: ABILITIES.CREATE_INVOICE, menuName: 'Invoices' },
++  { label: 'estimates.new_estimate', icon: 'DocumentIcon', to: '/admin/estimates/create', ability: ABILITIES.CREATE_ESTIMATE, menuName: 'Estimates' },
+   { label: 'payments.new_payment', icon: 'CreditCardIcon', to: '/admin/payments/create', ability: ABILITIES.CREATE_PAYMENT },
+   { label: 'expenses.new_expense', icon: 'CalculatorIcon', to: '/admin/expenses/create', ability: ABILITIES.CREATE_EXPENSE },
+   { label: 'customers.new_customer', icon: 'UserIcon', to: '/admin/customers/create', ability: ABILITIES.CREATE_CUSTOMER },
+@@ -25,15 +28,56 @@ const ACTIONS: Array<CreateAction & { ability: string }> = [
+ export function useCreateActions() {
+   const userStore = useUserStore()
+   const companyStore = useCompanyStore()
++  // HisabKitab feature
++  const globalStore = useGlobalStore()
++
++  // HisabKitab feature — a core menu entry is visible unless a module filter removed it
++  const visibleMenuNames = computed(() => new Set(globalStore.menuGroups.flat().map((m) => m.name)))
+ 
+   const createActions = computed<CreateAction[]>(() => {
+     if (companyStore.isAdminMode) {
+       return []
+     }
+ 
+-    return ACTIONS.filter((action) => userStore.hasAbilities(action.ability)).map(
+-      ({ label, icon, to }) => ({ label, icon, to }),
+-    )
++    const actions: CreateAction[] = []
++
++    for (const action of ACTIONS) {
++      if (!userStore.hasAbilities(action.ability)) continue
++      // HisabKitab feature — hide invoice/estimate create actions when their menu is hidden
++      if (action.menuName && !visibleMenuNames.value.has(action.menuName)) continue
++      actions.push({ label: action.label, icon: action.icon, to: action.to })
++
++      // HisabKitab feature — insert module-registered receipt create actions
++      // right after their parent document type
++      if (action.menuName === 'Invoices') {
++        for (const vm of extensionItems(extensionRegistry.invoiceViewModes.value)) {
++          if (vm.ability && !userStore.hasAbilities(vm.ability)) continue
++          actions.push({ label: `New ${vm.label}`, icon: vm.icon, to: `/admin/${vm.createLink}` })
++        }
++      } else if (action.menuName === 'Estimates') {
++        for (const vm of extensionItems(extensionRegistry.estimateViewModes.value)) {
++          if (vm.ability && !userStore.hasAbilities(vm.ability)) continue
++          actions.push({ label: `New ${vm.label}`, icon: vm.icon, to: `/admin/${vm.createLink}` })
++        }
++      }
++    }
++
++    // HisabKitab feature — when the Invoices menu is hidden, the receipt create
++    // actions still need to appear, so add them here too
++    if (!visibleMenuNames.value.has('Invoices')) {
++      for (const vm of extensionItems(extensionRegistry.invoiceViewModes.value)) {
++        if (vm.ability && !userStore.hasAbilities(vm.ability)) continue
++        actions.push({ label: `New ${vm.label}`, icon: vm.icon, to: `/admin/${vm.createLink}` })
++      }
++    }
++    if (!visibleMenuNames.value.has('Estimates')) {
++      for (const vm of extensionItems(extensionRegistry.estimateViewModes.value)) {
++        if (vm.ability && !userStore.hasAbilities(vm.ability)) continue
++        actions.push({ label: `New ${vm.label}`, icon: vm.icon, to: `/admin/${vm.createLink}` })
++      }
++    }
++
++    return actions
+   })
+ 
+   return { createActions }
+diff --git a/resources/scripts/features/company/customers/components/CustomerModal.vue b/resources/scripts/features/company/customers/components/CustomerModal.vue
+index b80e7a53..8a4abf00 100644
+--- a/resources/scripts/features/company/customers/components/CustomerModal.vue
++++ b/resources/scripts/features/company/customers/components/CustomerModal.vue
+@@ -37,6 +37,11 @@ const notificationStore = useNotificationStore()
+ 
+ const isFetchingInitialData = ref<boolean>(false)
+ 
++// HisabKitab feature — hide Basic Info / Portal Access tabs when InvoiceReceipt module is enabled
++const isInvoiceReceiptModule = computed<boolean>(() =>
++  globalStore.modules.includes('InvoiceReceipt')
++)
++
+ const { t } = useI18n()
+ const route = useRoute()
+ const isEdit = ref<boolean>(false)
+@@ -177,7 +182,13 @@ async function submitCustomerData(): Promise<void> {
+       isLoading.value = false
+       // Automatically select newly created customer
+       if (route.name === 'invoices.create' || route.name === 'invoices.edit') {
+-        invoiceStore.selectCustomer(response.data.id)
++        // HisabKitab feature — consignee picker support (LR Receipt)
++        if (invoiceStore.isConsigneeMode) {
++          invoiceStore.selectConsignee(response.data.id)
++          invoiceStore.isConsigneeMode = false
++        } else {
++          invoiceStore.selectCustomer(response.data.id)
++        }
+       }
+       if (route.name === 'estimates.create' || route.name === 'estimates.edit') {
+         estimateStore.selectCustomer(response.data.id)
+@@ -219,7 +230,8 @@ function closeCustomerModal(): void {
+     <form action="" @submit.prevent="submitCustomerData">
+       <div class="px-6 pb-3 max-h-[calc(80vh-8rem)] overflow-y-auto">
+         <BaseTabGroup>
+-          <BaseTab :title="$t('customers.basic_info')">
++          <!-- HisabKitab feature — hide Basic Info tab in InvoiceReceipt mode -->
++          <BaseTab v-if="!isInvoiceReceiptModule" :title="$t('customers.basic_info')">
+             <BaseInputGrid layout="one-column">
+               <BaseInputGroup
+                 :label="$t('customers.display_name')"
+@@ -328,7 +340,8 @@ function closeCustomerModal(): void {
+             </BaseInputGrid>
+           </BaseTab>
+ 
+-          <BaseTab :title="$t('customers.portal_access')">
++          <!-- HisabKitab feature — hide Portal Access tab in InvoiceReceipt mode -->
++          <BaseTab v-if="!isInvoiceReceiptModule" :title="$t('customers.portal_access')">
+             <BaseInputGrid class="col-span-5 lg:col-span-4">
+               <div class="md:col-span-2">
+                 <p class="text-sm text-muted">
+@@ -399,6 +412,16 @@ function closeCustomerModal(): void {
+                 />
+               </BaseInputGroup>
+ 
++              <!-- HisabKitab feature — GST NO field on billing address -->
++              <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
++                <BaseInput
++                  v-model.trim="customerStore.currentCustomer.billing.tax_id"
++                  type="text"
++                  name="billingTaxId"
++                  class="mt-1 md:mt-0"
++                />
++              </BaseInputGroup>
++
+               <BaseInputGroup :label="$t('customers.country')">
+                 <BaseMultiselect
+                   v-model="customerStore.currentCustomer.billing.country_id"
+@@ -514,6 +537,16 @@ function closeCustomerModal(): void {
+                 />
+               </BaseInputGroup>
+ 
++              <!-- HisabKitab feature — GST NO field on shipping address -->
++              <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
++                <BaseInput
++                  v-model.trim="customerStore.currentCustomer.shipping.tax_id"
++                  type="text"
++                  name="shippingTaxId"
++                  class="mt-1 md:mt-0"
++                />
++              </BaseInputGroup>
++
+               <BaseInputGroup :label="$t('customers.country')">
+                 <BaseMultiselect
+                   v-model="customerStore.currentCustomer.shipping.country_id"
+diff --git a/resources/scripts/features/company/customers/store.ts b/resources/scripts/features/company/customers/store.ts
+index 9d55d1bd..e8ac7999 100644
+--- a/resources/scripts/features/company/customers/store.ts
++++ b/resources/scripts/features/company/customers/store.ts
+@@ -26,6 +26,8 @@ export interface CustomerFormAddress {
+   country_id: number | null
+   zip: string | null
+   type: string | null
++  // HisabKitab feature — GST number on each address
++  tax_id: string | null
+ }
+ 
+ export interface CustomerForm {
+@@ -61,6 +63,8 @@ function createAddressStub(): CustomerFormAddress {
+     country_id: null,
+     zip: null,
+     type: null,
++    // HisabKitab feature
++    tax_id: null,
+   }
+ }
+ 
+diff --git a/resources/scripts/features/company/dashboard/components/ReceivablesHero.vue b/resources/scripts/features/company/dashboard/components/ReceivablesHero.vue
+index 0ee7de2a..a96c60e9 100644
+--- a/resources/scripts/features/company/dashboard/components/ReceivablesHero.vue
++++ b/resources/scripts/features/company/dashboard/components/ReceivablesHero.vue
+@@ -42,7 +42,7 @@
+ 
+         <router-link
+           v-if="isFirstRun && canCreateInvoice"
+-          to="/admin/invoices/create"
++          :to="newInvoiceLink"
+           class="
+             inline-flex items-center gap-1.5 self-start h-9 px-3.5 text-sm font-semibold transition-colors rounded-lg shrink-0
+             bg-chrome-fg text-hero-from hover:bg-chrome-fg/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chrome-fg
+@@ -54,7 +54,7 @@
+ 
+         <router-link
+           v-else-if="canViewInvoices"
+-          to="/admin/invoices"
++          :to="viewInvoicesLink"
+           class="
+             inline-flex items-center self-start h-9 px-3.5 text-sm font-medium transition-colors border rounded-lg shrink-0
+             border-chrome-fg/20 bg-chrome-fg/10 hover:bg-chrome-fg/15 focus-visible:outline-2 focus-visible:outline-chrome-fg
+@@ -121,6 +121,9 @@ import { useI18n } from 'vue-i18n'
+ import { useDashboardStore } from '../store'
+ import { useCompanyStore } from '@/scripts/stores/company.store'
+ import { useUserStore } from '@/scripts/stores/user.store'
++// HisabKitab feature
++import { useGlobalStore } from '@/scripts/stores/global.store'
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+ import { formatMoney } from '@/scripts/utils/format-money'
+ import { ABILITIES } from '@/scripts/config/abilities'
+ 
+@@ -138,6 +141,8 @@ const headingId = 'dashboard-receivables'
+ const dashboardStore = useDashboardStore()
+ const companyStore = useCompanyStore()
+ const userStore = useUserStore()
++// HisabKitab feature
++const globalStore = useGlobalStore()
+ const { t } = useI18n()
+ 
+ const loaded = computed<boolean>(() => dashboardStore.isDashboardDataLoaded)
+@@ -148,6 +153,30 @@ const canCreateInvoice = computed<boolean>(() => userStore.hasAbilities(ABILITIE
+ // No invoice at all yet, as for a new company
+ const isFirstRun = computed<boolean>(() => loaded.value && !dashboardStore.stats.totalInvoiceCount)
+ 
++// HisabKitab feature — when the core Invoices menu is hidden, the receivables
++// hero links to the first registered receipt view instead of the core invoice pages
++const invoiceMenuVisible = computed(() =>
++  globalStore.menuGroups.flat().some((m) => m.name === 'Invoices'),
++)
++
++const registeredInvoiceViews = computed(() =>
++  extensionItems(extensionRegistry.invoiceViewModes.value).filter(
++    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
++  ),
++)
++
++const firstReceiptView = computed(() => registeredInvoiceViews.value[0] ?? null)
++
++const newInvoiceLink = computed(() => {
++  if (invoiceMenuVisible.value) return '/admin/invoices/create'
++  return firstReceiptView.value ? `/admin/${firstReceiptView.value.createLink}` : '/admin/invoices/create'
++})
++
++const viewInvoicesLink = computed(() => {
++  if (invoiceMenuVisible.value) return '/admin/invoices'
++  return firstReceiptView.value ? firstReceiptView.value.listLink : '/admin/invoices'
++})
++
+ const buckets = computed<Bucket[]>(() => {
+   const total = summary.value.outstanding || 1
+   const share = (amount: number): number => (amount / total) * 100
+diff --git a/resources/scripts/features/company/dashboard/store.ts b/resources/scripts/features/company/dashboard/store.ts
+index ef2c9ce9..4dcfb5eb 100644
+--- a/resources/scripts/features/company/dashboard/store.ts
++++ b/resources/scripts/features/company/dashboard/store.ts
+@@ -1,3 +1,5 @@
++// HisabKitab feature
++
+ import { defineStore } from 'pinia'
+ import type { PurchasePayables } from '@/scripts/types/domain/purchase'
+ import { ref, computed } from 'vue'
+@@ -12,6 +14,8 @@ export interface DashboardStats {
+   totalAmountDue: number
+   totalCustomerCount: number
+   totalInvoiceCount: number
++  // HisabKitab feature — module-registered counts replace hardcoded receipt fields
++  moduleCounts: Array<{ key: string; label: string; to: string; value: number }>
+   totalEstimateCount: number
+ }
+ 
+@@ -64,6 +68,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
+     totalAmountDue: 0,
+     totalCustomerCount: 0,
+     totalInvoiceCount: 0,
++    // HisabKitab feature
++    moduleCounts: [],
+     totalEstimateCount: 0,
+   })
+ 
+@@ -121,6 +127,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
+       stats.value.totalAmountDue = response.total_amount_due ?? 0
+       stats.value.totalCustomerCount = response.total_customer_count ?? 0
+       stats.value.totalInvoiceCount = response.total_invoice_count ?? 0
++      // HisabKitab feature — module-registered dashboard counts
++      stats.value.moduleCounts = response.module_counts ?? []
+       stats.value.totalEstimateCount = response.total_estimate_count ?? 0
+ 
+       if (response.receivables) {
+diff --git a/resources/scripts/features/company/dashboard/views/DashboardView.vue b/resources/scripts/features/company/dashboard/views/DashboardView.vue
+index 1fe4bfe1..124ca6c4 100644
+--- a/resources/scripts/features/company/dashboard/views/DashboardView.vue
++++ b/resources/scripts/features/company/dashboard/views/DashboardView.vue
+@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from 'vue'
+ import { useRoute, useRouter } from 'vue-router'
+ import { useI18n } from 'vue-i18n'
+ import { useUserStore } from '../../../../stores/user.store'
++import { useGlobalStore } from '../../../../stores/global.store'
+ import { useDashboardStore } from '../store'
+ import { ABILITIES } from '@/scripts/config/abilities'
+ import { formatPeriodRange, periodParams, yearPresets } from '@/scripts/utils/period'
+@@ -24,9 +25,11 @@ interface Count {
+ const route = useRoute()
+ const router = useRouter()
+ const userStore = useUserStore()
++const globalStore = useGlobalStore()
+ const dashboardStore = useDashboardStore()
+ const { t } = useI18n()
+ 
++// HisabKitab feature — receipt count cards come from the dashboard store (module_counts)
+ const presets = computed(() => yearPresets(t))
+ 
+ // The dates behind the current choice, e.g. what "This year" means for a
+@@ -39,6 +42,9 @@ const periodSummary = computed<string>(() => {
+     : ''
+ })
+ 
++// HisabKitab feature — only show a core count card when its sidebar menu entry is visible
++const visibleMenuNames = computed(() => new Set(globalStore.menuGroups.flat().map((m) => m.name)))
++
+ // The customer, invoice and estimate counts: context, so they stay quiet
+ const counts = computed<Count[]>(() => {
+   const stats = dashboardStore.stats
+@@ -47,10 +53,16 @@ const counts = computed<Count[]>(() => {
+   if (userStore.hasAbilities(ABILITIES.VIEW_CUSTOMER)) {
+     list.push({ key: 'customers', to: '/admin/customers', value: stats.totalCustomerCount, label: t('dashboard.counts.customers', stats.totalCustomerCount) })
+   }
+-  if (userStore.hasAbilities(ABILITIES.VIEW_INVOICE)) {
++  // HisabKitab feature — hide the core invoice card when a module replaced the Invoices menu
++  if (userStore.hasAbilities(ABILITIES.VIEW_INVOICE) && visibleMenuNames.value.has('Invoices')) {
+     list.push({ key: 'invoices', to: '/admin/invoices', value: stats.totalInvoiceCount, label: t('dashboard.counts.invoices', stats.totalInvoiceCount) })
+   }
+-  if (userStore.hasAbilities(ABILITIES.VIEW_ESTIMATE)) {
++  // HisabKitab feature — module-registered dashboard count cards
++  for (const dc of dashboardStore.stats.moduleCounts) {
++    list.push({ key: dc.key, to: dc.to, value: dc.value, label: dc.label })
++  }
++  // HisabKitab feature — hide the core estimate card when a module replaced the Estimates menu
++  if (userStore.hasAbilities(ABILITIES.VIEW_ESTIMATE) && visibleMenuNames.value.has('Estimates')) {
+     list.push({ key: 'estimates', to: '/admin/estimates', value: stats.totalEstimateCount, label: t('dashboard.counts.estimates', stats.totalEstimateCount) })
+   }
+ 
+@@ -76,6 +88,7 @@ onMounted(() => {
+ })
+ </script>
+ 
++<!-- HisabKitab feature -->
+ <template>
+   <BasePage>
+     <BasePageHeader :help="$t('page_help.dashboard')" :title="$t('navigation.dashboard')" phone-actions="inline">
+diff --git a/resources/scripts/features/company/estimates/components/EstimateBasicFields.vue b/resources/scripts/features/company/estimates/components/EstimateBasicFields.vue
+index 1de236c2..aa1e1944 100644
+--- a/resources/scripts/features/company/estimates/components/EstimateBasicFields.vue
++++ b/resources/scripts/features/company/estimates/components/EstimateBasicFields.vue
+@@ -10,8 +10,9 @@
+     <BaseInputGrid
+       class="col-span-6 p-4 border glass rounded-xl md:p-5"
+     >
++      <!-- HisabKitab feature — label from registered estimate document meta -->
+       <BaseInputGroup
+-        :label="$t('reports.estimates.estimate_date')"
++        :label="currentDocMeta?.dateLabel ?? (currentDocMeta?.label ? `${currentDocMeta.label} Date` : $t('reports.estimates.estimate_date'))"
+         :content-loading="isLoading"
+         required
+         :error="v.estimate_date.$error && v.estimate_date.$errors[0].$message"
+@@ -36,8 +37,9 @@
+         />
+       </BaseInputGroup>
+ 
++      <!-- HisabKitab feature — label from registered estimate document meta -->
+       <BaseInputGroup
+-        :label="$t('estimates.estimate_number')"
++        :label="currentDocMeta?.numberLabel ?? (currentDocMeta?.label ? `${currentDocMeta.label} Number` : $t('estimates.estimate_number'))"
+         :content-loading="isLoading"
+         required
+         :error="
+@@ -71,10 +73,13 @@
+ </template>
+ 
+ <script setup lang="ts">
++import { computed } from 'vue'
+ import { ExchangeRateConverter } from '../../../shared/document-form'
+ import { useEstimateStore } from '../store'
+ import CustomFieldInput from '@/scripts/features/shared/custom-fields/CustomFieldInput.vue'
+ import { useCustomFields } from '@/scripts/features/shared/custom-fields/use-custom-fields'
++// HisabKitab feature
++import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
+ 
+ interface ValidationField {
+   $error: boolean
+@@ -97,6 +102,9 @@ const estimateStore = useEstimateStore()
+ 
+ const customFieldScope = 'newEstimate'
+ 
++// HisabKitab feature — document meta from registered estimate view modes
++const { currentDocMeta } = useEstimateDocumentMeta(() => estimateStore.newEstimate.template_name)
++
+ const customFields = useCustomFields({
+   store: estimateStore,
+   storeProp: 'newEstimate',
+diff --git a/resources/scripts/features/company/estimates/store.ts b/resources/scripts/features/company/estimates/store.ts
+index bd420323..185ff88c 100644
+--- a/resources/scripts/features/company/estimates/store.ts
++++ b/resources/scripts/features/company/estimates/store.ts
+@@ -548,7 +548,12 @@ export const useEstimateStore = defineStore('estimate', {
+           Promise.resolve(), // placeholder for items fetch
+           this.resetSelectedNote(),
+           this.fetchEstimateTemplates(),
+-          this.getNextNumber(),
++          // HisabKitab feature — pass template_name as key if set, for serial number scoping
++          this.getNextNumber(
++            this.newEstimate.template_name
++              ? { key: this.newEstimate.template_name as string }
++              : undefined,
++          ),
+           Promise.resolve(), // placeholder for tax types fetch
+           ...editActions,
+         ])
+diff --git a/resources/scripts/features/company/estimates/views/EstimateCreateView.vue b/resources/scripts/features/company/estimates/views/EstimateCreateView.vue
+index f8222479..63a4ef71 100644
+--- a/resources/scripts/features/company/estimates/views/EstimateCreateView.vue
++++ b/resources/scripts/features/company/estimates/views/EstimateCreateView.vue
+@@ -1,20 +1,28 @@
+ <template>
+   <BasePage class="relative estimate-create-page">
+     <form @submit.prevent="submitForm">
++      <!-- HisabKitab feature -->
+       <BasePageHeader :help="$t('page_help.estimates')" :title="pageTitle">
+         <BaseBreadcrumb>
+           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
++          <!-- HisabKitab feature — breadcrumb from registered document meta -->
+           <BaseBreadcrumbItem
+-            :title="$t('estimates.estimate', 2)"
+-            to="/admin/estimates"
++            :title="currentDocMeta?.labelPlural ?? $t('estimates.estimate', 2)"
++            :to="currentDocMeta ? currentDocMeta.listLink : '/admin/estimates'"
+           />
+           <BaseBreadcrumbItem
+             v-if="isEdit"
+-            :title="$t('estimates.edit_estimate')"
++            :title="isQuotation ? `Edit ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.edit_estimate')"
++            to="#"
++            active
++          />
++          <!-- HisabKitab feature -->
++          <BaseBreadcrumbItem
++            v-else
++            :title="isQuotation ? `New ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.new_estimate')"
+             to="#"
+             active
+           />
+-          <BaseBreadcrumbItem v-else :title="$t('estimates.new_estimate')" to="#" active />
+         </BaseBreadcrumb>
+ 
+         <!-- Phones get these in the bottom bar instead -->
+@@ -46,7 +54,8 @@
+                 name="ArrowDownOnSquareIcon"
+               />
+             </template>
+-            {{ $t('estimates.save_estimate') }}
++            <!-- HisabKitab feature — save label from registered document meta -->
++            {{ isQuotation ? `Save ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.save_estimate') }}
+           </BaseButton>
+         </template>
+       </BasePageHeader>
+@@ -54,7 +63,7 @@
+       <DocumentFormActionBar
+         :total="estimateStore.getTotal"
+         :currency="estimateStore.newEstimate.selectedCurrency"
+-        :save-label="$t('estimates.save_estimate')"
++        :save-label="isQuotation ? `Save ${currentDocMeta?.label ?? 'Quotation'}` : $t('estimates.save_estimate')"
+         :saving="isSaving"
+         :loading="isLoadingContent"
+         :pdf-url="isEdit ? `/estimates/pdf/${estimateStore.newEstimate.unique_hash}` : null"
+@@ -68,8 +77,17 @@
+       />
+ 
+       <BaseScrollPane>
+-        <!-- Estimate Items -->
++        <!-- HisabKitab feature -->
++        <ExtensionSlot
++          name="estimate-form-sections"
++          :template-name="estimateStore.newEstimate.template_name"
++          :store="estimateStore"
++        />
++
++        <!-- Estimate Items — hidden for the Quotation module, which uses its own
++             redesigned consignment-style items table instead of line items -->
+         <DocumentItemsTable
++          v-if="!isQuotation"
+           :currency="estimateStore.newEstimate.selectedCurrency"
+           :is-loading="isLoadingContent"
+           :item-validation-scope="estimateValidationScope"
+@@ -130,11 +148,14 @@ import { useEstimateStore } from '../store'
+ import { useCompanyStore } from '@/scripts/stores/company.store'
+ import { useNotificationStore } from '@/scripts/stores/notification.store'
+ import { useBreakpoints } from '@/scripts/composables/use-breakpoints'
++// HisabKitab feature
++import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
+ import {
+   handleApiError,
+   getErrorTranslationKey,
+ } from '@/scripts/utils/error-handling'
+ import EstimateBasicFields from '../components/EstimateBasicFields.vue'
++import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
+ import {
+   DocumentItemsTable,
+   DocumentFormActionBar,
+@@ -162,12 +183,21 @@ const isLoadingContent = computed<boolean>(
+   () => estimateStore.isFetchingInitialSettings,
+ )
+ 
+-const pageTitle = computed<string>(() =>
+-  isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate'),
+-)
++// HisabKitab feature — document meta from registered estimate view modes
++const { currentDocMeta } = useEstimateDocumentMeta(() => estimateStore.newEstimate.template_name)
++
++const isQuotation = computed<boolean>(() => currentDocMeta.value !== null)
+ 
+ const isEdit = computed<boolean>(() => route.name === 'estimates.edit')
+ 
++// HisabKitab feature — page title from registered document meta
++const pageTitle = computed<string>(() => {
++  if (currentDocMeta.value) {
++    return isEdit.value ? `Edit ${currentDocMeta.value.label}` : `New ${currentDocMeta.value.label}`
++  }
++  return isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate')
++})
++
+ const rules = {
+   estimate_date: {
+     required: helpers.withMessage(t('validation.required'), required),
+@@ -195,10 +225,21 @@ const v$ = useVuelidate(
+ // Initialization
+ estimateStore.resetCurrentEstimate()
+ v$.value.$reset
++
++// HisabKitab feature
++if (route.query.template) {
++  estimateStore.setTemplate(route.query.template as string)
++}
++
+ estimateStore.fetchEstimateInitialSettings(
+   isEdit.value,
+   { id: route.params.id as string, query: route.query as Record<string, string> },
+-)
++).then(() => {
++  // HisabKitab feature
++  if (route.query.template) {
++    estimateStore.setTemplate(route.query.template as string)
++  }
++})
+ 
+ watch(
+   () => estimateStore.newEstimate.customer,
+diff --git a/resources/scripts/features/company/estimates/views/EstimateDetailView.vue b/resources/scripts/features/company/estimates/views/EstimateDetailView.vue
+index 3c59b762..37c09fee 100644
+--- a/resources/scripts/features/company/estimates/views/EstimateDetailView.vue
++++ b/resources/scripts/features/company/estimates/views/EstimateDetailView.vue
+@@ -2,9 +2,10 @@
+   <div v-if="estimateData" class="flex min-h-full">
+ 
+     <BasePage class="min-w-0">
++      <!-- HisabKitab feature -->
+       <BasePageHeader :help="$t('page_help.estimates')" :title="pageTitle">
+         <BaseBreadcrumb>
+-          <BaseBreadcrumbItem :title="$t('estimates.estimate', 2)" to="/admin/estimates" />
++          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
+         </BaseBreadcrumb>
+ 
+         <div class="flex flex-wrap items-center gap-1.5 mt-2">
+@@ -74,7 +75,7 @@
+             {{ estimateData.customer.name }}
+           </router-link>
+         </BaseStat>
+-        <BaseStat :label="$t('reports.estimates.estimate_date')">
++        <BaseStat :label="currentDocMeta?.dateLabel ?? $t('reports.estimates.estimate_date')">
+           {{ estimateData.formatted_estimate_date }}
+         </BaseStat>
+         <BaseStat :label="$t('estimates.expiry_date')">
+@@ -196,6 +197,9 @@ import { useUserStore } from '../../../../stores/user.store'
+ import { useDialogStore } from '../../../../stores/dialog.store'
+ import { useModalStore } from '../../../../stores/modal.store'
+ import type { Estimate } from '../../../../types/domain/estimate'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
++import { useEstimateDocumentMeta } from '@/scripts/composables/use-document-meta'
+ import { scrollBehavior } from '@/scripts/utils/motion'
+ 
+ interface Props {
+@@ -284,6 +288,19 @@ const searchData = reactive<SearchData>({
+ 
+ const pageTitle = computed<string>(() => estimateData.value?.estimate_number ?? '')
+ 
++// HisabKitab feature — breadcrumb from registered estimate document meta
++const { currentDocMeta } = useEstimateDocumentMeta(() => estimateData.value?.template_name as string | undefined)
++
++const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('estimates.estimate', 2))
++
++const breadcrumbLink = computed<string>(() => {
++  const tpl = estimateData.value?.template_name as string | undefined
++  if (!tpl) return '/admin/estimates'
++  const vm = extensionItems(extensionRegistry.estimateViewModes.value)
++    .find((v) => v.value === tpl)
++  return vm ? vm.listLink : '/admin/estimates'
++})
++
+ const { isPhone } = useBreakpoints()
+ const pdfPreview = ref<InstanceType<typeof BasePdfPreview> | null>(null)
+ 
+diff --git a/resources/scripts/features/company/estimates/views/EstimateIndexView.vue b/resources/scripts/features/company/estimates/views/EstimateIndexView.vue
+index c4b83f53..fe8398c3 100644
+--- a/resources/scripts/features/company/estimates/views/EstimateIndexView.vue
++++ b/resources/scripts/features/company/estimates/views/EstimateIndexView.vue
+@@ -1,6 +1,16 @@
+ <template>
+   <BasePage>
+-    <BasePageHeader :help="$t('page_help.estimates')" :title="$t('estimates.title')">
++    <!-- HisabKitab feature -->
++    <BasePageHeader :help="$t('page_help.estimates')" :title="$t('estimates.estimate', 2)">
++      <template v-if="estimateViews.length > 1" #title-suffix>
++        <BaseViewSwitcher
++          :model-value="viewMode"
++          primary-value="estimates"
++          :label="$t('estimates.estimate', 2)"
++          :options="estimateViews"
++          @update:model-value="setViewMode"
++        />
++      </template>
+       <BaseBreadcrumb>
+         <BaseBreadcrumbItem :title="$t('general.home')" to="dashboard" />
+         <BaseBreadcrumbItem :title="$t('estimates.estimate', 2)" to="#" active />
+@@ -24,12 +34,13 @@
+           </template>
+         </BaseButton>
+ 
+-        <router-link v-if="canCreate" to="estimates/create" class="inline-flex rounded-lg ms-4">
++        <router-link v-if="canCreate" :to="newEstimateLink" class="inline-flex rounded-lg ms-4">
+           <BaseButton tag="span" variant="primary">
+             <template #left="slotProps">
+               <BaseIcon name="PlusIcon" :class="slotProps.class" />
+             </template>
+-            {{ $t('estimates.new_estimate') }}
++            <!-- HisabKitab feature - label from registered view mode -->
++            {{ currentDocMeta ? `New ${currentDocMeta.label}` : $t('estimates.new_estimate') }}
+           </BaseButton>
+         </router-link>
+       </template>
+@@ -91,22 +102,24 @@
+     </BaseFilterWrapper>
+ 
+     <!-- Empty State -->
++    <!-- HisabKitab feature -->
+     <BaseEmptyPlaceholder
+       v-show="showEmptyScreen"
+       art="estimate"
+       :ghost="6"
+-      :title="$t('estimates.no_estimates')"
+-      :description="$t('estimates.empty_description')"
++      :title="currentDocMeta ? `No ${currentDocMeta.labelPlural.toLowerCase()} yet` : $t('estimates.no_estimates')"
++      :description="currentDocMeta ? `Create a ${currentDocMeta.label.toLowerCase()} with station-wise capacity rates.` : $t('estimates.empty_description')"
+     >
+       <template v-if="canCreate" #actions>
+         <BaseButton
+           variant="primary"
+-          @click="$router.push('/admin/estimates/create')"
++          @click="$router.push(newEstimateLink)"
+         >
+           <template #left="slotProps">
+             <BaseIcon name="PlusIcon" :class="slotProps.class" />
+           </template>
+-          {{ $t('estimates.add_new_estimate') }}
++          <!-- HisabKitab feature - label from registered view mode -->
++          {{ currentDocMeta ? `New ${currentDocMeta.label}` : $t('estimates.add_new_estimate') }}
+         </BaseButton>
+       </template>
+     </BaseEmptyPlaceholder>
+@@ -217,15 +230,21 @@
+ 
+ <script setup lang="ts">
+ import type { ColumnDef } from '@/scripts/components/table/DataTable.vue'
+-import { computed, onUnmounted, reactive, ref } from 'vue'
++// HisabKitab feature
++import BaseViewSwitcher, { type ViewSwitcherOption } from '@/scripts/components/base/BaseViewSwitcher.vue'
++import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+ import { useI18n } from 'vue-i18n'
++import { useRoute, useRouter } from 'vue-router'
+ import { debouncedWatch } from '@vueuse/core'
+ import { useEstimateStore } from '../store'
+ import EstimateDropdown from '../components/EstimateDropdown.vue'
+ import SendEstimateModal from '../components/SendEstimateModal.vue'
+ import { useUserStore } from '../../../../stores/user.store'
+ import { useDialogStore } from '../../../../stores/dialog.store'
++import { useGlobalStore } from '../../../../stores/global.store'
+ import type { Estimate } from '../../../../types/domain/estimate'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+ 
+ interface Props {
+   canCreate?: boolean
+@@ -254,8 +273,118 @@ const ABILITIES = {
+ const estimateStore = useEstimateStore()
+ const userStore = useUserStore()
+ const dialogStore = useDialogStore()
++const globalStore = useGlobalStore()
++const route = useRoute()
++const router = useRouter()
+ const { t } = useI18n()
+ 
++// ----------------------------------------------------------------
++// View mode toggle (module-driven via extensionRegistry)
++// ----------------------------------------------------------------
++
++type EstimateViewMode = string
++
++// HisabKitab feature - registered estimate view modes from modules, filtered by ability
++const registeredViewModes = computed(() =>
++  extensionItems(extensionRegistry.estimateViewModes.value).filter(
++    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
++  ),
++)
++
++const registeredViewModeValues = computed(() =>
++  new Set(registeredViewModes.value.map((vm) => vm.value)),
++)
++
++// HisabKitab feature - document meta for the current view mode
++const currentDocMeta = computed(() => {
++  const items = extensionItems(extensionRegistry.estimateDocumentMeta.value)
++  return items.find((m) => m.templateName === viewMode.value) ?? null
++})
++
++function initialViewMode(): EstimateViewMode {
++  // HisabKitab feature - check registered view modes dynamically
++  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
++  if (vm) return vm.value
++  return 'estimates'
++}
++
++const viewMode = ref<EstimateViewMode>(initialViewMode())
++
++// HisabKitab feature - view switcher options from registered view modes
++const estimateViews = computed<ViewSwitcherOption[]>(() => [
++  { value: 'estimates', label: t('estimates.title'), icon: 'DocumentTextIcon' },
++  ...registeredViewModes.value.map((vm) => ({
++    value: vm.value,
++    label: vm.label,
++    icon: vm.icon,
++  })),
++])
++
++// HisabKitab feature - label from registered view mode
++const viewModeLabel = computed<string>(() => {
++  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
++  if (vm) return `${vm.label}s`
++  return t('estimates.title')
++})
++
++// HisabKitab feature - create link from registered view mode
++const newEstimateLink = computed<string>(() => {
++  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
++  if (vm) return vm.createLink
++  return 'estimates/create'
++})
++
++function setViewMode(mode: EstimateViewMode): void {
++  viewMode.value = mode
++  // HisabKitab feature - reflect registered view modes in the URL
++  if (mode !== 'estimates') {
++    router.replace({ query: { view: mode } })
++  } else if (route.query.view) {
++    router.replace({ query: {} })
++  }
++  // Force the table to re-mount and re-fetch with the new template_name filter.
++  filters.customer_id = ''
++  filters.status = ''
++  filters.from_date = ''
++  filters.to_date = ''
++  filters.estimate_number = ''
++  estimateStore.selectedEstimates = []
++  estimateStore.selectAllField = false
++  tableKey.value += 1
++  isRequestOngoing.value = true
++}
++
++// HisabKitab feature - data-driven route-based view mode detection
++function updateViewModeFromRoute(): void {
++  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
++  const newMode = vm ? vm.value : 'estimates'
++  if (viewMode.value !== newMode) {
++    viewMode.value = newMode
++    filters.customer_id = ''
++    filters.status = ''
++    filters.from_date = ''
++    filters.to_date = ''
++    filters.estimate_number = ''
++    estimateStore.selectedEstimates = []
++    estimateStore.selectAllField = false
++    tableKey.value += 1
++    isRequestOngoing.value = true
++  }
++}
++
++onMounted(() => {
++  updateViewModeFromRoute()
++})
++
++// Watch for route query changes (when navigating between estimate types via
++// the sidebar - Estimates ↔ Quotation share the same path).
++watch(
++  () => route.query.view,
++  () => {
++    updateViewModeFromRoute()
++  },
++)
++
+ const tableRef = ref<{ refresh: () => void } | null>(null)
+ const tableKey = ref<number>(0)
+ const showFilters = ref<boolean>(false)
+@@ -345,7 +474,8 @@ const estimateColumns = computed<TableColumn[]>(() => [
+   },
+   {
+     key: 'estimate_number',
+-    label: t('estimates.number', 2),
++    // HisabKitab feature - column label from registered document meta
++    label: currentDocMeta.value?.numberLabel ?? (currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('estimates.number', 2)),
+     mobile: 'subtitle',
+   },
+   { key: 'name', label: t('estimates.customer'), mobile: 'title' },
+@@ -410,6 +540,10 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
+     from_date: filters.from_date || undefined,
+     to_date: filters.to_date || undefined,
+     estimate_number: filters.estimate_number || undefined,
++    // HisabKitab feature - template_name from registered view mode, or 'estimates'
++    template_name: registeredViewModeValues.value.has(viewMode.value)
++      ? viewMode.value
++      : 'estimates',
+     orderByField: sort.fieldName || 'created_at',
+     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
+     page,
+diff --git a/resources/scripts/features/company/invoices/components/InvoiceBasicFields.vue b/resources/scripts/features/company/invoices/components/InvoiceBasicFields.vue
+index 70d5978e..2ebf8cd1 100644
+--- a/resources/scripts/features/company/invoices/components/InvoiceBasicFields.vue
++++ b/resources/scripts/features/company/invoices/components/InvoiceBasicFields.vue
+@@ -1,11 +1,23 @@
+ <template>
+   <div class="grid grid-cols-12 gap-4 mt-5 mb-6 md:gap-8 md:mb-8">
+-    <BaseCustomerSelectPopup
+-      :valid="v.customer_id"
+-      :content-loading="isLoading"
+-      type="invoice"
+-      class="col-span-12 lg:col-span-6 pe-0"
+-    />
++    <div class="col-span-12 lg:col-span-6 pe-0 space-y-4">
++      <!-- HisabKitab feature — Lorry Receipt: customer list is filtered
++           server-side to only party-profile-linked customers -->
++      <BaseCustomerSelectPopup
++        :valid="v.customer_id"
++        :content-loading="isLoading"
++        type="invoice"
++        :label="isLrReceipt ? 'Consignor' : null"
++      />
++      <!-- HisabKitab feature — consignee picker (LR Receipt only) -->
++      <BaseCustomerSelectPopup
++        v-if="isLrReceipt"
++        :content-loading="isLoading"
++        type="invoice"
++        consignee-mode
++        label="Consignee"
++      />
++    </div>
+ 
+     <RecurringFields
+       v-if="isRecurring"
+@@ -17,10 +29,10 @@
+ 
+     <BaseInputGrid
+       v-else
+-      class="col-span-12 p-4 border lg:col-span-6 glass rounded-xl md:p-5"
++      class="col-span-12 p-4 border lg:col-span-6 glass rounded-xl md:p-5 self-start"
+     >
+       <BaseInputGroup
+-        :label="$t('invoices.invoice_date')"
++        :label="currentDocMeta?.dateLabel ?? $t('invoices.invoice_date')"
+         :content-loading="isLoading"
+         required
+         :error="v.invoice_date.$error && v.invoice_date.$errors[0].$message"
+@@ -48,7 +60,7 @@
+       </BaseInputGroup>
+ 
+       <BaseInputGroup
+-        :label="$t('invoices.invoice_number')"
++        :label="currentDocMeta?.numberLabel ?? $t('invoices.invoice_number')"
+         :content-loading="isLoading"
+         :error="v.invoice_number.$error && v.invoice_number.$errors[0].$message"
+         required
+@@ -69,10 +81,11 @@
+         :customer-currency="invoiceStore.newInvoice.currency_id"
+       />
+ 
+-      <!-- Document-level custom fields sit with the number and the dates:
+-           they are attributes of the document, not a separate section. -->
++      <!-- HisabKitab feature — custom fields removed for transport receipts
++           (all fields now live in the module form sections). -->
+       <CustomFieldInput
+         v-for="field in customFields"
++        v-if="!isTransportReceipt"
+         :key="field.id"
+         :custom-field-scope="customFieldScope"
+         :field="field"
+@@ -88,6 +101,8 @@ import { useInvoiceStore } from '../store'
+ import RecurringFields from './RecurringFields.vue'
+ import CustomFieldInput from '@/scripts/features/shared/custom-fields/CustomFieldInput.vue'
+ import { useCustomFields } from '@/scripts/features/shared/custom-fields/use-custom-fields'
++// HisabKitab feature — per-template field labels
++import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
+ 
+ interface ValidationField {
+   $error: boolean
+@@ -129,4 +144,21 @@ const time24h = computed<boolean>(() => {
+   const format = props.companySettings?.carbon_time_format ?? ''
+   return format.indexOf('H') > -1
+ })
++
++// HisabKitab feature — consignee picker (LR Receipt only)
++const isLrReceipt = computed<boolean>(
++  () => invoiceStore.newInvoice.template_name === 'lr_receipt',
++)
++
++// HisabKitab feature — transport receipts have their own fields, hide custom fields
++const isTransportReceipt = computed<boolean>(() => {
++  const t = invoiceStore.newInvoice.template_name
++  return t === 'lr_receipt' || t === 'lorry_receipt' || t === 'invoice_receipt'
++})
++
++// HisabKitab feature — per-template field labels from registered document meta
++const { currentDocMeta } = useDocumentMeta(() => invoiceStore.newInvoice.template_name ?? undefined)
++
++const dateLabel = computed<string>(() => currentDocMeta.value?.dateLabel ?? 'invoices.invoice_date')
++const numberLabel = computed<string>(() => currentDocMeta.value?.numberLabel ?? 'invoices.invoice_number')
+ </script>
+diff --git a/resources/scripts/features/company/invoices/components/InvoiceDropdown.vue b/resources/scripts/features/company/invoices/components/InvoiceDropdown.vue
+index e8d97c31..a940cd40 100644
+--- a/resources/scripts/features/company/invoices/components/InvoiceDropdown.vue
++++ b/resources/scripts/features/company/invoices/components/InvoiceDropdown.vue
+@@ -1,3 +1,4 @@
++<!-- HisabKitab feature -->
+ <template>
+   <BaseDropdown :label="$t('general.actions_for', { name: row.invoice_number })">
+     <template #activator>
+@@ -15,7 +16,7 @@
+         name="PencilIcon"
+         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+       />
+-      {{ $t('general.edit') }}
++      {{ $t('general.edit') }} {{ docLabel }}
+     </BaseDropdownItem>
+ 
+     <!-- Copy PDF url -->
+@@ -42,7 +43,7 @@
+         name="PaperAirplaneIcon"
+         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+       />
+-      {{ $t('invoices.send_invoice') }}
++      {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
+     </BaseDropdownItem>
+ 
+     <!-- Resend Invoice -->
+@@ -51,7 +52,7 @@
+         name="PaperAirplaneIcon"
+         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+       />
+-      {{ $t('invoices.resend_invoice') }}
++      {{ $t('invoices.resend_invoice').replace('Invoice', docLabel) }}
+     </BaseDropdownItem>
+ 
+     <!-- Record Payment -->
+@@ -77,7 +78,7 @@
+         name="CheckCircleIcon"
+         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+       />
+-      {{ $t('invoices.mark_as_sent') }}
++      {{ $t('invoices.mark_as_sent').replace('invoice', docLabel.toLowerCase()) }}
+     </BaseDropdownItem>
+ 
+     <!-- Clone Invoice -->
+@@ -86,7 +87,7 @@
+         name="DocumentTextIcon"
+         class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+       />
+-      {{ $t('invoices.clone_invoice') }}
++      {{ $t('invoices.clone_invoice').replace('Invoice', docLabel) }}
+     </BaseDropdownItem>
+ 
+     <!-- Convert to Estimate -->
+@@ -132,6 +133,8 @@ import {
+   getErrorTranslationKey,
+ } from '../../../../utils/error-handling'
+ import type { Invoice } from '../../../../types/domain/invoice'
++// HisabKitab feature
++import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
+ 
+ interface TableRef {
+   refresh: () => void
+@@ -172,6 +175,10 @@ const router = useRouter()
+ 
+ const isDetailView = computed<boolean>(() => route.name === 'invoices.view')
+ 
++// HisabKitab feature — doc label from registered document meta
++const { currentDocMeta } = useDocumentMeta(() => props.row?.template_name as string | undefined)
++const docLabel = computed<string>(() => currentDocMeta.value?.label ?? t('invoices.invoice'))
++
+ const canReSendInvoice = computed<boolean>(() => {
+   return (
+     (props.row.status === 'SENT' || props.row.status === 'VIEWED') &&
+@@ -315,7 +322,7 @@ function onMarkAsSent(): void {
+ 
+ function sendInvoice(): void {
+   modalStore.openModal({
+-    title: t('invoices.send_invoice'),
++    title: t('invoices.send_invoice').replace('Invoice', docLabel.value),
+     componentName: 'SendInvoiceModal',
+     id: props.row.id,
+     data: props.row,
+diff --git a/resources/scripts/features/company/invoices/store.ts b/resources/scripts/features/company/invoices/store.ts
+index ec7c310c..15e5da2f 100644
+--- a/resources/scripts/features/company/invoices/store.ts
++++ b/resources/scripts/features/company/invoices/store.ts
+@@ -1,3 +1,5 @@
++// HisabKitab feature
++
+ import { defineStore } from 'pinia'
+ import { useNotificationStore } from '../../../stores/notification.store'
+ import { useCompanyStore } from '../../../stores/company.store'
+@@ -94,6 +96,11 @@ export interface InvoiceFormData {
+   unique_hash?: string
+   exchange_rate?: number | null
+   currency_id?: number
++  // Invoice Receipt (office invoice) module: GST Tax Through selector
++  gst_tax_payable_by?: string | null
++  // HisabKitab feature — consignee picker (LR Receipt)
++  consignee?: Customer | null
++  tr_consignee_customer_id?: number | null
+ }
+ 
+ function createInvoiceStub(): InvoiceFormData {
+@@ -124,6 +131,9 @@ function createInvoiceStub(): InvoiceFormData {
+     fields: [],
+     selectedNote: null,
+     selectedCurrency: '',
++    // HisabKitab feature — consignee picker (LR Receipt)
++    consignee: null,
++    tr_consignee_customer_id: null,
+   }
+ }
+ 
+@@ -466,6 +476,24 @@ export const useInvoiceStore = defineStore('invoice', {
+       this.newInvoice.customer_id = null
+     },
+ 
++    // HisabKitab feature — consignee picker support (LR Receipt)
++    isConsigneeMode: false,
++
++    async selectConsignee(id: number): Promise<unknown> {
++      const { customerService } = await import(
++        '../../../api/services/customer.service'
++      )
++      const response = await customerService.get(id)
++      this.newInvoice.consignee = response.data as unknown as Customer
++      this.newInvoice.tr_consignee_customer_id = response.data.id
++      return response
++    },
++
++    resetSelectedConsignee(): void {
++      this.newInvoice.consignee = null
++      this.newInvoice.tr_consignee_customer_id = null
++    },
++
+     addItem(): void {
+       this.newInvoice.items.push(createInvoiceItemStub())
+     },
+@@ -549,7 +577,12 @@ export const useInvoiceStore = defineStore('invoice', {
+           Promise.resolve(), // placeholder for items fetch
+           this.resetSelectedNote(),
+           this.fetchInvoiceTemplates(),
+-          this.getNextNumber(),
++          // HisabKitab feature — pass template_name as key if set, for serial number scoping
++          this.getNextNumber(
++            this.newInvoice.template_name
++              ? { key: this.newInvoice.template_name as string }
++              : undefined,
++          ),
+           Promise.resolve(), // placeholder for tax types fetch
+           ...editActions,
+         ])
+diff --git a/resources/scripts/features/company/invoices/views/InvoiceCreateView.vue b/resources/scripts/features/company/invoices/views/InvoiceCreateView.vue
+index f819d6db..d1b2474f 100644
+--- a/resources/scripts/features/company/invoices/views/InvoiceCreateView.vue
++++ b/resources/scripts/features/company/invoices/views/InvoiceCreateView.vue
+@@ -1,10 +1,11 @@
++<!-- HisabKitab feature -->
+ <template>
+   <BasePage class="relative invoice-create-page">
+     <form @submit.prevent="submitForm">
+       <BasePageHeader :help="$t(isRecurring ? 'page_help.recurring_invoices' : 'page_help.invoices')" :title="pageTitle">
+         <BaseBreadcrumb>
+           <BaseBreadcrumbItem :title="$t('general.home')" to="/admin/dashboard" />
+-          <BaseBreadcrumbItem :title="$t('invoices.invoice', 2)" to="/admin/invoices" />
++          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
+           <BaseBreadcrumbItem
+             v-if="isEdit"
+             :title="$t('invoices.edit_invoice')"
+@@ -81,9 +82,19 @@
+         :is-recurring="isRecurring"
+       />
+ 
++      <!-- Transport receipt modules (LR Receipt, Lorry Receipt) inject their
++           template-specific form sections here. No-op if no module registered. -->
++      <ExtensionSlot
++        name="invoice-form-sections"
++        :template-name="invoiceStore.newInvoice.template_name"
++        :store="invoiceStore"
++      />
++
+       <BaseScrollPane>
+-        <!-- Invoice Items -->
++        <!-- Invoice Items — hidden for transport receipt modules (LR/Lorry Receipt)
++             which use their own hire-particulars fields instead of line items -->
+         <DocumentItemsTable
++          v-if="!isTransportReceipt"
+           :currency="invoiceStore.newInvoice.selectedCurrency"
+           :is-loading="isLoadingContent"
+           :item-validation-scope="invoiceValidationScope"
+@@ -146,11 +157,15 @@ import { useRecurringInvoiceStore } from '@/scripts/features/company/recurring-i
+ import { useCompanyStore } from '@/scripts/stores/company.store'
+ import { useNotificationStore } from '@/scripts/stores/notification.store'
+ import { useBreakpoints } from '@/scripts/composables/use-breakpoints'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
++import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
+ import {
+   handleApiError,
+   getErrorTranslationKey,
+ } from '@/scripts/utils/error-handling'
+ import InvoiceBasicFields from '../components/InvoiceBasicFields.vue'
++import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
+ import {
+   DocumentItemsTable,
+   DocumentFormActionBar,
+@@ -169,6 +184,22 @@ const route = useRoute()
+ const router = useRouter()
+ const { isPhone } = useBreakpoints()
+ 
++// HisabKitab feature — document meta from registered modules
++const { currentDocMeta } = useDocumentMeta(() => invoiceStore.newInvoice.template_name)
++
++const isTransportReceipt = computed<boolean>(() => currentDocMeta.value !== null)
++
++// HisabKitab feature — breadcrumb from registered document meta
++const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('invoices.invoice', 2))
++
++const breadcrumbLink = computed<string>(() => {
++  const tpl = invoiceStore.newInvoice.template_name
++  if (!tpl) return '/admin/invoices'
++  const vm = extensionItems(extensionRegistry.invoiceViewModes.value)
++    .find((v) => v.value === tpl)
++  return vm ? vm.listLink : '/admin/invoices'
++})
++
+ const invoiceValidationScope = 'newInvoice'
+ const isSaving = ref<boolean>(false)
+ const isMarkAsDefault = ref<boolean>(false)
+@@ -242,6 +273,11 @@ if (route.query.recurring === '1' || isRecurringEdit.value) {
+   isRecurring.value = true
+ }
+ 
++// HisabKitab feature
++if (route.query.template) {
++  invoiceStore.setTemplate(route.query.template as string)
++}
++
+ // Initialize recurring store
+ recurringInvoiceStore.initFrequencies(t)
+ 
+@@ -275,7 +311,12 @@ if (isRecurringEdit.value) {
+   invoiceStore.fetchInvoiceInitialSettings(
+     isEdit.value,
+     { id: route.params.id as string, query: route.query as Record<string, string> },
+-  )
++  ).then(() => {
++    // HisabKitab feature
++    if (route.query.template) {
++      invoiceStore.setTemplate(route.query.template as string)
++    }
++  })
+ } else {
+   // New recurring invoice — just initialize
+   recurringInvoiceStore.resetCurrentRecurringInvoice()
+@@ -432,6 +473,22 @@ async function submitForm(): Promise<void> {
+         tax: Math.round(invoiceStore.getTotalTax),
+       }
+ 
++      // HisabKitab feature — hide line items for receipt types that don't use them.
++      // Uses registered document meta to determine if this template has items.
++      if (isTransportReceipt.value && !currentDocMeta.value?.label?.includes('Invoice')) {
++        // LR Receipt uses tr_net_amount (sum of freight charges), Lorry Receipt uses tr_net_amount_payable
++        const netAmount = Number(data.tr_net_amount) || 0
++        const netPayable = Number(data.tr_net_amount_payable) || 0
++        const amount = netAmount || netPayable
++        const cents = Math.round(amount * 100)
++        data.sub_total = cents
++        data.total = cents
++        data.due_amount = cents
++        data.base_sub_total = cents
++        data.base_total = cents
++        data.base_due_amount = cents
++      }
++
+       const items = data.items as Array<Record<string, unknown>>
+       if (data.discount_per_item === 'YES') {
+         items.forEach((item, index) => {
+diff --git a/resources/scripts/features/company/invoices/views/InvoiceDetailView.vue b/resources/scripts/features/company/invoices/views/InvoiceDetailView.vue
+index eeecb43f..9f575fea 100644
+--- a/resources/scripts/features/company/invoices/views/InvoiceDetailView.vue
++++ b/resources/scripts/features/company/invoices/views/InvoiceDetailView.vue
+@@ -1,10 +1,11 @@
++<!-- HisabKitab feature -->
+ <template>
+   <div v-if="invoiceData" class="flex min-h-full">
+ 
+     <BasePage class="min-w-0">
+       <BasePageHeader :help="$t(invoiceData?.type === 'CREDIT_NOTE' ? 'page_help.credit_notes' : 'page_help.invoices')" :title="pageTitle">
+         <BaseBreadcrumb>
+-          <BaseBreadcrumbItem :title="$t('invoices.invoice', 2)" to="/admin/invoices" />
++          <BaseBreadcrumbItem :title="breadcrumbTitle" :to="breadcrumbLink" />
+         </BaseBreadcrumb>
+ 
+         <div class="flex flex-wrap items-center gap-1.5 mt-2">
+@@ -20,6 +21,12 @@
+           >
+             <BaseInvoiceStatusLabel :status="invoiceData.paid_status" />
+           </BasePaidStatusBadge>
++          <span
++            v-if="(invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by"
++            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200"
++          >
++            GST Tax Payable By: {{ (invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by }}
++          </span>
+         </div>
+ 
+         <template v-if="!isPhone" #actions>
+@@ -29,7 +36,7 @@
+             variant="white"
+             @click="onMarkAsSent"
+           >
+-            {{ $t('invoices.mark_as_sent') }}
++            {{ $t('invoices.mark_as_sent').replace('invoice', docLabel.toLowerCase()) }}
+           </BaseButton>
+ 
+           <BaseButton
+@@ -40,7 +47,7 @@
+             <template #left="slotProps">
+               <BaseIcon name="PaperAirplaneIcon" :class="slotProps.class" />
+             </template>
+-            {{ $t('invoices.send_invoice') }}
++            {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
+           </BaseButton>
+ 
+           <router-link
+@@ -87,7 +94,7 @@
+             {{ invoiceData.customer.name }}
+           </router-link>
+         </BaseStat>
+-        <BaseStat :label="$t('invoices.invoice_date')">
++        <BaseStat :label="currentDocMeta?.dateLabel ?? $t('invoices.invoice_date')">
+           {{ invoiceData.formatted_invoice_date }}
+         </BaseStat>
+         <BaseStat :label="$t('invoices.due_date')">
+@@ -95,6 +102,14 @@
+             {{ invoiceData.formatted_due_date || '-' }}
+           </span>
+         </BaseStat>
++        <BaseStat
++          v-if="(invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by"
++          label="GST Tax Payable By"
++        >
++          <span class="font-semibold text-primary-600">
++            {{ (invoiceData as any).gst_tax_payable_by || (invoiceData as any).tr_gst_payable_by }}
++          </span>
++        </BaseStat>
+       </BaseStatStrip>
+ 
+       <!-- Credit note: link back to the invoice it reverses -->
+@@ -186,7 +201,7 @@
+           <template #left="slotProps">
+             <BaseIcon name="PaperAirplaneIcon" :class="slotProps.class" />
+           </template>
+-          {{ $t('invoices.send_invoice') }}
++          {{ $t('invoices.send_invoice').replace('Invoice', docLabel) }}
+         </BaseButton>
+         <BaseButton
+           v-else-if="canRecordPayment"
+@@ -288,6 +303,9 @@ import { useDialogStore } from '../../../../stores/dialog.store'
+ import { useModalStore } from '../../../../stores/modal.store'
+ import type { Invoice, InvoicePaymentAllocation } from '../../../../types/domain/invoice'
+ import { scrollBehavior } from '@/scripts/utils/motion'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
++import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
+ 
+ interface Props {
+   canEdit?: boolean
+@@ -377,6 +395,34 @@ const searchData = reactive<SearchData>({
+ 
+ const pageTitle = computed<string>(() => invoiceData.value?.invoice_number ?? '')
+ 
++// HisabKitab feature — document meta from registered modules
++const { currentDocMeta } = useDocumentMeta(() => invoiceData.value?.template_name as string | undefined)
++
++const docLabel = computed<string>(() => currentDocMeta.value?.label ?? t('invoices.invoice'))
++
++// HisabKitab feature — sidebar filter from registered view mode values
++const sidebarTemplateFilter = computed<string>(() => {
++  const tpl = invoiceData.value?.template_name as string | undefined
++  if (!tpl) return 'one-time'
++  const registered = extensionItems(extensionRegistry.invoiceViewModes.value)
++  return registered.some((vm) => vm.value === tpl) ? tpl : 'one-time'
++})
++
++// The filter the currently loaded sidebar list was fetched with, so we can
++// detect a type change when navigating between documents
++const listTemplateFilter = ref<string>('')
++
++// HisabKitab feature — breadcrumb from registered document meta
++const breadcrumbTitle = computed<string>(() => currentDocMeta.value?.labelPlural ?? t('invoices.invoice', 2))
++
++const breadcrumbLink = computed<string>(() => {
++  const tpl = invoiceData.value?.template_name as string | undefined
++  if (!tpl) return '/admin/invoices'
++  const vm = extensionItems(extensionRegistry.invoiceViewModes.value)
++    .find((v) => v.value === tpl)
++  return vm ? vm.listLink : '/admin/invoices'
++})
++
+ const { isPhone } = useBreakpoints()
+ const pdfPreview = ref<InstanceType<typeof BasePdfPreview> | null>(null)
+ 
+@@ -437,7 +483,12 @@ const shareableLink = computed<string>(() => {
+ 
+ watch(route, (to) => {
+   if (to.name === 'invoices.view') {
+-    loadInvoice()
++    loadInvoice().finally(() => {
++      // HisabKitab feature
++      if (listTemplateFilter.value !== sidebarTemplateFilter.value) {
++        refreshInvoiceList()
++      }
++    })
+   }
+ })
+ 
+@@ -466,7 +517,7 @@ function onMarkAsSent(): void {
+ 
+ function onSendInvoice(): void {
+   modalStore.openModal({
+-    title: t('invoices.send_invoice'),
++    title: t('invoices.send_invoice').replace('Invoice', docLabel.value),
+     componentName: 'SendInvoiceModal',
+     id: invoiceData.value!.id,
+     data: invoiceData.value,
+@@ -497,8 +548,12 @@ async function loadInvoices(
+   }
+ 
+   isLoading.value = true
++  // HisabKitab feature
++  const templateFilter = sidebarTemplateFilter.value
++  listTemplateFilter.value = templateFilter
+   const response = await invoiceStore.fetchInvoices({
+     page: pageNumber,
++    template_name: templateFilter,
+     ...params,
+   } as never).catch(() => null)
+   isLoading.value = false
+@@ -595,7 +650,7 @@ function sortData(): void {
+   onSearched()
+ }
+ 
+-// Initialize
+-loadInvoices()
+-loadInvoice()
++// Initialize — the invoice loads first so the sidebar list can be scoped to
++// the same document type (template_name) as the one on screen
++loadInvoice().finally(() => loadInvoices())
+ </script>
+diff --git a/resources/scripts/features/company/invoices/views/InvoiceIndexView.vue b/resources/scripts/features/company/invoices/views/InvoiceIndexView.vue
+index a608fac8..e2f89248 100644
+--- a/resources/scripts/features/company/invoices/views/InvoiceIndexView.vue
++++ b/resources/scripts/features/company/invoices/views/InvoiceIndexView.vue
+@@ -1,10 +1,12 @@
++<!-- HisabKitab feature -->
+ <template>
+   <BasePage>
++    <!-- HisabKitab feature -->
+     <BasePageHeader :title="$t('invoices.title')" :help="$t(viewMode === 'recurring' ? 'page_help.recurring_invoices' : 'page_help.invoices')" :help-title="$t(viewMode === 'recurring' ? 'recurring_invoices.title' : 'invoices.title')">
+       <template v-if="invoiceViews.length > 1" #title-suffix>
+         <BaseViewSwitcher
+           :model-value="viewMode"
+-          primary-value="one-time"
++          :primary-value="invoicePrimaryValue"
+           :label="$t('invoices.title')"
+           :options="invoiceViews"
+           @update:model-value="setViewMode"
+@@ -17,7 +19,7 @@
+ 
+       <template #actions>
+         <BaseButton
+-          v-show="viewMode === 'one-time' ? invoiceStore.invoiceTotalCount : recurringInvoiceStore.totalRecurringInvoices"
++          v-show="viewMode !== 'recurring' ? invoiceStore.invoiceTotalCount : recurringInvoiceStore.totalRecurringInvoices"
+           variant="primary-outline"
+           :aria-expanded="showFilters"
+           @click="toggleFilter"
+@@ -35,7 +37,7 @@
+ 
+         <router-link
+           v-if="canCreate"
+-          :to="viewMode === 'recurring' ? 'invoices/create?recurring=1' : 'invoices/create'"
++          :to="newInvoiceLink"
+           class="inline-flex rounded-lg"
+         >
+           <BaseButton tag="span" variant="primary">
+@@ -50,7 +52,7 @@
+ 
+     <!-- Filters (one-time) -->
+     <BaseFilterWrapper
+-      v-show="showFilters && viewMode === 'one-time'"
++      v-show="showFilters && viewMode !== 'recurring'"
+       :row-on-xl="true"
+       @clear="clearFilter"
+     >
+@@ -150,8 +152,15 @@
+       </BaseInputGroup>
+     </BaseFilterWrapper>
+ 
+-    <!-- One-time invoices section -->
+-    <template v-if="viewMode === 'one-time'">
++    <!-- HisabKitab feature — permission-missing UI is module-driven via extension slot -->
++    <ExtensionSlot
++      v-if="receiptPermissionMissing"
++      name="invoice-permission-missing"
++      :view-mode-label="viewModeLabel"
++    />
++
++    <!-- One-time invoices section (also used for LR Receipt & Lorry Receipt modes) -->
++    <template v-if="viewMode !== 'recurring' && !receiptPermissionMissing">
+       <!-- Empty State -->
+       <BaseEmptyPlaceholder
+         v-show="showEmptyScreen"
+@@ -163,7 +172,7 @@
+         <template v-if="canCreate" #actions>
+           <BaseButton
+             variant="primary"
+-            @click="$router.push('/admin/invoices/create')"
++            @click="$router.push(newInvoiceLink)"
+           >
+             <template #left="slotProps">
+               <BaseIcon name="PlusIcon" :class="slotProps.class" />
+@@ -249,12 +258,28 @@
+             </span>
+           </template>
+ 
++          <!-- HisabKitab feature — generic cell template for module-registered extra columns -->
++          <template
++            v-for="col in extraViewModeColumns"
++            :key="col.key"
++            #[`cell-${col.key}`]="{ row }"
++          >
++            <span class="text-sm text-heading">{{ row.data[col.key] ?? '-' }}</span>
++          </template>
++
+           <template #cell-invoice_date="{ row }">
+             {{ row.data.formatted_invoice_date }}
+           </template>
+ 
+           <template #cell-total="{ row }">
++            <!-- HisabKitab feature — Lorry Receipt: Total = Advance (+ Net Amount Payable if final settlement done) -->
+             <BaseFormatMoney
++              v-if="viewMode === 'lorry_receipt'"
++              :amount="lorryReceiptTotal(row.data)"
++              :currency="row.data.customer.currency"
++            />
++            <BaseFormatMoney
++              v-else
+               :amount="row.data.total"
+               :currency="row.data.customer.currency"
+             />
+@@ -267,7 +292,22 @@
+           </template>
+ 
+           <template #cell-due_amount="{ row }">
+-            <div class="flex items-center justify-between gap-3">
++            <!-- HisabKitab feature — Lorry Receipt: Amount Due = Net Amount Payable (0 after final settlement) -->
++            <div v-if="viewMode === 'lorry_receipt'" class="flex items-center justify-between gap-3">
++              <BaseFormatMoney
++                :amount="lorryReceiptDueAmount(row.data)"
++                :currency="row.data.customer.currency"
++              />
++
++              <BasePaidStatusBadge
++                :status="lorryReceiptDueAmount(row.data) === 0 ? 'PAID' : 'UNPAID'"
++              >
++                <BaseInvoiceStatusLabel
++                  :status="lorryReceiptDueAmount(row.data) === 0 ? 'PAID' : 'UNPAID'"
++                />
++              </BasePaidStatusBadge>
++            </div>
++            <div v-else class="flex items-center justify-between gap-3">
+               <BaseFormatMoney
+                 :amount="row.data.due_amount"
+                 :currency="row.data.currency"
+@@ -473,7 +513,7 @@
+ <script setup lang="ts">
+ import BaseViewSwitcher, { type ViewSwitcherOption } from '@/scripts/components/base/BaseViewSwitcher.vue'
+ import type { ColumnDef } from '@/scripts/components/table/DataTable.vue'
+-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
++import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+ import { useI18n } from 'vue-i18n'
+ import { useRoute, useRouter } from 'vue-router'
+ import { debouncedWatch } from '@vueuse/core'
+@@ -484,7 +524,12 @@ import SendInvoiceModal from '../components/SendInvoiceModal.vue'
+ import CreditNoteModal from '../components/CreditNoteModal.vue'
+ import RecurringInvoiceDropdown from '../../recurring-invoices/components/RecurringInvoiceDropdown.vue'
+ import { useUserStore } from '../../../../stores/user.store'
++import { useGlobalStore } from '../../../../stores/global.store'
+ import { useDialogStore } from '../../../../stores/dialog.store'
++// HisabKitab feature
++import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
++import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
++import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
+ import type { Invoice } from '../../../../types/domain/invoice'
+ import type { RecurringInvoice } from '../../../../types/domain/recurring-invoice'
+ 
+@@ -522,6 +567,7 @@ const RECURRING_ABILITIES = {
+ const invoiceStore = useInvoiceStore()
+ const recurringInvoiceStore = useRecurringInvoiceStore()
+ const userStore = useUserStore()
++const globalStore = useGlobalStore()
+ const dialogStore = useDialogStore()
+ const route = useRoute()
+ const router = useRouter()
+@@ -539,31 +585,184 @@ const canViewRecurring = computed<boolean>(() => {
+ // View mode toggle
+ // ----------------------------------------------------------------
+ 
+-const storedViewMode = localStorage.getItem('invoiceViewMode') as 'one-time' | 'recurring' | null
+-const viewMode = ref<'one-time' | 'recurring'>(
+-  storedViewMode === 'recurring' && !canViewRecurring.value ? 'one-time' : (storedViewMode ?? 'one-time')
++// HisabKitab feature — view modes are now module-driven via extensionRegistry
++type InvoiceViewMode = string
++
++// HisabKitab feature — registered view modes from modules, filtered by ability
++const registeredViewModes = computed(() =>
++  extensionItems(extensionRegistry.invoiceViewModes.value).filter(
++    (vm) => !vm.ability || userStore.hasAbilities(vm.ability),
++  ),
+ )
+ 
+-onMounted(() => {
++const registeredViewModeValues = computed(() =>
++  new Set(registeredViewModes.value.map((vm) => vm.value)),
++)
++
++// HisabKitab feature — document meta (labels) for the current view mode
++const { currentDocMeta } = useDocumentMeta(() => viewMode.value)
++
++// HisabKitab feature — extra columns registered by the current view mode's module
++const extraViewModeColumns = computed(() => {
++  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
++  return (vm as any)?.columns ?? []
++})
++
++// True when the current view mode is a receipt type the member may not see.
++const receiptPermissionMissing = computed<boolean>(() => {
++  if (viewMode.value === 'one-time' || viewMode.value === 'recurring') return false
++  return !registeredViewModeValues.value.has(viewMode.value)
++})
++
++// The ?view= query param must win at setup time: the table fetches its first
++// page in a child onMounted hook that runs before this view's onMounted, so
++// viewMode has to be correct here or the first fetch uses the wrong
++// template_name filter and the list comes up empty until a manual refresh.
++function initialViewMode(): InvoiceViewMode {
++  // HisabKitab feature — check registered view modes dynamically
++  const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
++  if (vm) return vm.value
++
++  switch (route.query.view) {
++    case 'recurring':
++      return canViewRecurring.value ? 'recurring' : 'one-time'
++    default: {
++      // HisabKitab feature — when the core Invoices menu is hidden, default to
++      // the first registered receipt view instead of 'one-time'
++      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
++        return registeredViewModes.value[0].value as InvoiceViewMode
++      }
++      const storedViewMode = localStorage.getItem('invoiceViewMode') as InvoiceViewMode | null
++      return storedViewMode === 'recurring' && !canViewRecurring.value
++        ? 'one-time'
++        : (storedViewMode ?? 'one-time')
++    }
++  }
++}
++
++const viewMode = ref<InvoiceViewMode>(initialViewMode())
++
++// HisabKitab feature — label from registered view mode, or i18n for built-in modes
++const viewModeLabel = computed(() => {
++  if (viewMode.value === 'recurring') return t('recurring_invoices.recurring')
++  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
++  if (vm) return vm.label
++  return t('invoices.one_time')
++})
++
++// HisabKitab feature — create link from registered view mode
++const newInvoiceLink = computed(() => {
++  if (viewMode.value === 'recurring') return 'invoices/create?recurring=1'
++  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
++  if (vm) return vm.createLink
++  return 'invoices/create'
++})
++
++function updateViewModeFromRoute(): void {
+   if (route.query.view === 'recurring' && canViewRecurring.value) {
+     viewMode.value = 'recurring'
++    localStorage.setItem('invoiceViewMode', 'recurring')
++  } else {
++    // HisabKitab feature — check registered view modes dynamically
++    const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
++    if (vm) {
++      viewMode.value = vm.value
++      localStorage.setItem('invoiceViewMode', vm.value)
++    } else if (!route.query.view) {
++      // HisabKitab feature — when the core Invoices menu is hidden, default to
++      // the first registered receipt view instead of 'one-time'
++      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
++        viewMode.value = registeredViewModes.value[0].value as InvoiceViewMode
++        localStorage.setItem('invoiceViewMode', viewMode.value)
++      } else {
++        viewMode.value = 'one-time'
++        localStorage.setItem('invoiceViewMode', 'one-time')
++      }
++    }
+   }
++}
++
++onMounted(() => {
++  updateViewModeFromRoute()
+   recurringInvoiceStore.initFrequencies(t)
+ })
+ 
++// HisabKitab feature — view switcher options from registered view modes.
++// When a module has replaced the core Invoices menu (e.g. InvoiceReceipt),
++// hide the one-time/recurring options and show only the registered receipt views.
++const invoiceMenuVisible = computed(() =>
++  globalStore.menuGroups.flat().some((m) => m.name === 'Invoices'),
++)
++
++// HisabKitab feature — primary value for the view switcher: 'one-time' when the
++// core Invoices menu is visible, otherwise the first registered receipt view.
++const invoicePrimaryValue = computed(() =>
++  invoiceMenuVisible.value
++    ? 'one-time'
++    : (registeredViewModes.value[0]?.value ?? 'one-time'),
++)
++
+ const invoiceViews = computed<ViewSwitcherOption[]>(() => [
+-  {value: 'one-time', label: t('view_switcher.one_time'), icon: 'DocumentTextIcon'},
+-  ...(canViewRecurring.value ? [{value: 'recurring', label: t('view_switcher.recurring'), icon: 'ArrowPathIcon'}] : []),
++  ...(invoiceMenuVisible.value
++    ? [{value: 'one-time', label: t('view_switcher.one_time'), icon: 'DocumentTextIcon'}]
++    : []),
++  ...(invoiceMenuVisible.value && canViewRecurring.value
++    ? [{value: 'recurring', label: t('view_switcher.recurring'), icon: 'ArrowPathIcon'}]
++    : []),
++  ...registeredViewModes.value.map((vm) => ({
++    value: vm.value,
++    label: vm.label,
++    icon: vm.icon,
++  })),
+ ])
+ 
++// HisabKitab feature
++watch(
++  () => route.query.view,
++  () => {
++    updateViewModeFromRoute()
++    if (viewMode.value !== 'recurring') {
++      filters.customer_id = ''
++      filters.status = ''
++      filters.from_date = ''
++      filters.to_date = ''
++      filters.invoice_number = ''
++      invoiceStore.selectedInvoices = []
++      invoiceStore.selectAllField = false
++      tableKey.value += 1
++      isRequestOngoing.value = true
++    }
++  },
++)
++
+ function setViewMode(mode: string): void {
+-  if (mode !== 'one-time' && mode !== 'recurring') return
+   if (mode === 'recurring' && !canViewRecurring.value) return
+   viewMode.value = mode
+   localStorage.setItem('invoiceViewMode', mode)
+-  router.replace({
+-    query: mode === 'recurring' ? { view: 'recurring' } : {},
+-  })
++
++  // Only 'recurring' mode is reflected in the URL (onMounted reads it to
++  // restore state on page reload). LR/Lorry modes are view-only filters —
++  // changing the URL for them causes a route re-evaluation that flickers
++  // the table, so we skip router.replace entirely for non-recurring modes.
++  if (mode === 'recurring') {
++    router.replace({ query: { view: 'recurring' } })
++  } else if (route.query.view) {
++    // Clear the ?view=recurring query when switching away from recurring
++    router.replace({ query: {} })
++  }
++
++  // HisabKitab feature
++  if (mode !== 'recurring') {
++    filters.customer_id = ''
++    filters.status = ''
++    filters.from_date = ''
++    filters.to_date = ''
++    filters.invoice_number = ''
++    invoiceStore.selectedInvoices = []
++    invoiceStore.selectAllField = false
++    tableKey.value += 1
++    isRequestOngoing.value = true
++  }
+ }
+ 
+ // ----------------------------------------------------------------
+@@ -668,6 +867,31 @@ const hasAtLeastOneAbility = computed<boolean>(() => {
+ 
+ type TableColumn = Omit<ColumnDef, 'label'> & { label?: string }
+ 
++// HisabKitab feature — Lorry Receipt: convert tr_ text (major units) to cents
++function trToCents(value: unknown): number {
++  const n = Number(value)
++  return Number.isFinite(n) ? Math.round(n * 100) : 0
++}
++
++// HisabKitab feature — Lorry Receipt Total:
++//   Before final settlement: Advance only
++//   After final settlement (tr_final_balance_on set): Advance + Net Amount Payable
++function lorryReceiptTotal(row: Record<string, any>): number {
++  const advance = trToCents(row.tr_advance_amount)
++  const finalSettled = !!row.tr_final_balance_on
++  if (!finalSettled) return advance
++  return advance + trToCents(row.tr_net_amount_payable)
++}
++
++// HisabKitab feature — Lorry Receipt Amount Due:
++//   Before final settlement: Net Amount Payable (remaining after advance)
++//   After final settlement: 0 (settled)
++function lorryReceiptDueAmount(row: Record<string, any>): number {
++  const finalSettled = !!row.tr_final_balance_on
++  if (finalSettled) return 0
++  return trToCents(row.tr_net_amount_payable)
++}
++
+ const invoiceColumns = computed<TableColumn[]>(() => [
+   {
+     key: 'checkbox',
+@@ -682,8 +906,11 @@ const invoiceColumns = computed<TableColumn[]>(() => [
+     thClass: 'extra',
+     mobile: 'subtitle',
+   },
+-  { key: 'invoice_number', label: t('invoices.number'), mobile: 'subtitle' },
+-  { key: 'name', label: t('invoices.customer'), mobile: 'title' },
++  // HisabKitab feature — column labels from registered document meta
++  { key: 'invoice_number', label: currentDocMeta.value?.numberLabel ?? (currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('invoices.number')), mobile: 'subtitle' },
++  { key: 'name', label: currentDocMeta.value?.labelPlural ? currentDocMeta.value.labelPlural.replace(/s$/, '') : t('invoices.customer'), mobile: 'title' },
++  // HisabKitab feature — extra columns from the current view mode's module
++  ...extraViewModeColumns.value,
+   { key: 'status', label: t('invoices.status') },
+   {
+     key: 'due_amount',
+@@ -747,12 +974,21 @@ interface FetchResult {
+ }
+ 
+ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
++  // HisabKitab feature
++  if (receiptPermissionMissing.value) {
++    return { data: [], pagination: { totalPages: 0, currentPage: 1, totalCount: 0, limit: 0 } }
++  }
++
+   const data = {
+     customer_id: filters.customer_id ? Number(filters.customer_id) : undefined,
+     status: filters.status || undefined,
+     from_date: filters.from_date || undefined,
+     to_date: filters.to_date || undefined,
+     invoice_number: filters.invoice_number || undefined,
++    // HisabKitab feature — template_name from registered view mode, or 'one-time'
++    template_name: registeredViewModeValues.value.has(viewMode.value)
++      ? viewMode.value
++      : 'one-time',
+     orderByField: sort.fieldName || 'created_at',
+     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
+     page,
+diff --git a/resources/scripts/features/company/settings/components/EstimatesTab.vue b/resources/scripts/features/company/settings/components/EstimatesTab.vue
+index d84369fb..5fa25223 100644
+--- a/resources/scripts/features/company/settings/components/EstimatesTab.vue
++++ b/resources/scripts/features/company/settings/components/EstimatesTab.vue
+@@ -48,6 +48,15 @@ const sendAsAttachmentField = computed<boolean>({
+ <template>
+   <NumberCustomizer type="estimate" :type-store="estimateStore" />
+ 
++  <!-- HisabKitab feature — Quotation number format customizer -->
++  <BaseDivider class="mt-6 mb-2" />
++
++  <NumberCustomizer
++    type="quotation"
++    :type-store="estimateStore"
++    default-series="QUO"
++  />
++
+   <BaseDivider class="mt-6 mb-2" />
+   <EstimatesTabExpiryDate />
+   <BaseDivider class="mt-6 mb-2" />
+diff --git a/resources/scripts/features/company/settings/components/InvoicesTab.vue b/resources/scripts/features/company/settings/components/InvoicesTab.vue
+index 4d7dfc6a..85a97220 100644
+--- a/resources/scripts/features/company/settings/components/InvoicesTab.vue
++++ b/resources/scripts/features/company/settings/components/InvoicesTab.vue
+@@ -51,11 +51,36 @@ const sendAsAttachmentField = computed<boolean>({
+   <BaseDivider class="mt-6 mb-2" />
+ 
+   <NumberCustomizer
+-    type="credit_note"
++type="credit_note"
+     :type-store="invoiceStore"
+     default-series="CN"
+   />
+ 
++  <!-- HisabKitab feature — per-receipt number format customizers -->
++  <BaseDivider class="mt-6 mb-2" />
++
++  <NumberCustomizer
++    type="invoice_receipt"
++    :type-store="invoiceStore"
++    default-series="INV"
++  />
++
++  <BaseDivider class="mt-6 mb-2" />
++
++  <NumberCustomizer
++    type="lr_receipt"
++    :type-store="invoiceStore"
++    default-series="LR"
++  />
++
++  <BaseDivider class="mt-6 mb-2" />
++
++  <NumberCustomizer
++    type="lorry_receipt"
++    :type-store="invoiceStore"
++    default-series="LR"
++  />
++
+   <BaseDivider class="mt-6 mb-2" />
+ 
+   <InvoicesTabDueDate />
+diff --git a/resources/scripts/features/customer-portal/views/CustomerInvoiceDetailView.vue b/resources/scripts/features/customer-portal/views/CustomerInvoiceDetailView.vue
+index ba9b2939..419d3a4f 100644
+--- a/resources/scripts/features/customer-portal/views/CustomerInvoiceDetailView.vue
++++ b/resources/scripts/features/customer-portal/views/CustomerInvoiceDetailView.vue
+@@ -24,6 +24,12 @@
+           <BasePaidStatusBadge v-else :status="currentInvoice.paid_status">
+             <BaseInvoiceStatusLabel :status="currentInvoice.paid_status" />
+           </BasePaidStatusBadge>
++          <span
++            v-if="gstTaxPayableBy"
++            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200"
++          >
++            GST Tax Payable By: {{ gstTaxPayableBy }}
++          </span>
+         </div>
+ 
+         <template #actions>
+@@ -51,7 +57,7 @@
+       </BasePageHeader>
+ 
+       <!-- What the invoice says, without opening it -->
+-      <BaseStatStrip v-if="currentInvoice" :columns="4">
++      <BaseStatStrip v-if="currentInvoice" :columns="gstTaxPayableBy ? 5 : 4">
+         <BaseStat :label="$t('dashboard.recent_invoices_card.amount_due')" emphasis>
+           <BaseFormatMoney :amount="currentInvoice.due_amount" :currency="currentInvoice.currency" />
+         </BaseStat>
+@@ -66,6 +72,9 @@
+             {{ currentInvoice.formatted_due_date || '-' }}
+           </span>
+         </BaseStat>
++        <BaseStat v-if="gstTaxPayableBy" label="GST Tax Payable By">
++          <span class="font-semibold text-primary-600">{{ gstTaxPayableBy }}</span>
++        </BaseStat>
+       </BaseStatStrip>
+ 
+       <BasePdfPreview
+@@ -145,6 +154,12 @@ const pageTitle = computed<string>(() => {
+ 
+ const currentInvoice = computed<Invoice | null>(() => store.selectedViewInvoice)
+ 
++const gstTaxPayableBy = computed<string | null>(() => {
++  const inv = (currentInvoice.value || invoice.value) as any
++  if (!inv) return null
++  return inv.gst_tax_payable_by || inv.tr_gst_payable_by || inv.tr_gst_through || null
++})
++
+ const sortOptions = computed(() => [
+   { value: 'invoice_date', label: t('invoices.invoice_date') },
+   { value: 'due_date', label: t('invoices.due_date') },
+diff --git a/resources/scripts/features/customer-portal/views/CustomerInvoicesView.vue b/resources/scripts/features/customer-portal/views/CustomerInvoicesView.vue
+index c1cc8ebd..ed845e7c 100644
+--- a/resources/scripts/features/customer-portal/views/CustomerInvoicesView.vue
++++ b/resources/scripts/features/customer-portal/views/CustomerInvoicesView.vue
+@@ -99,6 +99,12 @@
+           >
+             {{ row.data.invoice_number }}
+           </router-link>
++          <div
++            v-if="row.data.gst_tax_payable_by || row.data.tr_gst_payable_by"
++            class="text-xs text-muted mt-0.5"
++          >
++            GST: <span class="font-medium text-body">{{ row.data.gst_tax_payable_by || row.data.tr_gst_payable_by }}</span>
++          </div>
+         </template>
+ 
+         <template #cell-due_amount="{ row }">
+diff --git a/resources/scripts/layouts/partials/MobileTabBar.vue b/resources/scripts/layouts/partials/MobileTabBar.vue
+index cd7ab5e4..ab07c301 100644
+--- a/resources/scripts/layouts/partials/MobileTabBar.vue
++++ b/resources/scripts/layouts/partials/MobileTabBar.vue
+@@ -84,6 +84,52 @@ const tabs = computed<MenuItem[]>(() => {
+     return items.slice(0, TAB_COUNT)
+   }
+ 
++  // HisabKitab feature — custom mobile tabs when receipt modules are enabled.
++  // Replace the default Invoice/Customer/Expense tabs with receipt-specific
++  // shortcuts: Invoice Receipt (labeled "Invoice"), Lorry Receipt (labeled
++  // "Lorry"), and Trips.
++  const RECEIPT_MODULES = ['InvoiceReceipt', 'LrReceipt', 'LorryReceipt']
++  const hasReceiptModule = globalStore.modules.some((m) => RECEIPT_MODULES.includes(m))
++
++  if (hasReceiptModule) {
++    const customTabs: MenuItem[] = []
++
++    // Tab 1: Dashboard
++    const dashboard = items.find((i) => i.link === '/admin/dashboard')
++    if (dashboard) customTabs.push(dashboard)
++
++    // Tab 2: Invoice Receipt (labeled "Invoice") or LR Receipt,
++    // falling back to core Invoices if neither receipt module is enabled
++    const receipt =
++      items.find((i) => i.link === '/admin/invoices?view=invoice_receipt') ??
++      items.find((i) => i.link === '/admin/invoices?view=lr_receipt') ??
++      items.find((i) => i.link === '/admin/invoices')
++    if (receipt) {
++      const isReceiptLink = receipt.link.includes('?view=')
++      customTabs.push(isReceiptLink ? { ...receipt, title: 'Invoice' } : receipt)
++    }
++
++    // Tab 3: Lorry Receipt (labeled "Lorry"), or fall back to Customer
++    const lorry = items.find((i) => i.link === '/admin/invoices?view=lorry_receipt')
++    if (lorry) {
++      customTabs.push({ ...lorry, title: 'Lorry' })
++    } else {
++      const customer = items.find((i) => i.link === '/admin/customers')
++      if (customer) customTabs.push(customer)
++    }
++
++    // Tab 4: Trips, or fall back to Expenses
++    const trips = items.find((i) => i.link === '/admin/modules/trips')
++    if (trips) {
++      customTabs.push(trips)
++    } else {
++      const expenses = items.find((i) => i.link === '/admin/expenses')
++      if (expenses) customTabs.push(expenses)
++    }
++
++    return customTabs.slice(0, TAB_COUNT)
++  }
++
+   const preferred = PREFERRED_LINKS.map((link) =>
+     items.find((item) => item.link === link),
+   ).filter((item): item is MenuItem => !!item)
+diff --git a/resources/scripts/stores/global.store.ts b/resources/scripts/stores/global.store.ts
+index 60419e46..1ade0528 100644
+--- a/resources/scripts/stores/global.store.ts
++++ b/resources/scripts/stores/global.store.ts
+@@ -37,6 +37,8 @@ export const useGlobalStore = defineStore('global', () => {
+   const mainMenu = ref<MenuItem[]>([])
+   const settingMenu = ref<MenuItem[]>([])
+   const userMenu = ref<Array<{ title: string; link: string; icon: string; name: string }>>([])
++  // HisabKitab feature — enabled module names from bootstrap (e.g. 'InvoiceReceipt')
++  const modules = ref<string[]>([])
+   const isAppLoaded = ref<boolean>(false)
+   // On phones the navigation lives in the More sheet; this is its open state.
+   const isSidebarOpen = ref<boolean>(false)
+@@ -75,6 +77,8 @@ export const useGlobalStore = defineStore('global', () => {
+       userMenu.value = response.user_menu ?? []
+       config.value = response.config
+       globalSettings.value = response.global_settings
++      // HisabKitab feature — capture enabled module names from bootstrap
++      modules.value = response.modules ?? []
+ 
+       // user store
+       userStore.currentUser = response.current_user
+@@ -321,6 +325,8 @@ export const useGlobalStore = defineStore('global', () => {
+     mainMenu,
+     settingMenu,
+     userMenu,
++    // HisabKitab feature
++    modules,
+     isAppLoaded,
+     isSidebarOpen,
+     isSidebarCollapsed,
+diff --git a/resources/scripts/utils/format-money.ts b/resources/scripts/utils/format-money.ts
+index c3ada19a..91ee86b9 100644
+--- a/resources/scripts/utils/format-money.ts
++++ b/resources/scripts/utils/format-money.ts
+@@ -4,6 +4,7 @@ export interface CurrencyConfig {
+   decimal_separator: string
+   symbol: string
+   swap_currency_symbol?: boolean
++  code?: string
+ }
+ 
+ const DEFAULT_CURRENCY: CurrencyConfig = {
+@@ -42,15 +43,24 @@ export function formatMoney(
+ 
+   const fixedAmount = amount.toFixed(precision)
+   const integerPart = parseInt(fixedAmount, 10).toString()
+-  const remainder = integerPart.length > 3 ? integerPart.length % 3 : 0
+ 
+-  const thousandText = remainder
+-    ? integerPart.substring(0, remainder) + currency.thousand_separator
+-    : ''
+-
+-  const amountText = integerPart
+-    .substring(remainder)
+-    .replace(/(\d{3})(?=\d)/g, '$1' + currency.thousand_separator)
++  // HisabKitab feature — Indian numbering system (2-digit grouping after
++  // the first 3 digits: 12,00,000) for INR; Western 3-digit grouping
++  // for everything else.
++  const isIndian = currency.code?.toUpperCase() === 'INR'
++
++  let amountText: string
++  if (isIndian) {
++    amountText = integerPart.replace(/(\d)(?=(\d\d)+\d$)/g, '$1' + currency.thousand_separator)
++  } else {
++    const remainder = integerPart.length > 3 ? integerPart.length % 3 : 0
++    const thousandText = remainder
++      ? integerPart.substring(0, remainder) + currency.thousand_separator
++      : ''
++    amountText = thousandText + integerPart
++      .substring(remainder)
++      .replace(/(\d{3})(?=\d)/g, '$1' + currency.thousand_separator)
++  }
+ 
+   const precisionText = precision
+     ? currency.decimal_separator +
+@@ -60,7 +70,7 @@ export function formatMoney(
+     : ''
+ 
+   const combinedAmountText =
+-    negativeSign + thousandText + amountText + precisionText
++    negativeSign + amountText + precisionText
+ 
+   const moneySymbol = `${symbol}`
+ 

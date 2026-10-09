@@ -73,17 +73,17 @@ var h = {
 					default: m(() => [i("div", g, [
 						a(u, { label: "From" }, {
 							default: m(() => [a(o, {
-								modelValue: s.value.tr_from_code,
-								"onUpdate:modelValue": t[0] ||= (e) => s.value.tr_from_code = e,
-								placeholder: "Origin code"
+								modelValue: s.value.tr_from_name,
+								"onUpdate:modelValue": t[0] ||= (e) => s.value.tr_from_name = e,
+								placeholder: "Origin"
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						a(u, { label: "To" }, {
 							default: m(() => [a(o, {
-								modelValue: s.value.tr_to_code,
-								"onUpdate:modelValue": t[1] ||= (e) => s.value.tr_to_code = e,
-								placeholder: "Destination code"
+								modelValue: s.value.tr_to_name,
+								"onUpdate:modelValue": t[1] ||= (e) => s.value.tr_to_name = e,
+								placeholder: "Destination"
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
@@ -406,7 +406,9 @@ window.InvoiceShelf.booting((e, t, n) => {
 		templateName: "lr_receipt",
 		label: "LR Receipt",
 		labelPlural: "LR Receipts",
-		listLink: "/admin/invoices?view=lr_receipt"
+		listLink: "/admin/invoices?view=lr_receipt",
+		dateLabel: "Docket Date",
+		numberLabel: "Docket No."
 	}), n.registerPage({
 		id: "customer-lr-receipts",
 		module: "lr-receipt",

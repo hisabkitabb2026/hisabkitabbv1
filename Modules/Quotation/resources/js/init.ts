@@ -34,6 +34,9 @@ interface ExtensionApi {
     labelPlural: string
     listLink: string
     priority?: number
+    // HisabKitab feature — per-template field labels
+    dateLabel?: string
+    numberLabel?: string
   }): () => void
   addMessages(messages: Record<string, Record<string, unknown>>): void
   notify(type: 'success' | 'error' | 'warning' | 'info', message: string): void
@@ -90,5 +93,8 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
     label: 'Quotation',
     labelPlural: 'Quotations',
     listLink: '/admin/estimates?view=quotation',
+    // HisabKitab feature — per-template field labels
+    dateLabel: 'Quotation Date',
+    numberLabel: 'Quotation No.',
   })
 })

@@ -435,40 +435,11 @@ class Invoice extends Model implements HasMedia
     }
 
     /**
-     * Resolved GST Tax Payable By ("Consignor" or "Consignee").
-     */
-    public function getGstTaxPayableByAttribute(): ?string
-    {
-        if (! empty($this->attributes['tr_gst_payable_by'])) {
-            return $this->attributes['tr_gst_payable_by'];
-        }
-
-        if (! empty($this->attributes['tr_gst_through'])) {
-            return $this->attributes['tr_gst_through'];
-        }
-
-        $fields = $this->relationLoaded('fields') ? $this->fields : $this->fields()->with('customField')->get();
-        $field = $fields->first(function ($f) {
-            $slug = $f->customField?->slug ?? '';
-            $name = strtolower($f->customField?->name ?? '');
-
-            return in_array($slug, ['CUSTOM_Invoice_GST_TAX_PAYABLE_BY', 'CUSTOM_Invoice_GST_TAX_THROUGH'])
-                || in_array($name, ['gst tax payable by', 'gst tax through', 'gst payable by']);
-        });
-
-        if ($field && ! empty($field->value)) {
-            return is_array($field->value) ? ($field->value['name'] ?? null) : (string) $field->value;
-        }
-
-        return null;
-    }
-
-    /**
      * Alias for tr_gst_payable_by with fallback to gst_tax_payable_by.
      */
     public function getTrGstPayableByAttribute(): ?string
     {
-        return $this->attributes['tr_gst_payable_by'] ?? $this->gst_tax_payable_by;
+        return $this->attributes['tr_gst_payable_by'] ?? null;
     }
 
     /**

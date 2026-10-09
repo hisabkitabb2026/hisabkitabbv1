@@ -14,8 +14,8 @@ interface LorryReceipt {
   tr_driver_name?: string
   tr_broker_name?: string
   tr_lorry_no?: string
-  tr_from_code?: string
-  tr_to_code?: string
+  tr_from_name?: string
+  tr_to_name?: string
 }
 
 const receipts = ref<LorryReceipt[]>([])
@@ -59,7 +59,7 @@ function formatDate(date: string): string {
             <td class="px-4 py-3 font-medium text-heading">{{ r.invoice_number }}</td>
             <td class="px-4 py-3 text-body">{{ r.tr_lorry_no || '—' }}</td>
             <td class="px-4 py-3 text-body">{{ r.tr_owner_name || '—' }}</td>
-            <td class="px-4 py-3 text-body">{{ r.tr_from_code || '—' }} → {{ r.tr_to_code || '—' }}</td>
+            <td class="px-4 py-3 text-body">{{ r.tr_from_name || '—' }} → {{ r.tr_to_name || '—' }}</td>
             <td class="px-4 py-3 text-body">{{ formatDate(r.invoice_date) }}</td>
             <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-primary-50 text-primary-600">{{ r.status }}</span></td>
           </tr>

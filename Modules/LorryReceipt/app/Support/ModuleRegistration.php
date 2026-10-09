@@ -58,6 +58,11 @@ final class ModuleRegistration
      */
     private static function registerModuleExtensions(): void
     {
+        ModuleExtensions::registerReceiptModule('lorry-receipt');
+
+        // The hire is owed to the owner: a purchase, never a customer receivable
+        ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
+
         ModuleExtensions::registerSerialNumberType('lorry_receipt', Invoice::class, [
             'type' => Invoice::TYPE_INVOICE,
             'template_name' => 'lorry_receipt',

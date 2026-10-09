@@ -11,6 +11,7 @@ use App\Domains\Purchases\Models\Bill;
 // HisabKitab feature
 use App\Domains\Reporting\Http\Requests\DashboardRequest;
 use App\Domains\Reporting\Queries\CashflowQuery;
+use App\Domains\Reporting\Queries\CustomerInvoiceScope;
 use App\Domains\Reporting\Queries\PurchasesQuery;
 use App\Domains\Reporting\Queries\ReceivablesAgingQuery;
 use App\Domains\Sales\Models\Estimate;
@@ -54,31 +55,19 @@ class DashboardController extends Controller
 
         $customerCount = Customer::query()->whereCompany()->count();
 
-        // "How many invoices did we issue" counts issued documents, so the
-        // reversals are left out. The money figures above deliberately keep
-        // them: a credit note's negated total is exactly what nets a sale back
-        // out. The outstanding sum below keeps them too, which is a quirk
-        // rather than a decision — a credit note's due amount is always zero,
-        // so it adds nothing, and the sum has always been taken over the lot.
-        // HisabKitab feature — invoice count excludes module-registered template types
-        $invoiceCount = Invoice::query()
-            ->whereCompany()
-            ->where('type', Invoice::TYPE_INVOICE)
-            ->when(
-                ModuleExtensions::salesTemplates() !== [],
-                fn ($q) => $q->whereIn('template_name', ModuleExtensions::salesTemplates()),
-                fn ($q) => $q->whereNull('template_name'),
-            )
-            ->count();
+        // "How many invoices did we issue" counts issued customer documents, so
+        // the reversals are left out. The money figures above deliberately keep
+        // them: a credit note's negated total is exactly what nets a sale back out.
+        $invoiceCount = CustomerInvoiceScope::apply(
+            Invoice::query()->whereCompany()->where('type', Invoice::TYPE_INVOICE),
+        )->count();
 
         // HisabKitab feature — receipt counts come from registered module providers
         $moduleCounts = ModuleExtensions::dashboardCounts((int) $companyId);
 
         $estimateCount = Estimate::query()->whereCompany()->count();
 
-        $amountDue = Invoice::query()
-            ->whereCompany()
-            ->sum('base_due_amount');
+        $amountDue = CustomerInvoiceScope::apply(Invoice::query()->whereCompany())->sum('base_due_amount');
 
         // Raw models rather than InvoiceResource: each loaded relation is
         // serialized with the full $appends set, so a column-limited
@@ -87,8 +76,9 @@ class DashboardController extends Controller
         // appends per credit note for nothing. Neither list needs the relation
         // anyway — credited_status is a resource-level field, and a fully
         // credited invoice has no due amount left, so it never reaches here.
-        $recentDueInvoices = Invoice::with('customer')
-            ->whereCompany()->where('base_due_amount', '>', 0)
+        $recentDueInvoices = CustomerInvoiceScope::apply(
+            Invoice::with('customer')->whereCompany()->where('base_due_amount', '>', 0),
+        )
             ->take(5)
             ->latest()
             ->get();

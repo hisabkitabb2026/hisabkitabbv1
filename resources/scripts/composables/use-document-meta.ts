@@ -10,6 +10,9 @@ interface DocumentMeta {
   createLink: string
   templateName: string
   hasItems: boolean
+  // HisabKitab feature — per-template field labels
+  dateLabel?: string
+  numberLabel?: string
 }
 
 /**

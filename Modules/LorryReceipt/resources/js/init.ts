@@ -37,6 +37,8 @@ interface ExtensionApi {
     ability?: string
     priority?: number
     visible?: () => boolean
+    // HisabKitab feature — extra table columns for this view mode
+    columns?: Array<{ key: string; label: string }>
   }): () => void
   registerInvoiceDocumentMeta(contribution: {
     id: string
@@ -45,6 +47,9 @@ interface ExtensionApi {
     labelPlural: string
     listLink: string
     priority?: number
+    // HisabKitab feature — per-template field labels
+    dateLabel?: string
+    numberLabel?: string
   }): () => void
   registerDashboardCount(contribution: {
     id: string
@@ -117,6 +122,8 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
     createLink: 'invoices/create?template=lorry_receipt',
     listLink: '/admin/invoices?view=lorry_receipt',
     ability: 'lorry-receipt:view-lorry-receipt',
+    // HisabKitab feature — extra columns for the lorry receipt list view
+    columns: [{ key: 'tr_paid_to', label: 'Paid To' }],
   })
 
   // Register document meta for breadcrumbs and labels
@@ -126,6 +133,9 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
     label: 'Lorry Receipt',
     labelPlural: 'Lorry Receipts',
     listLink: '/admin/invoices?view=lorry_receipt',
+    // HisabKitab feature — per-template field labels
+    dateLabel: 'Challan Date',
+    numberLabel: 'Challan No.',
   })
 
   // Customer portal page

@@ -475,7 +475,7 @@ const estimateColumns = computed<TableColumn[]>(() => [
   {
     key: 'estimate_number',
     // HisabKitab feature - column label from registered document meta
-    label: currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('estimates.number', 2),
+    label: currentDocMeta.value?.numberLabel ?? (currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('estimates.number', 2)),
     mobile: 'subtitle',
   },
   { key: 'name', label: t('estimates.customer'), mobile: 'title' },

@@ -46,6 +46,16 @@ final class ModuleExtensions
     /** @var array<string, string> */
     private static array $salesTemplates = [];
 
+    /** @var array<string, string> */
+    private static array $supplierTemplates = [];
+
+    /** @var list<string> */
+    private static array $receiptModules = [];
+
+    /** @var array<string, string> */
+    private static array $mediaPaths = [];
+
+    /** Customer-owed invoice templates, such as Invoice Receipt. */
     public static function registerSalesTemplate(string $module, string $templateName): void
     {
         self::$salesTemplates[$module] = $templateName;
@@ -55,6 +65,29 @@ final class ModuleExtensions
     public static function salesTemplates(): array
     {
         return array_values(self::$salesTemplates);
+    }
+
+    /** Templates stored as invoices that are really owed to a supplier, such as Lorry Receipt. */
+    public static function registerSupplierTemplate(string $module, string $templateName): void
+    {
+        self::$supplierTemplates[$module] = $templateName;
+    }
+
+    /** @return list<string> */
+    public static function supplierTemplates(): array
+    {
+        return array_values(self::$supplierTemplates);
+    }
+
+    /** A receipt module replaces the standard invoice in the customer figures, whether or not it owes the customer money. */
+    public static function registerReceiptModule(string $module): void
+    {
+        self::$receiptModules[] = $module;
+    }
+
+    public static function receiptModulesEnabled(): bool
+    {
+        return self::$receiptModules !== [];
     }
 
     public static function registerDashboardCountProvider(string $module, callable $callback): void
@@ -223,6 +256,18 @@ final class ModuleExtensions
         self::$menuFilters[$module] = $callback;
     }
 
+    // HisabKitab feature — let modules register media library path folders
+    // for their model types (e.g. Trips module registers 'trip' => 'Trips').
+    public static function registerMediaPath(string $modelType, string $folder): void
+    {
+        self::$mediaPaths[$modelType] = $folder;
+    }
+
+    public static function mediaPathFor(string $modelType): ?string
+    {
+        return self::$mediaPaths[$modelType] ?? null;
+    }
+
     /**
      * Apply registered menu filters. Each filter receives the menu array
      * and returns a filtered array, letting modules hide or replace entries.
@@ -255,5 +300,8 @@ final class ModuleExtensions
         self::$estimateUniquenessRules = [];
         self::$menuFilters = [];
         self::$salesTemplates = [];
+        self::$supplierTemplates = [];
+        self::$receiptModules = [];
+        self::$mediaPaths = [];
     }
 }

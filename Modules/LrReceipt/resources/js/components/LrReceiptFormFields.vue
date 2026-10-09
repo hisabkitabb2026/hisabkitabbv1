@@ -97,10 +97,10 @@ const podOptions = ['YES', 'NO']
       </template>
       <div class="grid gap-x-4 gap-y-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <BaseInputGroup label="From">
-          <BaseInput v-model="invoiceData.tr_from_code" placeholder="Origin code" />
+          <BaseInput v-model="invoiceData.tr_from_name" placeholder="Origin" />
         </BaseInputGroup>
         <BaseInputGroup label="To">
-          <BaseInput v-model="invoiceData.tr_to_code" placeholder="Destination code" />
+          <BaseInput v-model="invoiceData.tr_to_name" placeholder="Destination" />
         </BaseInputGroup>
         <BaseInputGroup label="Truck No">
           <BaseInput v-model="invoiceData.tr_truck_no" placeholder="Vehicle number" />

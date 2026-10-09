@@ -4,6 +4,7 @@ export interface CurrencyConfig {
   decimal_separator: string
   symbol: string
   swap_currency_symbol?: boolean
+  code?: string
 }
 
 const DEFAULT_CURRENCY: CurrencyConfig = {
@@ -42,15 +43,24 @@ export function formatMoney(
 
   const fixedAmount = amount.toFixed(precision)
   const integerPart = parseInt(fixedAmount, 10).toString()
-  const remainder = integerPart.length > 3 ? integerPart.length % 3 : 0
 
-  const thousandText = remainder
-    ? integerPart.substring(0, remainder) + currency.thousand_separator
-    : ''
+  // HisabKitab feature — Indian numbering system (2-digit grouping after
+  // the first 3 digits: 12,00,000) for INR; Western 3-digit grouping
+  // for everything else.
+  const isIndian = currency.code?.toUpperCase() === 'INR'
 
-  const amountText = integerPart
-    .substring(remainder)
-    .replace(/(\d{3})(?=\d)/g, '$1' + currency.thousand_separator)
+  let amountText: string
+  if (isIndian) {
+    amountText = integerPart.replace(/(\d)(?=(\d\d)+\d$)/g, '$1' + currency.thousand_separator)
+  } else {
+    const remainder = integerPart.length > 3 ? integerPart.length % 3 : 0
+    const thousandText = remainder
+      ? integerPart.substring(0, remainder) + currency.thousand_separator
+      : ''
+    amountText = thousandText + integerPart
+      .substring(remainder)
+      .replace(/(\d{3})(?=\d)/g, '$1' + currency.thousand_separator)
+  }
 
   const precisionText = precision
     ? currency.decimal_separator +
@@ -60,7 +70,7 @@ export function formatMoney(
     : ''
 
   const combinedAmountText =
-    negativeSign + thousandText + amountText + precisionText
+    negativeSign + amountText + precisionText
 
   const moneySymbol = `${symbol}`
 

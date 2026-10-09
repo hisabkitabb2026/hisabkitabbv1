@@ -1,9 +1,9 @@
-const { createCommentVNode: e, createElementBlock: t, createElementVNode: n, createTextVNode: r, createVNode: i, defineComponent: a, h: o, normalizeClass: s, onMounted: c, onUnmounted: l, openBlock: u, reactive: d, ref: f, resolveComponent: p, withCtx: m, withModifiers: h } = window.__invoiceshelf_vue;
+const { computed: e, createCommentVNode: t, createElementBlock: n, createElementVNode: r, createTextVNode: i, createVNode: a, defineComponent: o, h: s, normalizeClass: c, onMounted: l, onUnmounted: u, openBlock: d, reactive: f, ref: p, resolveComponent: m, toDisplayString: h, withCtx: g, withModifiers: _ } = window.__invoiceshelf_vue;
 //#region resources/js/components/AccessRequestOverlay.vue?vue&type=script&setup=true&lang.ts
-var g = { key: 0 }, _ = { class: "px-8 py-8 sm:p-6" }, v = { class: "flex justify-end gap-2 px-8 py-8 sm:px-6 sm:py-6 bg-surface-secondary" }, y = /* @__PURE__ */ a({
+var v = { key: 0 }, y = { class: "px-8 py-8 sm:p-6" }, b = { class: "flex justify-end gap-2 px-8 py-8 sm:px-6 sm:py-6 bg-surface-secondary" }, x = /* @__PURE__ */ o({
 	__name: "AccessRequestOverlay",
-	setup(a) {
-		let o = f(!1), y = f(!1), b = f(!1), x = f("the company owner"), S = d({
+	setup(e) {
+		let o = p(!1), s = p(!1), h = p(!1), x = p("the company owner"), S = f({
 			subject: "",
 			message: ""
 		});
@@ -12,14 +12,14 @@ var g = { key: 0 }, _ = { class: "px-8 py-8 sm:p-6" }, v = { class: "flex justif
 		}
 		function w(e) {
 			let t = e;
-			S.subject = t.detail.subject, S.message = t.detail.message, x.value = t.detail.recipient, o.value = !0, y.value = !0;
+			S.subject = t.detail.subject, S.message = t.detail.message, x.value = t.detail.recipient, o.value = !0, s.value = !0;
 		}
 		function T() {
-			y.value = !1;
+			s.value = !1;
 		}
 		async function E() {
 			if (!(!S.subject.trim() || !S.message.trim())) {
-				b.value = !0;
+				h.value = !0;
 				try {
 					let e = C();
 					if (!e) {
@@ -30,80 +30,139 @@ var g = { key: 0 }, _ = { class: "px-8 py-8 sm:p-6" }, v = { class: "flex justif
 						subject: S.subject,
 						message: S.message
 					});
-					t.data?.error ? window.dispatchEvent(new CustomEvent("access-request:error", { detail: t.data.error })) : (y.value = !1, window.dispatchEvent(new CustomEvent("access-request:success", { detail: "Request sent to the company owner" })));
+					t.data?.error ? window.dispatchEvent(new CustomEvent("access-request:error", { detail: t.data.error })) : (s.value = !1, window.dispatchEvent(new CustomEvent("access-request:success", { detail: "Request sent to the company owner" })));
 				} catch {
 					window.dispatchEvent(new CustomEvent("access-request:error", { detail: "Could not send the request" }));
 				} finally {
-					b.value = !1;
+					h.value = !1;
 				}
 			}
 		}
-		return c(() => {
+		return l(() => {
 			window.addEventListener("access-request:open", w);
-		}), l(() => {
+		}), u(() => {
 			window.removeEventListener("access-request:open", w);
-		}), (a, c) => {
-			let l = p("BaseInput"), d = p("BaseInputGroup"), f = p("BaseTextarea"), C = p("BaseInputGrid"), w = p("BaseButton"), D = p("BaseIcon"), O = p("BaseModal");
-			return o.value ? (u(), t("div", g, [i(O, {
-				show: y.value,
+		}), (e, l) => {
+			let u = m("BaseInput"), f = m("BaseInputGroup"), p = m("BaseTextarea"), C = m("BaseInputGrid"), w = m("BaseButton"), D = m("BaseIcon"), O = m("BaseModal");
+			return o.value ? (d(), n("div", v, [a(O, {
+				show: s.value,
 				closable: "",
 				onClose: T
 			}, {
-				header: m(() => [...c[3] ||= [r(" Request Access ", -1)]]),
-				default: m(() => [n("form", { onSubmit: c[2] ||= h(() => {}, ["prevent"]) }, [n("div", _, [i(C, { layout: "one-column" }, {
-					default: m(() => [
-						i(d, { label: "To" }, {
-							default: m(() => [i(l, {
+				header: g(() => [...l[3] ||= [i(" Request Access ", -1)]]),
+				default: g(() => [r("form", { onSubmit: l[2] ||= _(() => {}, ["prevent"]) }, [r("div", y, [a(C, { layout: "one-column" }, {
+					default: g(() => [
+						a(f, { label: "To" }, {
+							default: g(() => [a(u, {
 								"model-value": x.value,
 								type: "text",
 								disabled: ""
 							}, null, 8, ["model-value"])]),
 							_: 1
 						}),
-						i(d, {
+						a(f, {
 							label: "Subject",
 							required: ""
 						}, {
-							default: m(() => [i(l, {
+							default: g(() => [a(u, {
 								modelValue: S.subject,
-								"onUpdate:modelValue": c[0] ||= (e) => S.subject = e,
+								"onUpdate:modelValue": l[0] ||= (e) => S.subject = e,
 								type: "text"
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
-						i(d, {
+						a(f, {
 							label: "Message",
 							required: ""
 						}, {
-							default: m(() => [i(f, {
+							default: g(() => [a(p, {
 								modelValue: S.message,
-								"onUpdate:modelValue": c[1] ||= (e) => S.message = e,
+								"onUpdate:modelValue": l[1] ||= (e) => S.message = e,
 								rows: "7"
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						})
 					]),
 					_: 1
-				})]), n("div", v, [i(w, {
+				})]), r("div", b, [a(w, {
 					variant: "white",
 					onClick: T
 				}, {
-					default: m(() => [...c[4] ||= [r(" Cancel ", -1)]]),
+					default: g(() => [...l[4] ||= [i(" Cancel ", -1)]]),
 					_: 1
-				}), i(w, {
-					disabled: b.value,
+				}), a(w, {
+					disabled: h.value,
 					variant: "primary",
 					onClick: E
 				}, {
-					left: m((e) => [i(D, {
+					left: g((e) => [a(D, {
 						name: "PaperAirplaneIcon",
-						class: s(e.class)
+						class: c(e.class)
 					}, null, 8, ["class"])]),
-					default: m(() => [c[5] ||= r(" Send ", -1)]),
+					default: g(() => [l[5] ||= i(" Send ", -1)]),
 					_: 1
 				}, 8, ["disabled"])])], 32)]),
 				_: 1
-			}, 8, ["show"])])) : e("", !0);
+			}, 8, ["show"])])) : t("", !0);
+		};
+	}
+}), S = { class: "flex flex-col items-center justify-center gap-4 py-16 text-center" }, C = { class: "flex items-center justify-center w-14 h-14 rounded-full bg-surface-secondary" }, w = { class: "text-lg font-semibold text-heading" }, T = { class: "max-w-md mt-1 text-sm text-muted" }, E = { class: "flex items-center gap-2" }, D = /* @__PURE__ */ o({
+	__name: "PermissionMissingUI",
+	props: { viewModeLabel: {} },
+	setup(t) {
+		let o = t, s = e(() => o.viewModeLabel ?? "Receipt"), l = e(() => [
+			"Hello,",
+			"",
+			`I need access to ${s.value}s.`,
+			"",
+			"Could you grant me the permission to view them? You can do this under Settings → Roles → my role.",
+			"",
+			"Thank you,"
+		].join("\n"));
+		function u() {
+			window.dispatchEvent(new CustomEvent("access-request:open", { detail: {
+				subject: `Request: Access to ${s.value}s`,
+				message: l.value,
+				recipient: null
+			} }));
+		}
+		async function f() {
+			try {
+				await navigator.clipboard.writeText(l.value), window.dispatchEvent(new CustomEvent("access-request:success", { detail: "Request copied — paste it to the owner in chat or email" }));
+			} catch {
+				window.dispatchEvent(new CustomEvent("access-request:error", { detail: "Could not copy the request" }));
+			}
+		}
+		return (e, t) => {
+			let o = m("BaseIcon"), l = m("BaseButton");
+			return d(), n("div", S, [
+				r("span", C, [a(o, {
+					name: "LockClosedIcon",
+					class: "w-7 h-7 text-muted"
+				})]),
+				r("div", null, [r("h2", w, h(s.value) + "s", 1), r("p", T, " You don't have permission to view " + h(s.value) + "s. Ask the company owner for access. ", 1)]),
+				r("div", E, [a(l, {
+					variant: "primary",
+					onClick: u
+				}, {
+					left: g((e) => [a(o, {
+						name: "EnvelopeIcon",
+						class: c(e.class)
+					}, null, 8, ["class"])]),
+					default: g(() => [t[0] ||= i(" Request Access ", -1)]),
+					_: 1
+				}), a(l, {
+					variant: "white",
+					onClick: f
+				}, {
+					left: g((e) => [a(o, {
+						name: "ClipboardDocumentIcon",
+						class: c(e.class)
+					}, null, 8, ["class"])]),
+					default: g(() => [t[1] ||= i(" Copy Request ", -1)]),
+					_: 1
+				})])
+			]);
 		};
 	}
 });
@@ -112,13 +171,16 @@ var g = { key: 0 }, _ = { class: "px-8 py-8 sm:p-6" }, v = { class: "flex justif
 window.InvoiceShelf.booting((e, t, n) => {
 	window.__accessRequestClient = n.client, n.registerCompanyLayoutOverlay({
 		id: "access-request-overlay",
-		component: a({ setup: () => () => o(y) })
+		component: o({ setup: () => () => s(x) })
 	}), window.addEventListener("access-request:success", (e) => {
 		let t = e.detail;
 		n.notify("success", t);
 	}), window.addEventListener("access-request:error", (e) => {
 		let t = e.detail;
 		n.notify("error", t);
+	}), n.registerInvoicePermissionMissing({
+		id: "access-request-permission-missing",
+		component: D
 	});
 });
 //#endregion

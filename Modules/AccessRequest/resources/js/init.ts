@@ -1,8 +1,10 @@
 import '../css/module.css'
 
 import type { AxiosInstance } from 'axios'
+import type { Component } from 'vue'
 import { defineComponent, h } from 'vue'
 import AccessRequestOverlay from './components/AccessRequestOverlay.vue'
+import PermissionMissingUI from './components/PermissionMissingUI.vue'
 
 interface ComponentExtensionContribution {
   id: string
@@ -15,6 +17,8 @@ interface ComponentExtensionContribution {
 interface ExtensionApi {
   readonly client: AxiosInstance
   registerCompanyLayoutOverlay(contribution: ComponentExtensionContribution): () => void
+  // HisabKitab feature — permission-missing UI for receipt view modes
+  registerInvoicePermissionMissing(contribution: ComponentExtensionContribution): () => void
   addMessages(messages: Record<string, Record<string, unknown>>): void
   notify(type: 'success' | 'error' | 'warning' | 'info', message: string): void
 }
@@ -54,5 +58,12 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
   window.addEventListener('access-request:error', (event) => {
     const detail = (event as CustomEvent).detail as string
     extensions.notify('error', detail)
+  })
+
+  // HisabKitab feature — register the permission-missing UI component
+  // rendered by the host's InvoiceIndexView when the member lacks a receipt ability.
+  extensions.registerInvoicePermissionMissing({
+    id: 'access-request-permission-missing',
+    component: PermissionMissingUI as unknown as Component,
   })
 })

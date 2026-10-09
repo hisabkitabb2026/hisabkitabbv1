@@ -51,9 +51,34 @@ const sendAsAttachmentField = computed<boolean>({
   <BaseDivider class="mt-6 mb-2" />
 
   <NumberCustomizer
-    type="credit_note"
+type="credit_note"
     :type-store="invoiceStore"
     default-series="CN"
+  />
+
+  <!-- HisabKitab feature — per-receipt number format customizers -->
+  <BaseDivider class="mt-6 mb-2" />
+
+  <NumberCustomizer
+    type="invoice_receipt"
+    :type-store="invoiceStore"
+    default-series="INV"
+  />
+
+  <BaseDivider class="mt-6 mb-2" />
+
+  <NumberCustomizer
+    type="lr_receipt"
+    :type-store="invoiceStore"
+    default-series="LR"
+  />
+
+  <BaseDivider class="mt-6 mb-2" />
+
+  <NumberCustomizer
+    type="lorry_receipt"
+    :type-store="invoiceStore"
+    default-series="LR"
   />
 
   <BaseDivider class="mt-6 mb-2" />

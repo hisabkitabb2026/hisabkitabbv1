@@ -62,7 +62,10 @@ class SerialNumberController extends Controller
                 $registered = ModuleExtensions::getSerialNumberType($request->key);
                 if ($registered !== null) {
                     $model = $registered['model'] === Invoice::class ? $invoice : $estimate;
-                    $serial->setModel($model)->setSequenceScope($registered['scope']);
+                    // HisabKitab feature — each receipt type gets its own number format setting
+                    $serial->setModel($model)
+                        ->setSettingKey($request->key.'_number_format')
+                        ->setSequenceScope($registered['scope']);
                     break;
                 }
 

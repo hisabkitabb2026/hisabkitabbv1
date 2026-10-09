@@ -52,6 +52,8 @@ final class ModuleRegistration
      */
     private static function registerModuleExtensions(): void
     {
+        ModuleExtensions::registerReceiptModule('lr-receipt');
+
         // Serial number type for LR Receipt
         ModuleExtensions::registerSerialNumberType('lr_receipt', Invoice::class, [
             'type' => Invoice::TYPE_INVOICE,

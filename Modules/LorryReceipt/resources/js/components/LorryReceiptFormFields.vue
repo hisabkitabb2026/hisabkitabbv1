@@ -278,10 +278,10 @@ onMounted(() => {
       </template>
       <div class="grid gap-x-4 gap-y-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <BaseInputGroup label="From">
-          <BaseInput v-model="invoiceData.tr_from_code" />
+          <BaseInput v-model="invoiceData.tr_from_name" />
         </BaseInputGroup>
         <BaseInputGroup label="To">
-          <BaseInput v-model="invoiceData.tr_to_code" />
+          <BaseInput v-model="invoiceData.tr_to_name" />
         </BaseInputGroup>
         <BaseInputGroup label="No Of Pages">
           <BaseInput v-model="invoiceData.tr_no_of_pages" />

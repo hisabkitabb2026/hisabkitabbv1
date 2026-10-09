@@ -201,6 +201,38 @@ function clean_slug($model, $title, $companyId, $id = 0)
 |--------------------------------------------------------------------------
 */
 
+// HisabKitab feature — Indian numbering system formatter (12,00,000).
+/**
+ * Format a number using the Indian numbering system: the last three digits
+ * before the decimal are grouped together, and every two digits before that
+ * receive a separator (e.g. 1,20,00,000.00).
+ */
+function indian_number_format(float $amount, int $precision = 2, string $decSep = '.', string $thouSep = ','): string
+{
+    $neg = $amount < 0;
+    $amount = abs($amount);
+
+    $str = number_format($amount, $precision, '.', '');
+
+    $parts = explode('.', $str);
+    $intPart = $parts[0];
+    $decPart = isset($parts[1]) ? $parts[1] : '';
+
+    if (strlen($intPart) > 3) {
+        $last3 = substr($intPart, -3);
+        $rest = substr($intPart, 0, -3);
+        $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', $thouSep, $rest);
+        $intPart = $rest.$thouSep.$last3;
+    }
+
+    $result = $intPart;
+    if ($precision > 0) {
+        $result .= $decSep.str_pad($decPart, $precision, '0', STR_PAD_LEFT);
+    }
+
+    return $neg ? '-'.$result : $result;
+}
+
 /**
  * Render a minor-unit amount as currency markup for a PDF template.
  *
@@ -226,12 +258,17 @@ function format_money_pdf($money, $currency = null)
     // to company 1's setting rather than to the amount's own company.
     $currency = $currency ?: Currency::findOrFail(CompanySetting::getSetting('currency', 1));
 
-    $digits = number_format(
-        abs($amount),
-        $currency->precision,
-        $currency->decimal_separator,
-        $currency->thousand_separator
-    );
+    // HisabKitab feature — Indian numbering system (2-digit grouping after
+    // the first 3 digits: 12,00,000) for INR; Western 3-digit grouping
+    // for everything else.
+    $digits = $currency->code === 'INR'
+        ? indian_number_format(abs($amount), $currency->precision, $currency->decimal_separator, $currency->thousand_separator)
+        : number_format(
+            abs($amount),
+            $currency->precision,
+            $currency->decimal_separator,
+            $currency->thousand_separator
+        );
 
     $symbol = '<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>';
 

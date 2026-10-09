@@ -1,0 +1,345 @@
+diff --git a/app/Domains/Reporting/Queries/CustomerInvoiceScope.php b/app/Domains/Reporting/Queries/CustomerInvoiceScope.php
+new file mode 100644
+index 00000000..9fe72ce7
+--- /dev/null
++++ b/app/Domains/Reporting/Queries/CustomerInvoiceScope.php
+@@ -0,0 +1,26 @@
++<?php
++
++namespace App\Domains\Reporting\Queries;
++
++use App\Support\ModuleExtensions;
++use Illuminate\Database\Eloquent\Builder;
++
++/**
++ * Which invoice rows are the company's customer-facing sales.
++ *
++ * With no receipt module enabled these are the standard invoices. Once one is
++ * enabled the standard invoice is out of the picture and only the customer
++ * receipts of the enabled modules count. Supplier-side templates (a Lorry
++ * Receipt is a hire owed to the owner) are never customer figures.
++ */
++final class CustomerInvoiceScope
++{
++    public static function apply(Builder $query): Builder
++    {
++        if (! ModuleExtensions::receiptModulesEnabled()) {
++            return $query->where(fn (Builder $q) => $q->whereNull('template_name')->orWhere('template_name', 'invoice1'));
++        }
++
++        return $query->whereIn('template_name', ModuleExtensions::salesTemplates());
++    }
++}
+diff --git a/app/Support/ModuleExtensions.php b/app/Support/ModuleExtensions.php
+new file mode 100644
+index 00000000..b0549130
+--- /dev/null
++++ b/app/Support/ModuleExtensions.php
+@@ -0,0 +1,307 @@
++<?php
++
++// HisabKitab feature
++
++declare(strict_types=1);
++
++namespace App\Support;
++
++/**
++ * Module-driven extension registry for the host's backend.
++ * Modules register callbacks from their ServiceProvider::boot() method.
++ * This is the PHP-side counterpart of the frontend extensionRegistry.
++ */
++final class ModuleExtensions
++{
++    /** @var array<string, callable> */
++    private static array $dashboardCountProviders = [];
++
++    /** @var array<string, callable> */
++    private static array $invoiceFilters = [];
++
++    /** @var array<string, callable> */
++    private static array $estimateFilters = [];
++
++    /** @var array<string, array{model: string, scope: array<string, mixed>}> */
++    private static array $serialNumberTypes = [];
++
++    /** @var array<string, callable> */
++    private static array $invoiceResourceFields = [];
++
++    /** @var array<string, callable> */
++    private static array $invoiceItemResourceFields = [];
++
++    /** @var array<string, callable> */
++    private static array $estimateItemResourceFields = [];
++
++    /** @var array<string, callable> */
++    private static array $invoiceUniquenessRules = [];
++
++    /** @var array<string, callable> */
++    private static array $estimateUniquenessRules = [];
++
++    /** @var array<string, callable> */
++    private static array $menuFilters = [];
++
++    /** @var array<string, string> */
++    private static array $salesTemplates = [];
++
++    /** @var array<string, string> */
++    private static array $supplierTemplates = [];
++
++    /** @var list<string> */
++    private static array $receiptModules = [];
++
++    /** @var array<string, string> */
++    private static array $mediaPaths = [];
++
++    /** Customer-owed invoice templates, such as Invoice Receipt. */
++    public static function registerSalesTemplate(string $module, string $templateName): void
++    {
++        self::$salesTemplates[$module] = $templateName;
++    }
++
++    /** @return list<string> */
++    public static function salesTemplates(): array
++    {
++        return array_values(self::$salesTemplates);
++    }
++
++    /** Templates stored as invoices that are really owed to a supplier, such as Lorry Receipt. */
++    public static function registerSupplierTemplate(string $module, string $templateName): void
++    {
++        self::$supplierTemplates[$module] = $templateName;
++    }
++
++    /** @return list<string> */
++    public static function supplierTemplates(): array
++    {
++        return array_values(self::$supplierTemplates);
++    }
++
++    /** A receipt module replaces the standard invoice in the customer figures, whether or not it owes the customer money. */
++    public static function registerReceiptModule(string $module): void
++    {
++        self::$receiptModules[] = $module;
++    }
++
++    public static function receiptModulesEnabled(): bool
++    {
++        return self::$receiptModules !== [];
++    }
++
++    public static function registerDashboardCountProvider(string $module, callable $callback): void
++    {
++        self::$dashboardCountProviders[$module] = $callback;
++    }
++
++    /** @return list<array{key: string, label: string, to: string, value: int}> */
++    public static function dashboardCounts(int $companyId): array
++    {
++        $counts = [];
++        foreach (self::$dashboardCountProviders as $provider) {
++            $result = $provider($companyId);
++            if (is_array($result)) {
++                foreach ($result as $entry) {
++                    $counts[] = $entry;
++                }
++            }
++        }
++
++        return $counts;
++    }
++
++    public static function registerInvoiceFilter(string $module, callable $callback): void
++    {
++        self::$invoiceFilters[$module] = $callback;
++    }
++
++    public static function applyInvoiceFilters(string $filter, mixed $value, mixed $query): bool
++    {
++        if (! isset(self::$invoiceFilters[$filter])) {
++            return false;
++        }
++        (self::$invoiceFilters[$filter])($value, $query);
++
++        return true;
++    }
++
++    public static function registerEstimateFilter(string $module, callable $callback): void
++    {
++        self::$estimateFilters[$module] = $callback;
++    }
++
++    public static function applyEstimateFilters(string $filter, mixed $value, mixed $query): bool
++    {
++        if (! isset(self::$estimateFilters[$filter])) {
++            return false;
++        }
++        (self::$estimateFilters[$filter])($value, $query);
++
++        return true;
++    }
++
++    /** @param array<string, mixed> $scope */
++    public static function registerSerialNumberType(string $type, string $model, array $scope): void
++    {
++        self::$serialNumberTypes[$type] = ['model' => $model, 'scope' => $scope];
++    }
++
++    public static function hasSerialNumberType(string $type): bool
++    {
++        return isset(self::$serialNumberTypes[$type]);
++    }
++
++    /** @return array{model: string, scope: array<string, mixed>}|null */
++    public static function getSerialNumberType(string $type): ?array
++    {
++        return self::$serialNumberTypes[$type] ?? null;
++    }
++
++    public static function registerInvoiceResourceFields(string $module, callable $callback): void
++    {
++        self::$invoiceResourceFields[$module] = $callback;
++    }
++
++    /** @return array<string, mixed> */
++    public static function invoiceResourceFields(mixed $invoice): array
++    {
++        $fields = [];
++        foreach (self::$invoiceResourceFields as $provider) {
++            $result = $provider($invoice);
++            if (is_array($result)) {
++                $fields = array_merge($fields, $result);
++            }
++        }
++
++        return $fields;
++    }
++
++    public static function registerInvoiceItemResourceFields(string $module, callable $callback): void
++    {
++        self::$invoiceItemResourceFields[$module] = $callback;
++    }
++
++    /** @return array<string, mixed> */
++    public static function invoiceItemResourceFields(mixed $item): array
++    {
++        $fields = [];
++        foreach (self::$invoiceItemResourceFields as $provider) {
++            $result = $provider($item);
++            if (is_array($result)) {
++                $fields = array_merge($fields, $result);
++            }
++        }
++
++        return $fields;
++    }
++
++    public static function registerEstimateItemResourceFields(string $module, callable $callback): void
++    {
++        self::$estimateItemResourceFields[$module] = $callback;
++    }
++
++    /** @return array<string, mixed> */
++    public static function estimateItemResourceFields(mixed $item): array
++    {
++        $fields = [];
++        foreach (self::$estimateItemResourceFields as $provider) {
++            $result = $provider($item);
++            if (is_array($result)) {
++                $fields = array_merge($fields, $result);
++            }
++        }
++
++        return $fields;
++    }
++
++    public static function registerInvoiceUniquenessRule(string $module, callable $callback): void
++    {
++        self::$invoiceUniquenessRules[$module] = $callback;
++    }
++
++    public static function buildInvoiceUniquenessRule(mixed $request): mixed
++    {
++        $templateName = $request->input('template_name');
++        foreach (self::$invoiceUniquenessRules as $builder) {
++            $rule = $builder($request, $templateName);
++            if ($rule !== null) {
++                return $rule;
++            }
++        }
++
++        return null;
++    }
++
++    public static function registerEstimateUniquenessRule(string $module, callable $callback): void
++    {
++        self::$estimateUniquenessRules[$module] = $callback;
++    }
++
++    public static function buildEstimateUniquenessRule(mixed $request): mixed
++    {
++        $templateName = $request->input('template_name');
++        foreach (self::$estimateUniquenessRules as $builder) {
++            $rule = $builder($request, $templateName);
++            if ($rule !== null) {
++                return $rule;
++            }
++        }
++
++        return null;
++    }
++
++    public static function registerMenuFilter(string $module, callable $callback): void
++    {
++        self::$menuFilters[$module] = $callback;
++    }
++
++    // HisabKitab feature — let modules register media library path folders
++    // for their model types (e.g. Trips module registers 'trip' => 'Trips').
++    public static function registerMediaPath(string $modelType, string $folder): void
++    {
++        self::$mediaPaths[$modelType] = $folder;
++    }
++
++    public static function mediaPathFor(string $modelType): ?string
++    {
++        return self::$mediaPaths[$modelType] ?? null;
++    }
++
++    /**
++     * Apply registered menu filters. Each filter receives the menu array
++     * and returns a filtered array, letting modules hide or replace entries.
++     *
++     * @param  list<array<string, mixed>>  $menu
++     * @return list<array<string, mixed>>
++     */
++    public static function applyMenuFilters(array $menu): array
++    {
++        foreach (self::$menuFilters as $filter) {
++            $result = $filter($menu);
++            if (is_array($result)) {
++                $menu = $result;
++            }
++        }
++
++        return $menu;
++    }
++
++    public static function flush(): void
++    {
++        self::$dashboardCountProviders = [];
++        self::$invoiceFilters = [];
++        self::$estimateFilters = [];
++        self::$serialNumberTypes = [];
++        self::$invoiceResourceFields = [];
++        self::$invoiceItemResourceFields = [];
++        self::$estimateItemResourceFields = [];
++        self::$invoiceUniquenessRules = [];
++        self::$estimateUniquenessRules = [];
++        self::$menuFilters = [];
++        self::$salesTemplates = [];
++        self::$supplierTemplates = [];
++        self::$receiptModules = [];
++        self::$mediaPaths = [];
++    }
++}

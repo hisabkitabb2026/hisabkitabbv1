@@ -3,6 +3,7 @@
 namespace App\Support\Media;
 
 use App\Platform\Persistence\ModelIdentityMap;
+use App\Support\ModuleExtensions;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\Support\PathGenerator\PathGenerator;
 
@@ -53,8 +54,8 @@ class CustomPathGenerator implements PathGenerator
             ModelIdentityMap::INVOICE_ALIAS => 'Invoices',
             ModelIdentityMap::ESTIMATE_ALIAS => 'Estimates',
             ModelIdentityMap::PAYMENT_ALIAS => 'Payments',
-            'trip' => 'Trips', // Local change Required for Trip modulul
-            default => $media->getKey(),
+            // HisabKitab feature — module-registered media paths (e.g. Trips)
+            default => ModuleExtensions::mediaPathFor($media->model_type) ?? (string) $media->getKey(),
         };
     }
 

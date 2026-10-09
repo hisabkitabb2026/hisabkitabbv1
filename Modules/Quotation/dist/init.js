@@ -180,7 +180,9 @@ window.InvoiceShelf.booting((e, t, n) => {
 		templateName: "quotation",
 		label: "Quotation",
 		labelPlural: "Quotations",
-		listLink: "/admin/estimates?view=quotation"
+		listLink: "/admin/estimates?view=quotation",
+		dateLabel: "Quotation Date",
+		numberLabel: "Quotation No."
 	});
 });
 //#endregion
