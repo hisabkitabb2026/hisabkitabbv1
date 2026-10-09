@@ -75,7 +75,7 @@ FROM base AS production
         COMPOSER_AUTH="$(cat /run/secrets/composer_auth 2>/dev/null || true)" \
         composer install --prefer-dist --no-dev --optimize-autoloader
 
-    # Copy entrypoint and inject script, and make sure they are executable
+    USER root
     COPY --chmod=755 docker/production/inject.sh /inject.sh
     COPY --chmod=755 docker/production/entrypoint.d/ /etc/entrypoint.d/
 
@@ -88,3 +88,7 @@ FROM base AS production
     # keeps the user bundle; an /etc/s6-overlay/s6-rc.d/user directory makes the
     # container fail at boot.
     COPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/
+    RUN chown -R www-data:www-data /etc/s6-overlay && chmod -R 775 /etc/s6-overlay
+
+    USER www-data
+
