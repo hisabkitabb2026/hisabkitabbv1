@@ -638,15 +638,15 @@ var E = ["aria-label"], D = { class: "flex items-start gap-3" }, te = {
 					default: C(() => [s("div", j, [
 						l(p, { label: "From" }, {
 							default: C(() => [l(c, {
-								modelValue: n.value.tr_from_code,
-								"onUpdate:modelValue": t[0] ||= (e) => n.value.tr_from_code = e
+								modelValue: n.value.tr_from_name,
+								"onUpdate:modelValue": t[0] ||= (e) => n.value.tr_from_name = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
 						l(p, { label: "To" }, {
 							default: C(() => [l(c, {
-								modelValue: n.value.tr_to_code,
-								"onUpdate:modelValue": t[1] ||= (e) => n.value.tr_to_code = e
+								modelValue: n.value.tr_to_name,
+								"onUpdate:modelValue": t[1] ||= (e) => n.value.tr_to_name = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
@@ -1153,7 +1153,7 @@ var E = ["aria-label"], D = { class: "flex items-start gap-3" }, te = {
 			s("td", U, x(e.invoice_number), 1),
 			s("td", W, x(e.tr_lorry_no || "—"), 1),
 			s("td", He, x(e.tr_owner_name || "—"), 1),
-			s("td", G, x(e.tr_from_code || "—") + " → " + x(e.tr_to_code || "—"), 1),
+			s("td", G, x(e.tr_from_name || "—") + " → " + x(e.tr_to_name || "—"), 1),
 			s("td", Ue, x(a(e.invoice_date)), 1),
 			s("td", K, [s("span", q, x(e.status), 1)])
 		]))), 128))])])]))]));
@@ -1190,13 +1190,19 @@ window.InvoiceShelf.booting((e, t, n) => {
 		icon: "TruckIcon",
 		createLink: "invoices/create?template=lorry_receipt",
 		listLink: "/admin/invoices?view=lorry_receipt",
-		ability: "lorry-receipt:view-lorry-receipt"
+		ability: "lorry-receipt:view-lorry-receipt",
+		columns: [{
+			key: "tr_paid_to",
+			label: "Paid To"
+		}]
 	}), n.registerInvoiceDocumentMeta({
 		id: "lorry-receipt-doc-meta",
 		templateName: "lorry_receipt",
 		label: "Lorry Receipt",
 		labelPlural: "Lorry Receipts",
-		listLink: "/admin/invoices?view=lorry_receipt"
+		listLink: "/admin/invoices?view=lorry_receipt",
+		dateLabel: "Challan Date",
+		numberLabel: "Challan No."
 	}), n.registerPage({
 		id: "customer-lorry-receipts",
 		module: "lorry-receipt",

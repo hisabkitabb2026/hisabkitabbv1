@@ -29,6 +29,9 @@ interface Props {
   customerId?: number | null
   type?: DocumentType | null
   contentLoading?: boolean
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  label?: string | null
+  consigneeMode?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -36,6 +39,8 @@ const props = withDefaults(defineProps<Props>(), {
   customerId: null,
   type: null,
   contentLoading: false,
+  label: null,
+  consigneeMode: false,
 })
 
 const userStore = useUserStore()
@@ -54,6 +59,10 @@ const isSearchingCustomer = ref<boolean>(false)
 const isLoadingCustomers = ref<boolean>(true)
 
 const selectedCustomer = computed(() => {
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  if (props.consigneeMode) {
+    return invoiceStore.newInvoice.consignee
+  }
   switch (props.type) {
     case 'invoice':
       return invoiceStore.newInvoice.customer
@@ -69,10 +78,15 @@ const selectedCustomer = computed(() => {
 // Fetch initial customers on setup
 async function fetchInitialCustomers(): Promise<void> {
   try {
-    await customerStore.fetchCustomers({
+    // HisabKitab feature — Lorry Receipt: only show party-profile customers
+    const params: Record<string, unknown> = {
       orderByField: '',
       orderBy: '',
-    })
+    }
+    if (invoiceStore.newInvoice.template_name === 'lorry_receipt') {
+      params.lorry_party_only = 1
+    }
+    await customerStore.fetchCustomers(params)
   } finally {
     isLoadingCustomers.value = false
   }
@@ -98,16 +112,28 @@ const debounceSearchCustomer = useDebounceFn(() => {
 
 async function searchCustomer(): Promise<void> {
   try {
-    await customerStore.fetchCustomers({
+    // HisabKitab feature — Lorry Receipt: only show party-profile customers
+    const params: Record<string, unknown> = {
       display_name: search.value ?? '',
       page: 1,
-    })
+    }
+    if (invoiceStore.newInvoice.template_name === 'lorry_receipt') {
+      params.lorry_party_only = 1
+    }
+    await customerStore.fetchCustomers(params)
   } finally {
     isSearchingCustomer.value = false
   }
 }
 
 function selectNewCustomer(id: number): void {
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  if (props.consigneeMode) {
+    invoiceStore.selectConsignee(id)
+    search.value = null
+    return
+  }
+
   const params: Record<string, unknown> = { userId: id }
   if (route.params.id) params.model_id = route.params.id
 
@@ -125,6 +151,11 @@ function selectNewCustomer(id: number): void {
 }
 
 function resetSelectedCustomer(): void {
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  if (props.consigneeMode) {
+    invoiceStore.resetSelectedConsignee()
+    return
+  }
   if (props.type === 'invoice') {
     invoiceStore.resetSelectedCustomer()
   } else if (props.type === 'estimate') {
@@ -145,6 +176,10 @@ async function editCustomer(): Promise<void> {
 
 function openCustomerModal(): void {
   customerStore.resetCurrentCustomer()
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  if (props.consigneeMode) {
+    invoiceStore.isConsigneeMode = true
+  }
   modalStore.openModal({
     title: t('customers.add_customer'),
     componentName: 'CustomerModal',
@@ -219,7 +254,7 @@ function onSearch(value: string) {
     <BaseContactPicker
       :selected="selected"
       :choices="choices"
-      :label="$t('invoices.customer')"
+      :label="label ?? $t('invoices.customer')"
       :placeholder="$t('customers.select_a_customer')"
       :create-label="$t('customers.add_new_customer')"
       :edit-label="$t('customers.edit_customer')"

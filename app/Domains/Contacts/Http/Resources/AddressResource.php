@@ -28,6 +28,8 @@ class AddressResource extends JsonResource
             'zip' => $this->zip,
             'phone' => $this->phone,
             'fax' => $this->fax,
+            // HisabKitab feature — GST number per address
+            'tax_id' => $this->tax_id,
             'type' => $this->type,
             'user_id' => $this->user_id,
             'company_id' => $this->company_id,

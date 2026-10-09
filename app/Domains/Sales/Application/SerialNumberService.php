@@ -170,12 +170,16 @@ class SerialNumberService
     public function getNextNumber(?string $format = null)
     {
         $derivedKey = strtolower(class_basename($this->model)).'_number_format';
+        $settingKey = $this->settingKey ?: $derivedKey;
 
         if ($format === null) {
-            $format = CompanySetting::getSetting(
-                $this->settingKey ?: $derivedKey,
-                $this->company
-            );
+            $format = CompanySetting::getSetting($settingKey, $this->company);
+
+            // HisabKitab feature — fall back to the base format if a receipt-specific
+            // format is not yet configured (backward compatibility)
+            if (! $format && $this->settingKey && $this->settingKey !== $derivedKey) {
+                $format = CompanySetting::getSetting($derivedKey, $this->company);
+            }
         }
 
         $this->setNextNumbers();

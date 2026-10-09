@@ -71,6 +71,10 @@ class LorryPartyProfileController extends Controller
             $this->payables()->ensureSupplier($profile, $email);
         }
 
+        // HisabKitab feature — every profile gets a Customer so it shows in
+        // the Lorry Receipt customer dropdown.
+        $this->payables()->ensureCustomer($profile);
+
         return response()->json([
             'data' => new LorryPartyProfileResource($profile->refresh()),
         ], 201);
@@ -96,6 +100,9 @@ class LorryPartyProfileController extends Controller
 
         // Keep the Supplier behind the party in step with the new details.
         $this->payables()->ensureSupplier($profile);
+
+        // HisabKitab feature — keep the Customer behind the party in step too.
+        $this->payables()->ensureCustomer($profile);
 
         return response()->json([
             'data' => new LorryPartyProfileResource($profile->refresh()),

@@ -26,6 +26,8 @@ export interface CustomerFormAddress {
   country_id: number | null
   zip: string | null
   type: string | null
+  // HisabKitab feature — GST number on each address
+  tax_id: string | null
 }
 
 export interface CustomerForm {
@@ -61,6 +63,8 @@ function createAddressStub(): CustomerFormAddress {
     country_id: null,
     zip: null,
     type: null,
+    // HisabKitab feature
+    tax_id: null,
   }
 }
 

@@ -75,7 +75,7 @@
             {{ estimateData.customer.name }}
           </router-link>
         </BaseStat>
-        <BaseStat :label="$t('reports.estimates.estimate_date')">
+        <BaseStat :label="currentDocMeta?.dateLabel ?? $t('reports.estimates.estimate_date')">
           {{ estimateData.formatted_estimate_date }}
         </BaseStat>
         <BaseStat :label="$t('estimates.expiry_date')">

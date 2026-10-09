@@ -1,5 +1,5 @@
 const { Fragment: e, computed: t, createBlock: n, createCommentVNode: r, createElementBlock: i, createElementVNode: a, createTextVNode: o, createVNode: s, defineComponent: c, openBlock: l, ref: u, renderList: d, resolveComponent: f, toDisplayString: p, watch: m, withCtx: h, withKeys: g, withModifiers: _ } = window.__invoiceshelf_vue;
-//#region Modules/InvoiceReceipt/resources/js/components/OfficeInvoiceItemsTable.vue?vue&type=script&setup=true&lang.ts
+//#region resources/js/components/OfficeInvoiceItemsTable.vue?vue&type=script&setup=true&lang.ts
 var v = {
 	key: 0,
 	class: "space-y-3"
@@ -46,18 +46,18 @@ var v = {
 				discount_type: "fixed",
 				discount_val: 0,
 				taxes: [],
-				consignment_number: "",
-				consignment_date: "",
-				party_inv_no: "",
-				from_code: "",
-				to_code: "",
-				truck_no: "",
-				pkg: "",
-				weight: "",
-				rate: 0,
-				other_charge: 0,
-				lr_charge: 0,
-				dd_charge: 0,
+				tr_consignment_number: "",
+				tr_consignment_date: "",
+				tr_party_inv_no: "",
+				tr_from_name: "",
+				tr_to_name: "",
+				tr_truck_no: "",
+				tr_pkg_weight: "",
+				tr_charged_weight: "",
+				tr_rate: 0,
+				tr_other_charge: 0,
+				tr_lr_charge: 0,
+				tr_dd_charge: 0,
 				amount: 0
 			};
 			L.store[L.storeProp].items.push(e);
@@ -67,16 +67,16 @@ var v = {
 			let t = Number(e);
 			return isNaN(t) ? 0 : t;
 		}, q = (e) => {
-			let t = K(e.rate), n = K(e.other_charge), r = K(e.lr_charge), i = K(e.dd_charge);
+			let t = K(e.tr_rate), n = K(e.tr_other_charge), r = K(e.tr_lr_charge), i = K(e.tr_dd_charge);
 			return t + n + r + i;
 		}, J = (e) => {
 			let t = q(e);
 			e.amount = t;
 			let n = Math.round(t * 100);
-			e.price = n, e.total = n, e.quantity = 1, e.name = e.consignment_number || "Consignment";
+			e.price = n, e.total = n, e.quantity = 1, e.name = e.tr_consignment_number || "Consignment";
 		};
 		function Y(e, t, n) {
-			if (e.consignment_number = t.consignment_number, t.consignment_date && (e.consignment_date = t.consignment_date), t.party_inv_no && (e.party_inv_no = t.party_inv_no), t.from_code && (e.from_code = t.from_code), t.to_code && (e.to_code = t.to_code), t.truck_no && (e.truck_no = t.truck_no), t.pkg && (e.pkg = t.pkg), t.weight && (e.weight = t.weight), t.rate !== void 0 && t.rate !== null && (e.rate = Number(t.rate)), t.other_charge !== void 0 && t.other_charge !== null && (e.other_charge = Number(t.other_charge)), t.lr_charge !== void 0 && t.lr_charge !== null && (e.lr_charge = Number(t.lr_charge)), t.dd_charge !== void 0 && t.dd_charge !== null && (e.dd_charge = Number(t.dd_charge)), J(e), L.store?.newInvoice) {
+			if (e.tr_consignment_number = t.consignment_number, t.consignment_date && (e.tr_consignment_date = t.consignment_date), t.party_inv_no && (e.tr_party_inv_no = t.party_inv_no), t.from_code && (e.tr_from_name = t.from_code), t.to_code && (e.tr_to_name = t.to_code), t.truck_no && (e.tr_truck_no = t.truck_no), t.pkg && (e.tr_pkg_weight = t.pkg), t.weight && (e.tr_charged_weight = t.weight), t.rate !== void 0 && t.rate !== null && (e.tr_rate = Number(t.rate)), t.other_charge !== void 0 && t.other_charge !== null && (e.tr_other_charge = Number(t.other_charge)), t.lr_charge !== void 0 && t.lr_charge !== null && (e.tr_lr_charge = Number(t.lr_charge)), t.dd_charge !== void 0 && t.dd_charge !== null && (e.tr_dd_charge = Number(t.dd_charge)), J(e), L.store?.newInvoice) {
 				!(L.store.newInvoice.customer_id || L.store.newInvoice.customer?.id) && t.customer_id && (t.customer ? (L.store.newInvoice.customer = t.customer, L.store.newInvoice.customer_id = t.customer_id, t.customer.currency_id && (L.store.newInvoice.currency_id = t.customer.currency_id)) : L.store.newInvoice.customer_id = t.customer_id, typeof L.store.selectCustomer == "function" && L.store.selectCustomer(t.customer_id).catch(() => {})), !L.store.newInvoice.tr_consignee_customer_id && t.consignee_customer_id && (L.store.newInvoice.tr_consignee_customer_id = t.consignee_customer_id, t.consignee && (L.store.newInvoice.consignee = t.consignee));
 				let e = t.gst_tax_payable_by || t.tr_gst_payable_by;
 				if (e && (L.store.newInvoice.tr_gst_payable_by || (L.store.newInvoice.tr_gst_payable_by = e), L.store.newInvoice.gst_tax_payable_by || (L.store.newInvoice.gst_tax_payable_by = e), Array.isArray(L.store.newInvoice.customFields))) for (let t of L.store.newInvoice.customFields) {
@@ -112,7 +112,7 @@ var v = {
 			}
 		}
 		function Z(e, t, n) {
-			e.consignment_number = n, H[t] && clearTimeout(H[t]);
+			e.tr_consignment_number = n, H[t] && clearTimeout(H[t]);
 			let r = (n || "").trim();
 			if (!r) {
 				B.value[t] = [], V.value[t] = null;
@@ -138,11 +138,11 @@ var v = {
 		}
 		function Q(e, t) {
 			setTimeout(() => {
-				B.value[t] = [], e.consignment_number && !V.value[t] && X(e, t, e.consignment_number);
+				B.value[t] = [], e.tr_consignment_number && !V.value[t] && X(e, t, e.tr_consignment_number);
 			}, 200);
 		}
 		function $(e, t) {
-			B.value[t]?.length ? Y(e, B.value[t][0], t) : e.consignment_number && X(e, t, e.consignment_number);
+			B.value[t]?.length ? Y(e, B.value[t][0], t) : e.tr_consignment_number && X(e, t, e.tr_consignment_number);
 		}
 		return m(R, (e) => {
 			e.forEach((e) => J(e));
@@ -181,7 +181,7 @@ var v = {
 							required: ""
 						}, {
 							default: h(() => [s(U, {
-								"model-value": t.consignment_number,
+								"model-value": t.tr_consignment_number,
 								type: "text",
 								placeholder: "Enter consignment number",
 								loading: z.value[n] || !1,
@@ -217,16 +217,16 @@ var v = {
 					]),
 					s(K, { label: "Consignment Date" }, {
 						default: h(() => [s(U, {
-							modelValue: t.consignment_date,
-							"onUpdate:modelValue": (e) => t.consignment_date = e,
+							modelValue: t.tr_consignment_date,
+							"onUpdate:modelValue": (e) => t.tr_consignment_date = e,
 							type: "date"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
 						_: 2
 					}, 1024),
 					s(K, { label: "Party Inv No" }, {
 						default: h(() => [s(U, {
-							modelValue: t.party_inv_no,
-							"onUpdate:modelValue": (e) => t.party_inv_no = e,
+							modelValue: t.tr_party_inv_no,
+							"onUpdate:modelValue": (e) => t.tr_party_inv_no = e,
 							type: "text",
 							placeholder: "Party invoice number"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
@@ -234,26 +234,26 @@ var v = {
 					}, 1024),
 					s(K, { label: "From" }, {
 						default: h(() => [s(U, {
-							modelValue: t.from_code,
-							"onUpdate:modelValue": (e) => t.from_code = e,
+							modelValue: t.tr_from_name,
+							"onUpdate:modelValue": (e) => t.tr_from_name = e,
 							type: "text",
-							placeholder: "Origin code"
+							placeholder: "Origin"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
 						_: 2
 					}, 1024),
 					s(K, { label: "Destination" }, {
 						default: h(() => [s(U, {
-							modelValue: t.to_code,
-							"onUpdate:modelValue": (e) => t.to_code = e,
+							modelValue: t.tr_to_name,
+							"onUpdate:modelValue": (e) => t.tr_to_name = e,
 							type: "text",
-							placeholder: "Destination code"
+							placeholder: "Destination"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
 						_: 2
 					}, 1024),
 					s(K, { label: "Vehicle No" }, {
 						default: h(() => [s(U, {
-							modelValue: t.truck_no,
-							"onUpdate:modelValue": (e) => t.truck_no = e,
+							modelValue: t.tr_truck_no,
+							"onUpdate:modelValue": (e) => t.tr_truck_no = e,
 							type: "text",
 							placeholder: "Truck/vehicle number"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
@@ -261,8 +261,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "Pkg" }, {
 						default: h(() => [s(U, {
-							modelValue: t.pkg,
-							"onUpdate:modelValue": (e) => t.pkg = e,
+							modelValue: t.tr_pkg_weight,
+							"onUpdate:modelValue": (e) => t.tr_pkg_weight = e,
 							type: "text",
 							placeholder: "Package type"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
@@ -270,8 +270,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "Weight" }, {
 						default: h(() => [s(U, {
-							modelValue: t.weight,
-							"onUpdate:modelValue": (e) => t.weight = e,
+							modelValue: t.tr_charged_weight,
+							"onUpdate:modelValue": (e) => t.tr_charged_weight = e,
 							type: "text",
 							placeholder: "Shipment weight"
 						}, null, 8, ["modelValue", "onUpdate:modelValue"])]),
@@ -279,8 +279,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "Rate" }, {
 						default: h(() => [s(U, {
-							modelValue: t.rate,
-							"onUpdate:modelValue": (e) => t.rate = e,
+							modelValue: t.tr_rate,
+							"onUpdate:modelValue": (e) => t.tr_rate = e,
 							modelModifiers: { number: !0 },
 							type: "number",
 							placeholder: "Freight rate"
@@ -289,8 +289,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "Other Charge" }, {
 						default: h(() => [s(U, {
-							modelValue: t.other_charge,
-							"onUpdate:modelValue": (e) => t.other_charge = e,
+							modelValue: t.tr_other_charge,
+							"onUpdate:modelValue": (e) => t.tr_other_charge = e,
 							modelModifiers: { number: !0 },
 							type: "number",
 							placeholder: "0.00"
@@ -299,8 +299,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "LR Charge" }, {
 						default: h(() => [s(U, {
-							modelValue: t.lr_charge,
-							"onUpdate:modelValue": (e) => t.lr_charge = e,
+							modelValue: t.tr_lr_charge,
+							"onUpdate:modelValue": (e) => t.tr_lr_charge = e,
 							modelModifiers: { number: !0 },
 							type: "number",
 							placeholder: "0.00"
@@ -309,8 +309,8 @@ var v = {
 					}, 1024),
 					s(K, { label: "DD Charge" }, {
 						default: h(() => [s(U, {
-							modelValue: t.dd_charge,
-							"onUpdate:modelValue": (e) => t.dd_charge = e,
+							modelValue: t.tr_dd_charge,
+							"onUpdate:modelValue": (e) => t.tr_dd_charge = e,
 							modelModifiers: { number: !0 },
 							type: "number",
 							placeholder: "0.00"
@@ -359,7 +359,7 @@ var v = {
 	}
 });
 //#endregion
-//#region Modules/InvoiceReceipt/resources/js/init.ts
+//#region resources/js/init.ts
 window.InvoiceShelf.booting((e, t, n) => {
 	window.__invoiceReceiptClient = n.client, n.addMessages({ en: { invoice_receipt: {
 		title: "Invoice Receipts",
@@ -381,7 +381,9 @@ window.InvoiceShelf.booting((e, t, n) => {
 		templateName: "invoice_receipt",
 		label: "Invoice Receipt",
 		labelPlural: "Invoice Receipts",
-		listLink: "/admin/invoices?view=invoice_receipt"
+		listLink: "/admin/invoices?view=invoice_receipt",
+		dateLabel: "Receipt Date",
+		numberLabel: "Receipt No."
 	});
 });
 //#endregion

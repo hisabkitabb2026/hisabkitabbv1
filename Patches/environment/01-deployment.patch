@@ -1,0 +1,4244 @@
+diff --git a/.gitignore b/.gitignore
+index 8dca8339..91769d9a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,7 @@
+-/Modules
++# Modules directory tracked
++Modules/**/node_modules/
++Modules/**/vendor/
++/services
+ /node_modules
+ /public/storage
+ /public/hot
+diff --git a/.php-config/99-upload.ini b/.php-config/99-upload.ini
+new file mode 100644
+index 00000000..0e9786e3
+--- /dev/null
++++ b/.php-config/99-upload.ini
+@@ -0,0 +1,4 @@
++; HisabKitab feature
++; HisabKitab feature
++; The built-in PHP server cannot create temp files for uploads without this.
++upload_tmp_dir = /home/mukesh_sm/ssgls/HackathonIdea/storage/app/uploads
+diff --git a/app/Platform/Operations/helpers.php b/app/Platform/Operations/helpers.php
+index 0abb6d8e..c5b9a428 100644
+--- a/app/Platform/Operations/helpers.php
++++ b/app/Platform/Operations/helpers.php
+@@ -71,7 +71,7 @@ function get_page_title($company_id)
+         ? CompanySetting::getSetting('customer_portal_page_title', $company_id)
+         : Setting::getSetting('admin_page_title');
+ 
+-    return $configured ?: 'InvoiceShelf - Self Hosted Invoicing Platform';
++    return $configured ?: 'HisabKitabb - Invoicing Platform';
+ }
+ 
+ /*
+@@ -201,6 +201,38 @@ function clean_slug($model, $title, $companyId, $id = 0)
+ |--------------------------------------------------------------------------
+ */
+ 
++// HisabKitab feature — Indian numbering system formatter (12,00,000).
++/**
++ * Format a number using the Indian numbering system: the last three digits
++ * before the decimal are grouped together, and every two digits before that
++ * receive a separator (e.g. 1,20,00,000.00).
++ */
++function indian_number_format(float $amount, int $precision = 2, string $decSep = '.', string $thouSep = ','): string
++{
++    $neg = $amount < 0;
++    $amount = abs($amount);
++
++    $str = number_format($amount, $precision, '.', '');
++
++    $parts = explode('.', $str);
++    $intPart = $parts[0];
++    $decPart = isset($parts[1]) ? $parts[1] : '';
++
++    if (strlen($intPart) > 3) {
++        $last3 = substr($intPart, -3);
++        $rest = substr($intPart, 0, -3);
++        $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', $thouSep, $rest);
++        $intPart = $rest.$thouSep.$last3;
++    }
++
++    $result = $intPart;
++    if ($precision > 0) {
++        $result .= $decSep.str_pad($decPart, $precision, '0', STR_PAD_LEFT);
++    }
++
++    return $neg ? '-'.$result : $result;
++}
++
+ /**
+  * Render a minor-unit amount as currency markup for a PDF template.
+  *
+@@ -226,12 +258,17 @@ function format_money_pdf($money, $currency = null)
+     // to company 1's setting rather than to the amount's own company.
+     $currency = $currency ?: Currency::findOrFail(CompanySetting::getSetting('currency', 1));
+ 
+-    $digits = number_format(
+-        abs($amount),
+-        $currency->precision,
+-        $currency->decimal_separator,
+-        $currency->thousand_separator
+-    );
++    // HisabKitab feature — Indian numbering system (2-digit grouping after
++    // the first 3 digits: 12,00,000) for INR; Western 3-digit grouping
++    // for everything else.
++    $digits = $currency->code === 'INR'
++        ? indian_number_format(abs($amount), $currency->precision, $currency->decimal_separator, $currency->thousand_separator)
++        : number_format(
++            abs($amount),
++            $currency->precision,
++            $currency->decimal_separator,
++            $currency->thousand_separator
++        );
+ 
+     $symbol = '<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>';
+ 
+diff --git a/composer.json b/composer.json
+index e76baf5c..8b1e3af5 100644
+--- a/composer.json
++++ b/composer.json
+@@ -105,7 +105,7 @@
+             "recurse": true,
+             "replace": false,
+             "ignore-duplicates": false,
+-            "merge-dev": true,
++            "merge-dev": false,
+             "merge-extra": false,
+             "merge-extra-deep": false,
+             "merge-scripts": false
+@@ -115,6 +115,7 @@
+         "optimize-autoloader": true,
+         "preferred-install": "dist",
+         "sort-packages": true,
++        "github-protocols": ["https"],
+         "allow-plugins": {
+             "pestphp/pest-plugin": true,
+             "php-http/discovery": true,
+@@ -122,11 +123,5 @@
+         }
+     },
+     "minimum-stability": "stable",
+-    "prefer-stable": true,
+-    "repositories": {
+-        "invoiceshelf-modules": {
+-            "type": "vcs",
+-            "url": "https://github.com/InvoiceShelf/modules.git"
+-        }
+-    }
++    "prefer-stable": true
+ }
+diff --git a/config/database.php b/config/database.php
+index 7a2a6403..cd78fa22 100644
+--- a/config/database.php
++++ b/config/database.php
+@@ -74,6 +74,9 @@ return [
+             'options' => $mysqlSslCaAttribute !== null ? array_filter([
+                 $mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA'),
+             ]) : [],
++            'dump' => [
++                'skip_ssl' => env('DB_DUMP_SKIP_SSL', true),
++            ],
+         ],
+ 
+         'mariadb' => [
+@@ -94,6 +97,9 @@ return [
+             'options' => $mysqlSslCaAttribute !== null ? array_filter([
+                 $mysqlSslCaAttribute => env('MYSQL_ATTR_SSL_CA'),
+             ]) : [],
++            'dump' => [
++                'skip_ssl' => env('DB_DUMP_SKIP_SSL', true),
++            ],
+         ],
+ 
+         'pgsql' => [
+diff --git a/database/seeders/DemoSeeder.php b/database/seeders/DemoSeeder.php
+index d963f4e9..2487ba58 100644
+--- a/database/seeders/DemoSeeder.php
++++ b/database/seeders/DemoSeeder.php
+@@ -24,19 +24,19 @@ class DemoSeeder extends Seeder
+     {
+         // Create demo user
+         $user = User::factory()->create([
+-            'email' => 'demo@invoiceshelf.com',
+-            'name' => 'Demo User',
++            'email' => 'mukesh@gmail.com',
++            'name' => 'Mukesh',
+             'role' => 'super admin',
+-            'password' => 'demo',
++            'password' => 'prachi',
+         ]);
+ 
+         // Create demo company
+         $company = Company::factory()->create([
+-            'name' => 'Acme Inc',
++            'name' => 'HisabKitabb',
+             'owner_id' => $user->id,
+-            'slug' => 'acme-inc',
+-            'vat_id' => 'US123456789',
+-            'tax_id' => '84-1234567',
++            'slug' => 'hisabKitabb',
++            'vat_id' => 'IND123456789',
++            'tax_id' => '12-1234567',
+         ]);
+ 
+         $company->unique_hash = Hashids::connection(HashidConnection::Company->value)->encode($company->id);
+@@ -53,7 +53,7 @@ class DemoSeeder extends Seeder
+         // from 2.x carries whatever order its own migrations produced, and on
+         // one of those id 1 is the Algerian Dinar, so the demo would price
+         // everything in "DA".
+-        $currencyId = Currency::where('code', 'USD')->value('id') ?? 1;
++        $currencyId = Currency::where('code', 'INR')->value('id') ?? 1;
+ 
+         // Set default user settings
+         $user->setSettings([
+diff --git a/docker-compose.ec2.yml b/docker-compose.ec2.yml
+new file mode 100644
+index 00000000..3fd5cfb6
+--- /dev/null
++++ b/docker-compose.ec2.yml
+@@ -0,0 +1,64 @@
++services:
++  database:
++    container_name: invoiceshelf-mysql
++    image: mariadb:10
++    environment:
++      - MYSQL_DATABASE=invoiceshelf
++      - MYSQL_USER=invoiceshelf
++      - MYSQL_PASSWORD=somepass
++      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=true
++    expose:
++      - 3306
++    ports:
++      - "127.0.0.1:3306:3306"
++    volumes:
++      - invoiceshelf_mysql:/var/lib/mysql
++    networks:
++      - invoiceshelf
++    restart: unless-stopped
++    healthcheck:
++      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
++      timeout: 20s
++      retries: 10
++
++  webapp:
++    container_name: invoiceshelf-variant-mariadb
++    image: hisabkitabb-app:latest
++    environment:
++      - APP_NAME=HisabKitab
++      - APP_ENV=production
++      - APP_DEBUG=false
++      - APP_KEY=base64:tu+xcVsAeEeciPFf2KnmBnzLQ9RQkvR9DB1qNjL2TS4=
++      - APP_URL=http://100.53.240.111:8090
++      - DB_CONNECTION=mariadb
++      - DB_HOST=database
++      - DB_PORT=3306
++      - DB_DATABASE=invoiceshelf
++      - DB_USERNAME=invoiceshelf
++      - DB_PASSWORD=somepass
++      - DB_PASSWORD_FILE=
++      - CACHE_STORE=file
++      - SESSION_DRIVER=file
++      - SESSION_LIFETIME=240
++      - SESSION_DOMAIN=
++      - SANCTUM_STATEFUL_DOMAINS=100.53.240.111:8090,100.53.240.111,ec2-100-53-240-111.compute-1.amazonaws.com:8090,ec2-100-53-240-111.compute-1.amazonaws.com,localhost:8090,localhost:80,127.0.0.1:8090,127.0.0.1
++    volumes:
++      - invoiceshelf_storage:/var/www/html/storage/
++      - invoiceshelf_modules:/var/www/html/Modules
++    ports:
++      - "8090:8080"
++      - "80:8080"
++    networks:
++      - invoiceshelf
++    restart: unless-stopped
++    depends_on:
++      database:
++        condition: service_healthy
++
++networks:
++  invoiceshelf:
++
++volumes:
++  invoiceshelf_mysql:
++  invoiceshelf_storage:
++  invoiceshelf_modules:
+diff --git a/docker/production/Dockerfile b/docker/production/Dockerfile
+index f482a123..902a99f5 100644
+--- a/docker/production/Dockerfile
++++ b/docker/production/Dockerfile
+@@ -6,7 +6,7 @@ FROM --platform=$BUILDPLATFORM node:24 AS static_builder
+ 
+ FROM serversideup/php:8.4-fpm-nginx-alpine AS base
+     USER root
+-    RUN apk add --no-cache bash nano mariadb-client postgresql-client sqlite
++    RUN apk add --no-cache bash nano mariadb-client postgresql-client sqlite git
+     # One invocation, not twelve: the tool sets up and tears down its build
+     # environment per call, and several of these compile from source.
+     RUN install-php-extensions \
+diff --git a/docker/production/docker-compose.mysql.yml b/docker/production/docker-compose.mysql.yml
+index 8622bf71..e80debd6 100644
+--- a/docker/production/docker-compose.mysql.yml
++++ b/docker/production/docker-compose.mysql.yml
+@@ -14,6 +14,8 @@ services:
+       - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=true
+     expose:
+       - 3306
++    ports:
++      - "3306:3306"
+     volumes:
+       - invoiceshelf_mysql:/var/lib/mysql
+     networks:
+@@ -30,9 +32,10 @@ services:
+         context: ../../
+         dockerfile: docker/production/Dockerfile
+     environment:
+-      - APP_NAME=Laravel
+-      - APP_ENV=local
+-      - APP_DEBUG=true
++      - APP_NAME=InvoiceShelf
++      - APP_ENV=production
++      - APP_DEBUG=false
++      - APP_KEY=base64:tu+xcVsAeEeciPFf2KnmBnzLQ9RQkvR9DB1qNjL2TS4=
+       - APP_URL=http://localhost:8090
+       - DB_CONNECTION=mariadb
+       - DB_HOST=database
+@@ -44,7 +47,7 @@ services:
+       - CACHE_STORE=file
+       - SESSION_DRIVER=file
+       - SESSION_LIFETIME=240
+-      - SESSION_DOMAIN=localhost
++      - SESSION_DOMAIN=
+       # The image runs Laravel's scheduler itself, which is what generates
+       # recurring invoices and flags overdue documents. Set this to false only
+       # if you run the schedule elsewhere, for example a second container with
+@@ -53,7 +56,7 @@ services:
+       #   healthcheck: {test: ["CMD", "healthcheck-schedule"], start_period: 10s}
+       # or more than one replica of this one.
+       # - SCHEDULER_ENABLED=true
+-      - SANCTUM_STATEFUL_DOMAINS=localhost:8090
++      - SANCTUM_STATEFUL_DOMAINS=localhost:8090,127.0.0.1:8090,localhost,127.0.0.1
+     volumes:
+       - invoiceshelf_storage:/var/www/html/storage/
+       - invoiceshelf_modules:/var/www/html/Modules
+diff --git a/docker/production/docker-compose.sqlite.yml b/docker/production/docker-compose.sqlite.yml
+index e0df04fd..433a702d 100644
+--- a/docker/production/docker-compose.sqlite.yml
++++ b/docker/production/docker-compose.sqlite.yml
+@@ -26,7 +26,7 @@ services:
+       - CACHE_STORE=file
+       - SESSION_DRIVER=file
+       - SESSION_LIFETIME=240
+-      - SESSION_DOMAIN=localhost
++      - SESSION_DOMAIN=
+       # The image runs Laravel's scheduler itself, which is what generates
+       # recurring invoices and flags overdue documents. Set this to false only
+       # if you run the schedule elsewhere, for example a second container with
+@@ -35,7 +35,7 @@ services:
+       #   healthcheck: {test: ["CMD", "healthcheck-schedule"], start_period: 10s}
+       # or more than one replica of this one.
+       # - SCHEDULER_ENABLED=true
+-      - SANCTUM_STATEFUL_DOMAINS=localhost:8090
++      - SANCTUM_STATEFUL_DOMAINS=localhost:8090,127.0.0.1:8090,localhost,127.0.0.1
+     restart: unless-stopped
+ networks:
+   invoiceshelf:
+diff --git a/infrastructure/observability/README.md b/infrastructure/observability/README.md
+new file mode 100644
+index 00000000..2371dc2c
+--- /dev/null
++++ b/infrastructure/observability/README.md
+@@ -0,0 +1,310 @@
++# Observability Infrastructure
++
++Enterprise-grade monitoring and observability stack for InvoiceShelf microservices.
++
++## Contents
++
++### Configuration Files
++
++| File | Purpose | Size |
++|------|---------|------|
++| `prometheus.yml` | Metrics collection configuration | 7 KB |
++| `prometheus-rules.yml` | Alert rules (50+ alerts) | 25 KB |
++| `alertmanager.yml` | Alert routing and notification | 6 KB |
++| `elasticsearch-templates.json` | Index mappings and settings | 15 KB |
++| `logstash-pipeline.conf` | Log processing pipeline | 12 KB |
++| `logstash-patterns.txt` | Custom Grok patterns (25+) | 8 KB |
++
++### Grafana Provisioning
++
++```
++grafana-provisioning/
++├── datasources/
++│   └── prometheus.yml          # Data source configuration
++└── dashboards/
++    └── provisioning.yml        # Dashboard provider config
++```
++
++### Dashboards
++
++```
++dashboards/
++├── 01-system-overview.json         # Infrastructure health
++├── 02-service-metrics.json         # Per-service performance
++├── 03-database-performance.json    # Database & cache metrics
++└── 04-logs-analysis.json           # Log aggregation & search
++```
++
++## Quick Start
++
++### 1. Deploy Stack
++
++```bash
++cd ../..
++docker-compose -f docker-compose.microservices.yml \
++               -f docker-compose.monitoring.yml up -d
++```
++
++### 2. Access Interfaces
++
++- **Grafana**: http://localhost:3000 (admin/admin)
++- **Kibana**: http://localhost:5601
++- **Prometheus**: http://localhost:9090
++- **AlertManager**: http://localhost:9093
++- **Jaeger**: http://localhost:16686
++
++### 3. Verify Setup
++
++```bash
++# Check services
++docker-compose ps
++
++# Verify metrics
++curl http://localhost:9090/api/v1/targets
++
++# Check logs
++curl http://localhost:9200/_cat/indices
++```
++
++## Components
++
++### Prometheus
++- **Metrics Database**: Time-series database for all metrics
++- **Scrape Config**: Monitors all 6 microservices + infrastructure
++- **Alert Rules**: 50+ predefined alert rules
++- **Retention**: 30 days of metrics
++
++**Key Metrics**:
++- Request rate, latency, errors (per service)
++- CPU, memory, disk usage
++- Database query rate and latency
++- Cache operations
++- Container metrics
++
++### Elasticsearch
++- **Log Storage**: Central log indexing and storage
++- **Index Pattern**: logs-YYYY.MM.dd (daily rotation)
++- **Mappings**: 100+ field types
++- **Retention**: Configurable via ILM
++
++**Log Types**:
++- Application logs
++- Request/response logs
++- Database query logs
++- Authentication events
++- Business events
++- Error traces
++
++### Logstash
++- **Input Sources**: TCP, UDP, HTTP, Filebeat
++- **Processing**: JSON parsing, Grok extraction, field enrichment
++- **Custom Patterns**: 25+ patterns for application logs
++- **Outputs**: Elasticsearch, AlertManager, Console
++
++**Features**:
++- Multiline log support
++- Sensitive data redaction
++- Service identification
++- Log level normalization
++
++### Kibana
++- **Log Search**: Full-text search with Lucene syntax
++- **Visualizations**: Pre-built dashboards
++- **Analytics**: Log analysis and trending
++- **Export**: CSV/JSON export capabilities
++
++### Grafana
++- **Dashboards**: 4 comprehensive dashboards
++- **Data Sources**: Prometheus, Elasticsearch, Jaeger, AlertManager
++- **Alerts**: Integrated with Prometheus alerts
++- **Sharing**: Team collaboration and sharing
++
++### AlertManager
++- **Alert Routing**: Severity and service-based routing
++- **Notifications**: Slack, PagerDuty, Email, Webhooks
++- **Grouping**: Intelligent alert grouping
++- **Inhibition**: Suppress redundant alerts
++
++### Jaeger
++- **Distributed Tracing**: Request flow visualization
++- **Span Storage**: Trace data persistence
++- **Service Topology**: Service dependency mapping
++- **Performance Analysis**: Latency and error investigation
++
++## Configuration
++
++### Add Service to Monitoring
++
++1. **Prometheus**: Add job to `prometheus.yml`
++   ```yaml
++   - job_name: 'new-service'
++     static_configs:
++       - targets: ['new-service:9090']
++   ```
++
++2. **Logstash**: Add pattern and filter to `logstash-pipeline.conf`
++
++3. **Elasticsearch**: Update `elasticsearch-templates.json` if needed
++
++4. **Grafana**: Create new dashboard or update existing
++
++### Add Alert Rule
++
++Edit `prometheus-rules.yml` and add rule:
++
++```yaml
++- alert: CustomAlert
++  expr: metric > threshold
++  for: 5m
++  labels:
++    severity: warning
++  annotations:
++    summary: "Alert summary"
++```
++
++### Customize Retention
++
++**Prometheus**:
++- Edit `docker-compose.monitoring.yml`
++- Change `--storage.tsdb.retention.time=30d`
++
++**Elasticsearch**:
++- Configure ILM policy
++- See MONITORING_SETUP.md for details
++
++## Troubleshooting
++
++### Services not scraped
++```bash
++# Check metrics endpoint
++curl http://invoice-service:9090/metrics
++
++# Check Prometheus targets
++curl http://localhost:9090/api/v1/targets
++```
++
++### No logs appearing
++```bash
++# Check Logstash
++docker logs invoiceshelf-logstash
++
++# Send test log
++curl -X POST http://localhost:8080 \
++  -H 'Content-Type: application/json' \
++  -d '{"message":"test", "level":"info"}'
++```
++
++### High memory usage
++- Reduce retention period
++- Lower scrape frequency
++- Enable compression
++- Archive old indices
++
++## Performance Tips
++
++1. **Prometheus**
++   - Use recording rules for complex queries
++   - Implement query caching
++   - Adjust scrape intervals
++
++2. **Elasticsearch**
++   - Enable index lifecycle management
++   - Use appropriate shard count
++   - Optimize refresh intervals
++
++3. **Grafana**
++   - Use panel caching
++   - Limit query time ranges
++   - Optimize dashboard sizes
++
++4. **Logstash**
++   - Use multiple workers
++   - Implement batch processing
++   - Monitor queue depth
++
++## Security
++
++### Credentials to Change
++
++- [ ] Grafana admin password
++- [ ] Elasticsearch elastic user password
++- [ ] AlertManager webhook URLs
++- [ ] PagerDuty service keys
++- [ ] Slack webhook URLs
++
++### Data Protection
++
++- Sensitive fields are automatically redacted:
++  - Passwords: `***REDACTED***`
++  - API keys: `***REDACTED***`
++  - Tokens: `***REDACTED***`
++
++### Network Security
++
++- Restrict port access
++- Use VPC/private networks
++- Enable TLS for production
++- Implement RBAC
++
++## Related Documentation
++
++- **MONITORING_SETUP.md**: Complete technical setup guide
++- **MONITORING_GUIDE.md**: User guide and troubleshooting
++- **MONITORING_IMPLEMENTATION_SUMMARY.md**: Implementation details
++- **docker-compose.monitoring.yml**: Service definitions
++
++## Support
++
++For issues or questions:
++1. Check MONITORING_GUIDE.md troubleshooting section
++2. Review logs: `docker logs <service-name>`
++3. Check Prometheus for targets
++4. Verify network connectivity
++
++## Monitoring Stack Architecture
++
++```
++┌─────────────────────────────────────────────────┐
++│          InvoiceShelf Microservices             │
++│  (6 services + MySQL + Redis + RabbitMQ + Kong) │
++└──────────────────┬──────────────────────────────┘
++                   │
++        ┌──────────┴──────────┐
++        │                     │
++    ┌───▼────┐          ┌─────▼───┐
++    │Prometheus│          │Jaeger   │
++    │(Metrics) │          │(Traces) │
++    └───┬────┘          └─────┬───┘
++        │                     │
++    ┌───▼──────────────────────▼───┐
++    │  Elasticsearch (Logs)        │
++    │  ↑                            │
++    │  │                            │
++    │  Logstash                     │
++    │  (Pipeline)                   │
++    └────────────┬──────────────────┘
++                 │
++        ┌────────┴────────────┐
++        │                     │
++    ┌───▼─────┐          ┌────▼────┐
++    │ Kibana  │          │AlertManager│
++    │(Logs UI)│          │(Alerts)    │
++    └─────────┘          └────┬─────┘
++                              │
++                        ┌─────▼──────┐
++                        │ Grafana    │
++                        │(Dashboards)│
++                        └──────────┬─┘
++                                  │
++                        ┌─────────┴──────────┐
++                        │                    │
++                    ┌───▼──┐            ┌────▼─┐
++                    │Slack │            │Pagerduty
++                    └──────┘            └────────┘
++```
++
++---
++
++**Version**: 1.0  
++**Last Updated**: 2024-08-30  
++**Status**: Production-Ready
+diff --git a/infrastructure/observability/alertmanager.yml b/infrastructure/observability/alertmanager.yml
+new file mode 100644
+index 00000000..b0421f0f
+--- /dev/null
++++ b/infrastructure/observability/alertmanager.yml
+@@ -0,0 +1,230 @@
++###############################################################################
++# AlertManager Configuration
++# Alert routing, grouping, and notification rules
++###############################################################################
++
++global:
++  resolve_timeout: 5m
++  slack_api_url: 'http://slack-webhook-url' # Replace with your Slack webhook URL
++  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
++
++# Template files for alert notifications
++templates:
++  - '/etc/alertmanager/templates/*.tmpl'
++
++# Top-level routing rules
++route:
++  # Route name
++  receiver: 'default'
++  # How often a notification is resent for a group
++  repeat_interval: 24h
++  # Initial wait time before sending notifications for a group
++  group_wait: 10s
++  # Wait duration for further alerts to arrive before sending group notification
++  group_interval: 10s
++
++  routes:
++    ##############################################################################
++    # Critical Service Alerts
++    ##############################################################################
++    - match:
++        severity: critical
++        component: service
++      receiver: 'critical-services'
++      repeat_interval: 5m
++      group_wait: 0s
++      group_interval: 5m
++
++    ##############################################################################
++    # Database Critical Alerts
++    ##############################################################################
++    - match:
++        severity: critical
++        service: mysql
++      receiver: 'database-alerts'
++      repeat_interval: 5m
++      group_wait: 0s
++
++    - match:
++        severity: critical
++        service: redis
++      receiver: 'cache-alerts'
++      repeat_interval: 5m
++      group_wait: 0s
++
++    - match:
++        severity: critical
++        service: elasticsearch
++      receiver: 'elasticsearch-alerts'
++      repeat_interval: 5m
++      group_wait: 0s
++
++    ##############################################################################
++    # Warning Level Alerts
++    ##############################################################################
++    - match:
++        severity: warning
++      receiver: 'warning-notifications'
++      repeat_interval: 1h
++      group_wait: 30s
++      group_interval: 30s
++
++    ##############################################################################
++    # System Alerts
++    ##############################################################################
++    - match:
++        severity: critical
++        component: system
++      receiver: 'system-critical'
++      repeat_interval: 10m
++      group_wait: 0s
++
++    ##############################################################################
++    # Application Performance Alerts
++    ##############################################################################
++    - match:
++        component: application
++      receiver: 'application-alerts'
++      repeat_interval: 15m
++      group_wait: 15s
++
++    ##############################################################################
++    # Container & Docker Alerts
++    ##############################################################################
++    - match:
++        component: container
++      receiver: 'container-alerts'
++      repeat_interval: 30m
++      group_wait: 20s
++
++# Receiver definitions
++receivers:
++  ##############################################################################
++  # Default Receiver
++  ##############################################################################
++  - name: 'default'
++    slack_configs:
++      - channel: '#monitoring'
++        title: 'Alert: {{ .GroupLabels.alertname }}'
++        text: '{{ .CommonAnnotations.description }}'
++
++  ##############################################################################
++  # Critical Services Receiver
++  ##############################################################################
++  - name: 'critical-services'
++    slack_configs:
++      - channel: '#critical-alerts'
++        title: 'CRITICAL: Service Down - {{ .GroupLabels.service }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'danger'
++    pagerduty_configs:
++      - service_key: 'pagerduty-integration-key'
++        description: '{{ .CommonAnnotations.summary }}'
++        details:
++          severity: 'critical'
++          service: '{{ .GroupLabels.service }}'
++
++  ##############################################################################
++  # Database Alerts Receiver
++  ##############################################################################
++  - name: 'database-alerts'
++    slack_configs:
++      - channel: '#database-alerts'
++        title: 'CRITICAL: MySQL Issue - {{ .GroupLabels.service }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'danger'
++
++  ##############################################################################
++  # Cache Alerts Receiver
++  ##############################################################################
++  - name: 'cache-alerts'
++    slack_configs:
++      - channel: '#cache-alerts'
++        title: 'CRITICAL: Redis Issue'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'danger'
++
++  ##############################################################################
++  # Elasticsearch Alerts Receiver
++  ##############################################################################
++  - name: 'elasticsearch-alerts'
++    slack_configs:
++      - channel: '#search-alerts'
++        title: 'CRITICAL: Elasticsearch Issue'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'danger'
++
++  ##############################################################################
++  # Warning Notifications Receiver
++  ##############################################################################
++  - name: 'warning-notifications'
++    slack_configs:
++      - channel: '#warnings'
++        title: 'WARNING: {{ .GroupLabels.alertname }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'warning'
++
++  ##############################################################################
++  # System Critical Receiver
++  ##############################################################################
++  - name: 'system-critical'
++    slack_configs:
++      - channel: '#system-critical'
++        title: 'CRITICAL: System Issue - {{ .GroupLabels.alertname }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'danger'
++
++  ##############################################################################
++  # Application Alerts Receiver
++  ##############################################################################
++  - name: 'application-alerts'
++    slack_configs:
++      - channel: '#application-alerts'
++        title: 'Application Alert: {{ .GroupLabels.alertname }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'warning'
++
++  ##############################################################################
++  # Container Alerts Receiver
++  ##############################################################################
++  - name: 'container-alerts'
++    slack_configs:
++      - channel: '#container-alerts'
++        title: 'Container Alert: {{ .CommonLabels.name }}'
++        text: '{{ .CommonAnnotations.description }}'
++        color: 'warning'
++
++# Inhibition rules - suppress alerts based on other alert conditions
++inhibit_rules:
++  # Don't alert on service errors if the service itself is down
++  - source_match:
++      alertname: 'InvoiceServiceDown'
++    target_match_re:
++      alertname: '.*(InvoiceService|Invoice).*'
++    equal: []
++
++  - source_match:
++      alertname: 'ExpenseServiceDown'
++    target_match_re:
++      alertname: '.*(ExpenseService|Expense).*'
++    equal: []
++
++  - source_match:
++      alertname: 'ProductServiceDown'
++    target_match_re:
++      alertname: '.*(ProductService|Product).*'
++    equal: []
++
++  # Don't alert on disk errors if the disk is full
++  - source_match:
++      alertname: 'LowDiskSpace'
++    target_match_re:
++      alertname: '.*DiskIO.*'
++    equal: []
++
++  # Don't alert on memory issues if the node is down
++  - source_match:
++      alertname: 'NodeDown'
++    target_match_re:
++      alertname: '.*Memory.*'
++    equal: []
+diff --git a/infrastructure/observability/dashboards/01-system-overview.json b/infrastructure/observability/dashboards/01-system-overview.json
+new file mode 100644
+index 00000000..dca95de2
+--- /dev/null
++++ b/infrastructure/observability/dashboards/01-system-overview.json
+@@ -0,0 +1,421 @@
++{
++  "annotations": {
++    "list": [
++      {
++        "builtIn": 1,
++        "datasource": "-- Grafana --",
++        "enable": true,
++        "hide": true,
++        "iconColor": "rgba(0, 211, 255, 1)",
++        "name": "Annotations & Alerts",
++        "type": "dashboard"
++      }
++    ]
++  },
++  "editable": true,
++  "gnetId": null,
++  "graphTooltip": 0,
++  "id": null,
++  "links": [],
++  "panels": [
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "thresholds"
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "red",
++                "value": 1
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 0
++      },
++      "id": 2,
++      "options": {
++        "orientation": "auto",
++        "reduceOptions": {
++          "values": false,
++          "fields": "",
++          "calcs": ["lastNotNull"]
++        },
++        "showThresholdLabels": false,
++        "showThresholdMarkers": true
++      },
++      "pluginVersion": "9.0.0",
++      "targets": [
++        {
++          "expr": "count(up{job=~\"invoice-service|expense-service|product-service|customer-service|settings-service|transport-service\"})",
++          "refId": "A"
++        }
++      ],
++      "title": "Active Services",
++      "type": "gauge"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Requests/sec",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "red",
++                "value": 80
++              }
++            ]
++          },
++          "unit": "reqps"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 0
++      },
++      "id": 3,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "bottom"
++        },
++        "tooltip": {
++          "mode": "single",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(http_requests_total[5m])) by (service)",
++          "legendFormat": "{{ service }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Request Rate by Service",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "CPU %",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "yellow",
++                "value": 50
++              },
++              {
++                "color": "red",
++                "value": 80
++              }
++            ]
++          },
++          "unit": "percent"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 8
++      },
++      "id": 4,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "bottom"
++        },
++        "tooltip": {
++          "mode": "single",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "(100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
++          "legendFormat": "{{ instance }}",
++          "refId": "A"
++        }
++      ],
++      "title": "CPU Usage",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Memory %",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "yellow",
++                "value": 50
++              },
++              {
++                "color": "red",
++                "value": 85
++              }
++            ]
++          },
++          "unit": "percent"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 8
++      },
++      "id": 5,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "bottom"
++        },
++        "tooltip": {
++          "mode": "single",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
++          "legendFormat": "{{ instance }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Memory Usage",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Errors/sec",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "red",
++                "value": 5
++              }
++            ]
++          },
++          "unit": "errps"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 24,
++        "x": 0,
++        "y": 16
++      },
++      "id": 6,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "bottom"
++        },
++        "tooltip": {
++          "mode": "single",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service)",
++          "legendFormat": "{{ service }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Error Rate by Service",
++      "type": "timeseries"
++    }
++  ],
++  "schemaVersion": 37,
++  "style": "dark",
++  "tags": ["system", "overview"],
++  "templating": {
++    "list": []
++  },
++  "time": {
++    "from": "now-1h",
++    "to": "now"
++  },
++  "timepicker": {},
++  "timezone": "",
++  "title": "System Overview",
++  "uid": "system-overview",
++  "version": 0
++}
+diff --git a/infrastructure/observability/dashboards/02-service-metrics.json b/infrastructure/observability/dashboards/02-service-metrics.json
+new file mode 100644
+index 00000000..25c6cc6a
+--- /dev/null
++++ b/infrastructure/observability/dashboards/02-service-metrics.json
+@@ -0,0 +1,435 @@
++{
++  "annotations": {
++    "list": [
++      {
++        "builtIn": 1,
++        "datasource": "-- Grafana --",
++        "enable": true,
++        "hide": true,
++        "iconColor": "rgba(0, 211, 255, 1)",
++        "name": "Annotations & Alerts",
++        "type": "dashboard"
++      }
++    ]
++  },
++  "editable": true,
++  "gnetId": null,
++  "graphTooltip": 0,
++  "id": null,
++  "links": [],
++  "panels": [
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Requests/sec",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "reqps"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 0
++      },
++      "id": 10,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max", "last"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(http_requests_total[5m])) by (service)",
++          "legendFormat": "{{ service }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Request Rate by Service",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Latency (ms)",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              },
++              {
++                "color": "yellow",
++                "value": 500
++              },
++              {
++                "color": "red",
++                "value": 1000
++              }
++            ]
++          },
++          "unit": "ms"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 0
++      },
++      "id": 11,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max", "min"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000",
++          "legendFormat": "p95 - {{ service }}",
++          "refId": "A"
++        },
++        {
++          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) * 1000",
++          "legendFormat": "p99 - {{ service }}",
++          "refId": "B"
++        }
++      ],
++      "title": "Request Latency Percentiles",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Count",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 24,
++        "x": 0,
++        "y": 8
++      },
++      "id": 12,
++      "options": {
++        "legend": {
++          "calcs": ["sum"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(http_requests_total[5m])) by (service, status)",
++          "legendFormat": "{{ service }} - {{ status }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Request Status Distribution by Service",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Throughput (MB/s)",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "Mbps"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 16
++      },
++      "id": 13,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(http_request_size_bytes[5m])) by (service) / 1000000",
++          "legendFormat": "{{ service }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Request Throughput by Service",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Memory (MB)",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "decmbytes"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 16
++      },
++      "id": 14,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "container_memory_usage_bytes{name=~\"invoiceshelf-.*-service\"} / 1024 / 1024",
++          "legendFormat": "{{ name }}",
++          "refId": "A"
++        }
++      ],
++      "title": "Service Memory Usage",
++      "type": "timeseries"
++    }
++  ],
++  "schemaVersion": 37,
++  "style": "dark",
++  "tags": ["services", "metrics"],
++  "templating": {
++    "list": []
++  },
++  "time": {
++    "from": "now-1h",
++    "to": "now"
++  },
++  "timepicker": {},
++  "timezone": "",
++  "title": "Service Metrics",
++  "uid": "service-metrics",
++  "version": 0
++}
+diff --git a/infrastructure/observability/dashboards/03-database-performance.json b/infrastructure/observability/dashboards/03-database-performance.json
+new file mode 100644
+index 00000000..d77ea9c6
+--- /dev/null
++++ b/infrastructure/observability/dashboards/03-database-performance.json
+@@ -0,0 +1,566 @@
++{
++  "annotations": {
++    "list": [
++      {
++        "builtIn": 1,
++        "datasource": "-- Grafana --",
++        "enable": true,
++        "hide": true,
++        "iconColor": "rgba(0, 211, 255, 1)",
++        "name": "Annotations & Alerts",
++        "type": "dashboard"
++      }
++    ]
++  },
++  "editable": true,
++  "gnetId": null,
++  "graphTooltip": 0,
++  "id": null,
++  "links": [],
++  "panels": [
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "thresholds"
++          },
++          "mappings": [
++            {
++              "options": {
++                "0": {
++                  "color": "red",
++                  "text": "Down"
++                },
++                "1": {
++                  "color": "green",
++                  "text": "Up"
++                }
++              },
++              "type": "value"
++            }
++          ],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "red",
++                "value": null
++              },
++              {
++                "color": "green",
++                "value": 1
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 4,
++        "w": 6,
++        "x": 0,
++        "y": 0
++      },
++      "id": 20,
++      "options": {
++        "orientation": "auto",
++        "reduceOptions": {
++          "values": false,
++          "fields": "",
++          "calcs": ["lastNotNull"]
++        },
++        "showThresholdLabels": false,
++        "showThresholdMarkers": true
++      },
++      "pluginVersion": "9.0.0",
++      "targets": [
++        {
++          "expr": "up{job=\"mysql\"}",
++          "legendFormat": "MySQL",
++          "refId": "A"
++        }
++      ],
++      "title": "MySQL Status",
++      "type": "gauge"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "thresholds"
++          },
++          "mappings": [
++            {
++              "options": {
++                "0": {
++                  "color": "red",
++                  "text": "Down"
++                },
++                "1": {
++                  "color": "green",
++                  "text": "Up"
++                }
++              },
++              "type": "value"
++            }
++          ],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "red",
++                "value": null
++              },
++              {
++                "color": "green",
++                "value": 1
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 4,
++        "w": 6,
++        "x": 6,
++        "y": 0
++      },
++      "id": 21,
++      "options": {
++        "orientation": "auto",
++        "reduceOptions": {
++          "values": false,
++          "fields": "",
++          "calcs": ["lastNotNull"]
++        },
++        "showThresholdLabels": false,
++        "showThresholdMarkers": true
++      },
++      "pluginVersion": "9.0.0",
++      "targets": [
++        {
++          "expr": "up{job=\"redis\"}",
++          "legendFormat": "Redis",
++          "refId": "A"
++        }
++      ],
++      "title": "Redis Status",
++      "type": "gauge"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "thresholds"
++          },
++          "mappings": [
++            {
++              "options": {
++                "0": {
++                  "color": "red",
++                  "text": "Down"
++                },
++                "1": {
++                  "color": "green",
++                  "text": "Up"
++                }
++              },
++              "type": "value"
++            }
++          ],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "red",
++                "value": null
++              },
++              {
++                "color": "green",
++                "value": 1
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 4,
++        "w": 6,
++        "x": 12,
++        "y": 0
++      },
++      "id": 22,
++      "options": {
++        "orientation": "auto",
++        "reduceOptions": {
++          "values": false,
++          "fields": "",
++          "calcs": ["lastNotNull"]
++        },
++        "showThresholdLabels": false,
++        "showThresholdMarkers": true
++      },
++      "pluginVersion": "9.0.0",
++      "targets": [
++        {
++          "expr": "up{job=\"elasticsearch\"}",
++          "legendFormat": "Elasticsearch",
++          "refId": "A"
++        }
++      ],
++      "title": "Elasticsearch Status",
++      "type": "gauge"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Queries/sec",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "qps"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 4
++      },
++      "id": 23,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(mysql_queries_total[5m]))",
++          "legendFormat": "Total Queries",
++          "refId": "A"
++        },
++        {
++          "expr": "sum(rate(mysql_queries_total{command=\"select\"}[5m]))",
++          "legendFormat": "SELECT",
++          "refId": "B"
++        },
++        {
++          "expr": "sum(rate(mysql_queries_total{command=\"insert\"}[5m]))",
++          "legendFormat": "INSERT",
++          "refId": "C"
++        }
++      ],
++      "title": "MySQL Query Rate",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Milliseconds",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "ms"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 4
++      },
++      "id": 24,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "histogram_quantile(0.95, rate(mysql_query_duration_seconds_bucket[5m])) * 1000",
++          "legendFormat": "p95",
++          "refId": "A"
++        },
++        {
++          "expr": "histogram_quantile(0.99, rate(mysql_query_duration_seconds_bucket[5m])) * 1000",
++          "legendFormat": "p99",
++          "refId": "B"
++        }
++      ],
++      "title": "MySQL Query Latency",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Connections",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "line",
++            "fillOpacity": 10,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "never",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "none"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 12
++      },
++      "id": 25,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "mysql_global_status_threads_connected",
++          "legendFormat": "Connected",
++          "refId": "A"
++        },
++        {
++          "expr": "mysql_global_variables_max_connections",
++          "legendFormat": "Max Allowed",
++          "refId": "B"
++        }
++      ],
++      "title": "MySQL Connections",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Prometheus",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Ops/sec",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "ops"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 12
++      },
++      "id": 26,
++      "options": {
++        "legend": {
++          "calcs": ["mean", "max"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "expr": "sum(rate(redis_commands_processed_total[5m]))",
++          "legendFormat": "Total Commands",
++          "refId": "A"
++        }
++      ],
++      "title": "Redis Operations",
++      "type": "timeseries"
++    }
++  ],
++  "schemaVersion": 37,
++  "style": "dark",
++  "tags": ["database", "performance"],
++  "templating": {
++    "list": []
++  },
++  "time": {
++    "from": "now-1h",
++    "to": "now"
++  },
++  "timepicker": {},
++  "timezone": "",
++  "title": "Database Performance",
++  "uid": "database-performance",
++  "version": 0
++}
+diff --git a/infrastructure/observability/dashboards/04-logs-analysis.json b/infrastructure/observability/dashboards/04-logs-analysis.json
+new file mode 100644
+index 00000000..dd5d421c
+--- /dev/null
++++ b/infrastructure/observability/dashboards/04-logs-analysis.json
+@@ -0,0 +1,476 @@
++{
++  "annotations": {
++    "list": [
++      {
++        "builtIn": 1,
++        "datasource": "-- Grafana --",
++        "enable": true,
++        "hide": true,
++        "iconColor": "rgba(0, 211, 255, 1)",
++        "name": "Annotations & Alerts",
++        "type": "dashboard"
++      }
++    ]
++  },
++  "editable": true,
++  "gnetId": null,
++  "graphTooltip": 0,
++  "id": null,
++  "links": [],
++  "panels": [
++    {
++      "datasource": "Elasticsearch",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Count",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 0
++      },
++      "id": 30,
++      "options": {
++        "legend": {
++          "calcs": ["sum"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "bucketAggs": [
++            {
++              "field": "@timestamp",
++              "id": "2",
++              "settings": {
++                "interval": "auto"
++              },
++              "type": "date_histogram"
++            },
++            {
++              "field": "level",
++              "id": "3",
++              "settings": {},
++              "type": "terms"
++            }
++          ],
++          "metrics": [
++            {
++              "id": "1",
++              "type": "count"
++            }
++          ],
++          "query": "*",
++          "refId": "A",
++          "timeField": "@timestamp"
++        }
++      ],
++      "title": "Log Level Distribution",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Elasticsearch",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Count",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 0
++      },
++      "id": 31,
++      "options": {
++        "legend": {
++          "calcs": ["sum"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "bucketAggs": [
++            {
++              "field": "@timestamp",
++              "id": "2",
++              "settings": {
++                "interval": "auto"
++              },
++              "type": "date_histogram"
++            },
++            {
++              "field": "service",
++              "id": "3",
++              "settings": {},
++              "type": "terms"
++            }
++          ],
++          "metrics": [
++            {
++              "id": "1",
++              "type": "count"
++            }
++          ],
++          "query": "*",
++          "refId": "A",
++          "timeField": "@timestamp"
++        }
++      ],
++      "title": "Logs by Service",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Elasticsearch",
++      "fieldConfig": {
++        "defaults": {
++          "custom": {
++            "align": "auto",
++            "displayMode": "auto"
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          }
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 24,
++        "x": 0,
++        "y": 8
++      },
++      "id": 32,
++      "options": {
++        "showHeader": true,
++        "sortBy": []
++      },
++      "targets": [
++        {
++          "bucketAggs": [],
++          "metrics": [
++            {
++              "id": "1",
++              "type": "count"
++            }
++          ],
++          "query": "level:ERROR OR level:error",
++          "refId": "A",
++          "timeField": "@timestamp"
++        }
++      ],
++      "title": "Recent Error Logs",
++      "type": "table"
++    },
++    {
++      "datasource": "Elasticsearch",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Count",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 16
++      },
++      "id": 33,
++      "options": {
++        "legend": {
++          "calcs": ["sum"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "bucketAggs": [
++            {
++              "field": "@timestamp",
++              "id": "2",
++              "settings": {
++                "interval": "auto"
++              },
++              "type": "date_histogram"
++            }
++          ],
++          "metrics": [
++            {
++              "id": "1",
++              "type": "count"
++            }
++          ],
++          "query": "level:ERROR OR level:error",
++          "refId": "A",
++          "timeField": "@timestamp"
++        }
++      ],
++      "title": "Error Rate Over Time",
++      "type": "timeseries"
++    },
++    {
++      "datasource": "Elasticsearch",
++      "fieldConfig": {
++        "defaults": {
++          "color": {
++            "mode": "palette-classic"
++          },
++          "custom": {
++            "axisLabel": "Count",
++            "axisPlacement": "auto",
++            "barAlignment": 0,
++            "drawStyle": "bars",
++            "fillOpacity": 70,
++            "gradientMode": "none",
++            "hideFrom": {
++              "tooltip": false,
++              "viz": false,
++              "legend": false
++            },
++            "lineInterpolation": "linear",
++            "lineWidth": 1,
++            "pointSize": 5,
++            "scaleDistribution": {
++              "type": "linear"
++            },
++            "showPoints": "auto",
++            "spanNulls": false,
++            "stacking": {
++              "group": "A",
++              "mode": "normal"
++            },
++            "thresholdsStyle": {
++              "mode": "off"
++            }
++          },
++          "mappings": [],
++          "thresholds": {
++            "mode": "absolute",
++            "steps": [
++              {
++                "color": "green",
++                "value": null
++              }
++            ]
++          },
++          "unit": "short"
++        },
++        "overrides": []
++      },
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 16
++      },
++      "id": 34,
++      "options": {
++        "legend": {
++          "calcs": ["sum"],
++          "displayMode": "table",
++          "placement": "right"
++        },
++        "tooltip": {
++          "mode": "multi",
++          "sort": "none"
++        }
++      },
++      "targets": [
++        {
++          "bucketAggs": [
++            {
++              "field": "@timestamp",
++              "id": "2",
++              "settings": {
++                "interval": "auto"
++              },
++              "type": "date_histogram"
++            },
++            {
++              "field": "exception_type",
++              "id": "3",
++              "settings": {},
++              "type": "terms"
++            }
++          ],
++          "metrics": [
++            {
++              "id": "1",
++              "type": "count"
++            }
++          ],
++          "query": "exception_type:*",
++          "refId": "A",
++          "timeField": "@timestamp"
++        }
++      ],
++      "title": "Exception Types",
++      "type": "timeseries"
++    }
++  ],
++  "schemaVersion": 37,
++  "style": "dark",
++  "tags": ["logs", "analysis"],
++  "templating": {
++    "list": []
++  },
++  "time": {
++    "from": "now-24h",
++    "to": "now"
++  },
++  "timepicker": {},
++  "timezone": "",
++  "title": "Logs Analysis",
++  "uid": "logs-analysis",
++  "version": 0
++}
+diff --git a/infrastructure/observability/elasticsearch-templates.json b/infrastructure/observability/elasticsearch-templates.json
+new file mode 100644
+index 00000000..48071bcd
+--- /dev/null
++++ b/infrastructure/observability/elasticsearch-templates.json
+@@ -0,0 +1,323 @@
++{
++  "order": 0,
++  "template": "logs-*",
++  "settings": {
++    "number_of_shards": 1,
++    "number_of_replicas": 0,
++    "index": {
++      "codec": "best_compression",
++      "refresh_interval": "5s",
++      "lifecycle": {
++        "name": "logs-policy",
++        "rollover_alias": "logs"
++      }
++    }
++  },
++  "mappings": {
++    "dynamic": true,
++    "dynamic_date_formats": [
++      "strict_date_optional_time||epoch_millis"
++    ],
++    "properties": {
++      "@timestamp": {
++        "type": "date",
++        "format": "strict_date_optional_time||epoch_millis"
++      },
++      "@version": {
++        "type": "keyword"
++      },
++      "message": {
++        "type": "text",
++        "analyzer": "standard",
++        "fields": {
++          "keyword": {
++            "type": "keyword",
++            "ignore_above": 256
++          }
++        }
++      },
++      "timestamp": {
++        "type": "date",
++        "format": "strict_date_optional_time||epoch_millis"
++      },
++      "level": {
++        "type": "keyword"
++      },
++      "severity": {
++        "type": "keyword"
++      },
++      "service": {
++        "type": "keyword"
++      },
++      "domain": {
++        "type": "keyword"
++      },
++      "service_name": {
++        "type": "keyword"
++      },
++      "environment": {
++        "type": "keyword"
++      },
++      "type": {
++        "type": "keyword"
++      },
++      "tags": {
++        "type": "keyword"
++      },
++      "host": {
++        "type": "object",
++        "properties": {
++          "name": {
++            "type": "keyword"
++          },
++          "hostname": {
++            "type": "keyword"
++          },
++          "ip": {
++            "type": "ip"
++          }
++        }
++      },
++      "docker": {
++        "type": "object",
++        "properties": {
++          "container": {
++            "type": "object",
++            "properties": {
++              "id": {
++                "type": "keyword"
++              },
++              "name": {
++                "type": "keyword"
++              },
++              "image": {
++                "type": "keyword"
++              }
++            }
++          }
++        }
++      },
++      "request_method": {
++        "type": "keyword"
++      },
++      "request_path": {
++        "type": "keyword"
++      },
++      "status": {
++        "type": "integer"
++      },
++      "status_code": {
++        "type": "integer"
++      },
++      "response_time": {
++        "type": "long"
++      },
++      "response_time_ms": {
++        "type": "long"
++      },
++      "latency": {
++        "type": "long"
++      },
++      "duration": {
++        "type": "long"
++      },
++      "execution_time": {
++        "type": "long"
++      },
++      "processing_time": {
++        "type": "long"
++      },
++      "operation_time": {
++        "type": "long"
++      },
++      "delivery_time": {
++        "type": "long"
++      },
++      "trace_id": {
++        "type": "keyword"
++      },
++      "span_id": {
++        "type": "keyword"
++      },
++      "parent_span_id": {
++        "type": "keyword"
++      },
++      "transaction_id": {
++        "type": "keyword"
++      },
++      "request_id": {
++        "type": "keyword"
++      },
++      "correlation_id": {
++        "type": "keyword"
++      },
++      "user_id": {
++        "type": "keyword"
++      },
++      "username": {
++        "type": "keyword"
++      },
++      "user_agent": {
++        "type": "text",
++        "fields": {
++          "keyword": {
++            "type": "keyword"
++          }
++        }
++      },
++      "client_ip": {
++        "type": "ip"
++      },
++      "source_ip": {
++        "type": "ip"
++      },
++      "database": {
++        "type": "keyword"
++      },
++      "table_name": {
++        "type": "keyword"
++      },
++      "query_type": {
++        "type": "keyword"
++      },
++      "operation": {
++        "type": "keyword"
++      },
++      "method": {
++        "type": "keyword"
++      },
++      "path": {
++        "type": "keyword"
++      },
++      "exception_type": {
++        "type": "keyword"
++      },
++      "exception_message": {
++        "type": "text",
++        "fields": {
++          "keyword": {
++            "type": "keyword"
++          }
++        }
++      },
++      "stack_trace": {
++        "type": "text"
++      },
++      "error_code": {
++        "type": "keyword"
++      },
++      "error_details": {
++        "type": "text"
++      },
++      "event_type": {
++        "type": "keyword"
++      },
++      "entity_type": {
++        "type": "keyword"
++      },
++      "entity_id": {
++        "type": "keyword"
++      },
++      "action": {
++        "type": "keyword"
++      },
++      "auth_type": {
++        "type": "keyword"
++      },
++      "source_service": {
++        "type": "keyword"
++      },
++      "target_service": {
++        "type": "keyword"
++      },
++      "queue_name": {
++        "type": "keyword"
++      },
++      "message_id": {
++        "type": "keyword"
++      },
++      "cache_key": {
++        "type": "keyword"
++      },
++      "filename": {
++        "type": "keyword"
++      },
++      "file_size": {
++        "type": "long"
++      },
++      "file_type": {
++        "type": "keyword"
++      },
++      "report_name": {
++        "type": "keyword"
++      },
++      "report_type": {
++        "type": "keyword"
++      },
++      "company_id": {
++        "type": "keyword"
++      },
++      "amount": {
++        "type": "scaled_float",
++        "scaling_factor": 100
++      },
++      "currency": {
++        "type": "keyword"
++      },
++      "gateway": {
++        "type": "keyword"
++      },
++      "payment_status": {
++        "type": "keyword"
++      },
++      "notification_type": {
++        "type": "keyword"
++      },
++      "notification_id": {
++        "type": "keyword"
++      },
++      "recipient": {
++        "type": "keyword"
++      },
++      "webhook_url": {
++        "type": "keyword"
++      },
++      "webhook_event": {
++        "type": "keyword"
++      },
++      "job_name": {
++        "type": "keyword"
++      },
++      "job_id": {
++        "type": "keyword"
++      },
++      "record_count": {
++        "type": "long"
++      },
++      "cpu_usage": {
++        "type": "scaled_float",
++        "scaling_factor": 100
++      },
++      "memory_usage": {
++        "type": "scaled_float",
++        "scaling_factor": 100
++      },
++      "disk_usage": {
++        "type": "scaled_float",
++        "scaling_factor": 100
++      },
++      "is_http_request": {
++        "type": "boolean"
++      },
++      "type_of_log": {
++        "type": "keyword"
++      },
++      "geoip": {
++        "type": "geo_point"
++      }
++    }
++  },
++  "aliases": {
++    "logs": {}
++  }
++}
+diff --git a/infrastructure/observability/grafana-provisioning/dashboards/provisioning.yml b/infrastructure/observability/grafana-provisioning/dashboards/provisioning.yml
+new file mode 100644
+index 00000000..8a44c41d
+--- /dev/null
++++ b/infrastructure/observability/grafana-provisioning/dashboards/provisioning.yml
+@@ -0,0 +1,12 @@
++apiVersion: 1
++
++providers:
++  - name: 'Dashboards'
++    orgId: 1
++    folder: 'Dashboards'
++    type: file
++    disableDeletion: false
++    updateIntervalSeconds: 10
++    allowUiUpdates: true
++    options:
++      path: /var/lib/grafana/dashboards
+diff --git a/infrastructure/observability/grafana-provisioning/datasources/prometheus.yml b/infrastructure/observability/grafana-provisioning/datasources/prometheus.yml
+new file mode 100644
+index 00000000..d5ee23a6
+--- /dev/null
++++ b/infrastructure/observability/grafana-provisioning/datasources/prometheus.yml
+@@ -0,0 +1,65 @@
++apiVersion: 1
++
++datasources:
++  ##############################################################################
++  # Prometheus Data Source
++  ##############################################################################
++  - name: Prometheus
++    type: prometheus
++    url: http://prometheus:9090
++    access: proxy
++    isDefault: true
++    editable: true
++    jsonData:
++      timeInterval: 15s
++    secureJsonData:
++      basicAuthPassword: ""
++    basicAuth: false
++
++  ##############################################################################
++  # Elasticsearch Data Source
++  ##############################################################################
++  - name: Elasticsearch
++    type: elasticsearch
++    url: http://elasticsearch:9200
++    access: proxy
++    isDefault: false
++    database: "logs-*"
++    jsonData:
++      esVersion: "8.0.0"
++      logMessageField: message
++      logLevelField: level
++      timeField: "@timestamp"
++    secureJsonData:
++      basicAuthPassword: changeme
++    basicAuth: true
++    basicAuthUser: elastic
++
++  ##############################################################################
++  # Jaeger Data Source
++  ##############################################################################
++  - name: Jaeger
++    type: jaeger
++    url: http://jaeger:16686
++    access: proxy
++    isDefault: false
++    jsonData:
++      nodeGraph:
++        enabled: true
++      lokiSearch:
++        enabled: false
++      spanBar:
++        type: duration
++    editable: true
++
++  ##############################################################################
++  # AlertManager Data Source
++  ##############################################################################
++  - name: AlertManager
++    type: alertmanager
++    url: http://alertmanager:9093
++    access: proxy
++    isDefault: false
++    jsonData:
++      implementation: prometheus
++    editable: true
+diff --git a/infrastructure/observability/logstash-patterns.txt b/infrastructure/observability/logstash-patterns.txt
+new file mode 100644
+index 00000000..8c9f9861
+--- /dev/null
++++ b/infrastructure/observability/logstash-patterns.txt
+@@ -0,0 +1,65 @@
++###############################################################################
++# Logstash Custom Grok Patterns
++# Patterns for parsing custom application log formats
++###############################################################################
++
++# Laravel/PHP Application Logs
++LARAVEL_TIMESTAMP \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]
++LARAVEL_LOG %{LARAVEL_TIMESTAMP:timestamp} %{DATA:env}\.%{LOGLEVEL:level}: %{GREEDYDATA:message}
++
++# Microservice Request Pattern
++MICROSERVICE_REQUEST \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:service} \[%{LOGLEVEL:level}\] %{DATA:method} %{DATA:path} - %{NUMBER:status_code} - %{NUMBER:response_time}ms
++
++# Database Query Pattern
++DB_QUERY \[%{TIMESTAMP_ISO8601:timestamp}\] \[%{DATA:database}\] %{DATA:query_type} on table `%{DATA:table_name}` - %{NUMBER:execution_time}ms
++
++# API Gateway Access Log
++API_GATEWAY_ACCESS %{TIMESTAMP_ISO8601:timestamp} \| %{IPORHOST:client_ip} \| %{DATA:request_method} \| %{DATA:request_path} \| %{NUMBER:status_code} \| %{NUMBER:response_time}ms
++
++# Distributed Trace Pattern
++DISTRIBUTED_TRACE \[%{TIMESTAMP_ISO8601:timestamp}\] trace_id=%{DATA:trace_id} span_id=%{DATA:span_id} parent_span_id=%{DATA:parent_span_id} service=%{DATA:service} operation=%{DATA:operation} duration=%{NUMBER:duration}ms
++
++# Exception Pattern
++EXCEPTION_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{LOGLEVEL:level}: %{DATA:exception_type}: %{GREEDYDATA:exception_message}
++
++# Authentication Log
++AUTH_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:auth_type} %{WORD:action} for user %{DATA:username} from %{IPORHOST:source_ip}
++
++# Business Event Pattern
++BUSINESS_EVENT \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:event_type} created: %{DATA:entity_type} ID %{NUMBER:entity_id} by user %{NUMBER:user_id}
++
++# Service Health Check
++HEALTH_CHECK \[%{TIMESTAMP_ISO8601:timestamp}\] Health check %{WORD:status}: %{DATA:service} response_time=%{NUMBER:response_time}ms
++
++# Cache Operation
++CACHE_OP \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:operation} cache key '%{DATA:cache_key}' - %{NUMBER:operation_time}ms
++
++# Queue Message
++QUEUE_MSG \[%{TIMESTAMP_ISO8601:timestamp}\] Queue %{DATA:queue_name} processed message ID %{DATA:message_id} - %{NUMBER:processing_time}ms
++
++# File Upload
++FILE_UPLOAD \[%{TIMESTAMP_ISO8601:timestamp}\] File upload: %{DATA:filename} \(%{NUMBER:file_size} bytes\) by user %{NUMBER:user_id}
++
++# Report Generation
++REPORT_GEN \[%{TIMESTAMP_ISO8601:timestamp}\] Report %{DATA:report_name} generated: %{DATA:report_type} for company %{NUMBER:company_id} in %{NUMBER:generation_time}ms
++
++# Payment Processing
++PAYMENT_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Payment %{WORD:status}: %{DATA:transaction_id} amount=%{NUMBER:amount} currency=%{DATA:currency} gateway=%{DATA:gateway}
++
++# Notification Delivery
++NOTIFICATION_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Notification %{WORD:type} %{WORD:status}: %{DATA:notification_id} to %{DATA:recipient} - %{NUMBER:delivery_time}ms
++
++# Background Job
++BG_JOB_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Job %{DATA:job_name} %{WORD:status}: %{DATA:job_id} - %{NUMBER:execution_time}ms
++
++# Webhook Event
++WEBHOOK_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] Webhook %{WORD:event_type} to %{DATA:webhook_url} - %{WORD:status} - %{NUMBER:response_time}ms
++
++# Import/Export Operation
++IMPORT_EXPORT_LOG \[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:operation} %{WORD:status}: %{DATA:file_type} file with %{NUMBER:record_count} records - %{NUMBER:operation_time}ms
++
++# System Performance
++SYSTEM_PERF \[%{TIMESTAMP_ISO8601:timestamp}\] CPU: %{NUMBER:cpu_usage}% \| Memory: %{NUMBER:memory_usage}% \| Disk: %{NUMBER:disk_usage}%
++
++# Service Communication
++SERVICE_COMM \[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:source_service} -> %{DATA:target_service}: %{DATA:operation} - %{WORD:status} - %{NUMBER:latency}ms
+diff --git a/infrastructure/observability/logstash-pipeline.conf b/infrastructure/observability/logstash-pipeline.conf
+new file mode 100644
+index 00000000..4890d54a
+--- /dev/null
++++ b/infrastructure/observability/logstash-pipeline.conf
+@@ -0,0 +1,325 @@
++###############################################################################
++# Logstash Pipeline Configuration
++# Log ingestion, processing, and forwarding to Elasticsearch
++###############################################################################
++
++input {
++  ##############################################################################
++  # TCP Input - Receive logs from services
++  ##############################################################################
++  tcp {
++    port => 5000
++    codec => json
++    type => "service_logs"
++    tags => ["tcp_input"]
++  }
++
++  ##############################################################################
++  # UDP Input - Receive logs from services (low-latency)
++  ##############################################################################
++  udp {
++    port => 5000
++    codec => json
++    type => "service_logs"
++    tags => ["udp_input"]
++  }
++
++  ##############################################################################
++  # HTTP Input - Receive logs via HTTP
++  ##############################################################################
++  http {
++    port => 8080
++    codec => json
++    type => "http_logs"
++    tags => ["http_input"]
++  }
++
++  ##############################################################################
++  # Beats Input - Receive logs from Filebeat/Metricbeat
++  ##############################################################################
++  beats {
++    port => 5044
++    type => "beats_input"
++  }
++
++  ##############################################################################
++  # File Input - Tail application log files
++  ##############################################################################
++  file {
++    path => "/var/log/invoiceshelf/**/*.log"
++    start_position => "beginning"
++    codec => multiline {
++      pattern => "^\["
++      negate => true
++      what => "previous"
++    }
++    type => "application_logs"
++    tags => ["file_input"]
++  }
++}
++
++filter {
++  ##############################################################################
++  # JSON Parsing
++  ##############################################################################
++  if [type] in ["service_logs", "http_logs"] {
++    json {
++      source => "message"
++      remove_field => ["message"]
++      skip_on_invalid_json => true
++    }
++  }
++
++  ##############################################################################
++  # Parse Common Application Log Formats
++  ##############################################################################
++  if [type] == "application_logs" {
++    # Parse Laravel/PHP style logs
++    grok {
++      match => { "message" => "\[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:environment}\.%{LOGLEVEL:level}: %{GREEDYDATA:message}" }
++      keep_on_failure => true
++      add_tag => ["grok_parsed"]
++    }
++
++    # Parse JSON logs
++    if [message] =~ /^\{.*\}$/ {
++      json {
++        source => "message"
++        target => "json_log"
++        skip_on_invalid_json => true
++      }
++      if "_jsonparsefailure" not in [tags] {
++        mutate {
++          replace => { "message" => "%{[json_log][message]}" }
++        }
++      }
++    }
++  }
++
++  ##############################################################################
++  # Service Identification
++  ##############################################################################
++  mutate {
++    add_field => { "[@metadata][source_ip]" => "%{[host][ip]}" }
++  }
++
++  # Identify service from hostname/container name
++  if [docker][container][name] {
++    mutate {
++      add_field => { "service_name" => "%{[docker][container][name]}" }
++    }
++  }
++
++  if [host][hostname] {
++    mutate {
++      add_field => { "service_name" => "%{[host][hostname]}" }
++    }
++  }
++
++  ##############################################################################
++  # Extract Service Domain
++  ##############################################################################
++  if [service_name] =~ /invoice-service/ {
++    mutate {
++      add_field => { "domain" => "invoice" }
++      add_field => { "service" => "invoice-service" }
++    }
++  } else if [service_name] =~ /expense-service/ {
++    mutate {
++      add_field => { "domain" => "expense" }
++      add_field => { "service" => "expense-service" }
++    }
++  } else if [service_name] =~ /product-service/ {
++    mutate {
++      add_field => { "domain" => "product" }
++      add_field => { "service" => "product-service" }
++    }
++  } else if [service_name] =~ /customer-service/ {
++    mutate {
++      add_field => { "domain" => "customer" }
++      add_field => { "service" => "customer-service" }
++    }
++  } else if [service_name] =~ /settings-service/ {
++    mutate {
++      add_field => { "domain" => "settings" }
++      add_field => { "service" => "settings-service" }
++    }
++  } else if [service_name] =~ /transport-service/ {
++    mutate {
++      add_field => { "domain" => "transport" }
++      add_field => { "service" => "transport-service" }
++    }
++  }
++
++  ##############################################################################
++  # Parse HTTP Requests (Kong/API Gateway logs)
++  ##############################################################################
++  if [request_method] {
++    mutate {
++      add_field => { "is_http_request" => true }
++    }
++
++    # Parse HTTP status for severity
++    if [status] >= 500 {
++      mutate {
++        add_field => { "severity" => "error" }
++        add_tag => ["http_error"]
++      }
++    } else if [status] >= 400 {
++      mutate {
++        add_field => { "severity" => "warning" }
++        add_tag => ["http_warning"]
++      }
++    } else {
++      mutate {
++        add_field => { "severity" => "info" }
++      }
++    }
++  }
++
++  ##############################################################################
++  # Parse Database Queries
++  ##############################################################################
++  if [message] =~ /^SELECT|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP/ {
++    mutate {
++      add_field => { "type_of_log" => "database_query" }
++    }
++
++    # Extract table name
++    grok {
++      match => { "message" => "(?<operation>SELECT|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE)\s+(?:INTO|FROM|TABLE|INDEX)?\s+`?(?<table>\w+)" }
++      keep_on_failure => true
++    }
++  }
++
++  ##############################################################################
++  # Parse Redis Commands
++  ##############################################################################
++  if [message] =~ /^redis-cli|redis operations/ {
++    mutate {
++      add_field => { "type_of_log" => "redis_command" }
++    }
++  }
++
++  ##############################################################################
++  # Log Level Mapping
++  ##############################################################################
++  if ![level] and [message] =~ /ERROR|CRITICAL|FATAL/ {
++    mutate {
++      add_field => { "level" => "error" }
++    }
++  } else if ![level] and [message] =~ /WARN|WARNING/ {
++    mutate {
++      add_field => { "level" => "warning" }
++    }
++  } else if ![level] and [message] =~ /DEBUG/ {
++    mutate {
++      add_field => { "level" => "debug" }
++    }
++  } else if ![level] {
++    mutate {
++      add_field => { "level" => "info" }
++    }
++  }
++
++  ##############################################################################
++  # Remove Sensitive Data
++  ##############################################################################
++  mutate {
++    # Remove passwords, API keys, tokens
++    gsub => [
++      "message", "password['\"]?\s*[:=]\s*['\"]?[^'\"]*['\"]?", "password=***REDACTED***",
++      "message", "api[_-]key['\"]?\s*[:=]\s*['\"]?[^'\"]*['\"]?", "api_key=***REDACTED***",
++      "message", "token['\"]?\s*[:=]\s*['\"]?[^'\"]*['\"]?", "token=***REDACTED***",
++      "message", "Bearer\s+[^\s]+", "Bearer ***REDACTED***",
++      "message", "credit[_-]card['\"]?\s*[:=]\s*['\"]?[^'\"]*['\"]?", "credit_card=***REDACTED***"
++    ]
++  }
++
++  ##############################################################################
++  # Timestamp Parsing
++  ##############################################################################
++  if ![timestamp] {
++    mutate {
++      add_field => { "timestamp" => "%{@timestamp}" }
++    }
++  }
++
++  date {
++    match => [ "timestamp", "ISO8601", "yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd HH:mm:ss" ]
++    timezone => "UTC"
++    remove_field => [ "timestamp" ]
++  }
++
++  ##############################################################################
++  # Add Metadata
++  ##############################################################################
++  mutate {
++    add_field => {
++      "[@metadata][environment]" => "production"
++      "[@metadata][data_pipeline]" => "logstash"
++      "[@metadata][version]" => "1.0"
++    }
++  }
++}
++
++output {
++  ##############################################################################
++  # Elasticsearch Output - Main storage
++  ##############################################################################
++  elasticsearch {
++    hosts => ["elasticsearch:9200"]
++    index => "logs-%{+YYYY.MM.dd}"
++    document_type => "_doc"
++    template => "/usr/share/logstash/templates/elasticsearch-template.json"
++    template_name => "logs"
++    template_overwrite => true
++    retry_on_conflict => 3
++    user => "elastic"
++    password => "changeme"
++  }
++
++  ##############################################################################
++  # Console Output - Debug/Development
++  ##############################################################################
++  stdout {
++    codec => rubydebug { metadata => true }
++  }
++
++  ##############################################################################
++  # Conditional Outputs
++  ##############################################################################
++  if "error" in [tags] or [level] == "error" {
++    # Route errors to dedicated index
++    elasticsearch {
++      hosts => ["elasticsearch:9200"]
++      index => "logs-errors-%{+YYYY.MM.dd}"
++      document_type => "_doc"
++      user => "elastic"
++      password => "changeme"
++    }
++  }
++
++  # Send critical events to alerting system
++  if [severity] == "critical" or [level] == "error" {
++    http {
++      http_method => "post"
++      url => "http://alertmanager:9093/api/v1/alerts"
++      format => "json"
++      mapping => {
++        "labels" => {
++          "alertname" => "%{[service]}"
++          "severity" => "%{[severity]}"
++          "level" => "%{[level]}"
++          "service" => "%{[service]}"
++          "domain" => "%{[domain]}"
++        }
++        "annotations" => {
++          "summary" => "%{[message]}"
++          "timestamp" => "%{[@timestamp]}"
++        }
++      }
++      keep_alive => false
++    }
++  }
++}
+diff --git a/infrastructure/observability/prometheus-rules.yml b/infrastructure/observability/prometheus-rules.yml
+new file mode 100644
+index 00000000..9dc0243f
+--- /dev/null
++++ b/infrastructure/observability/prometheus-rules.yml
+@@ -0,0 +1,347 @@
++###############################################################################
++# Prometheus Alert Rules
++# Defines alerting conditions and notification triggers
++###############################################################################
++
++groups:
++  ##############################################################################
++  # System & Infrastructure Alerts
++  ##############################################################################
++  - name: system_alerts
++    interval: 30s
++    rules:
++      # CPU Usage Alert
++      - alert: HighCPUUsage
++        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
++        for: 5m
++        labels:
++          severity: warning
++          component: system
++        annotations:
++          summary: "High CPU usage detected on {{ $labels.instance }}"
++          description: "CPU usage is above 80% (current value: {{ $value }}%)"
++
++      # Memory Usage Alert
++      - alert: HighMemoryUsage
++        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
++        for: 5m
++        labels:
++          severity: warning
++          component: system
++        annotations:
++          summary: "High memory usage on {{ $labels.instance }}"
++          description: "Memory usage is above 85% (current value: {{ $value }}%)"
++
++      # Disk Space Alert
++      - alert: LowDiskSpace
++        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
++        for: 5m
++        labels:
++          severity: critical
++          component: system
++        annotations:
++          summary: "Low disk space on {{ $labels.instance }}"
++          description: "Disk space is below 10% available (current value: {{ $value }}%)"
++
++  ##############################################################################
++  # Service Availability & Health Alerts
++  ##############################################################################
++  - name: service_alerts
++    interval: 30s
++    rules:
++      # Service Down Alert (Invoice Service)
++      - alert: InvoiceServiceDown
++        expr: up{job="invoice-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: invoice-service
++        annotations:
++          summary: "Invoice Service is down"
++          description: "Invoice Service at invoice-service:9090 is not responding"
++
++      # Service Down Alert (Expense Service)
++      - alert: ExpenseServiceDown
++        expr: up{job="expense-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: expense-service
++        annotations:
++          summary: "Expense Service is down"
++          description: "Expense Service at expense-service:9091 is not responding"
++
++      # Service Down Alert (Product Service)
++      - alert: ProductServiceDown
++        expr: up{job="product-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: product-service
++        annotations:
++          summary: "Product Service is down"
++          description: "Product Service at product-service:9092 is not responding"
++
++      # Service Down Alert (Customer Service)
++      - alert: CustomerServiceDown
++        expr: up{job="customer-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: customer-service
++        annotations:
++          summary: "Customer Service is down"
++          description: "Customer Service at customer-service:9093 is not responding"
++
++      # Service Down Alert (Settings Service)
++      - alert: SettingsServiceDown
++        expr: up{job="settings-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: settings-service
++        annotations:
++          summary: "Settings Service is down"
++          description: "Settings Service at settings-service:9094 is not responding"
++
++      # Service Down Alert (Transport Service)
++      - alert: TransportServiceDown
++        expr: up{job="transport-service"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: transport-service
++        annotations:
++          summary: "Transport Service is down"
++          description: "Transport Service at transport-service:9095 is not responding"
++
++  ##############################################################################
++  # Application Performance Alerts
++  ##############################################################################
++  - name: application_alerts
++    interval: 30s
++    rules:
++      # High Error Rate Alert
++      - alert: HighErrorRate
++        expr: |
++          (
++            sum(rate(http_requests_total{status=~"5.."}[5m]))
++            /
++            sum(rate(http_requests_total[5m]))
++          ) * 100 > 5
++        for: 5m
++        labels:
++          severity: warning
++          component: application
++        annotations:
++          summary: "High error rate detected"
++          description: "Error rate is above 5% (current value: {{ $value }}%)"
++
++      # High Request Latency Alert
++      - alert: HighRequestLatency
++        expr: |
++          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
++        for: 5m
++        labels:
++          severity: warning
++          component: application
++        annotations:
++          summary: "High request latency detected"
++          description: "95th percentile latency is above 1 second (current value: {{ $value }}s)"
++
++      # Database Connection Pool Exhaustion
++      - alert: DatabaseConnectionPoolExhausted
++        expr: |
++          (db_connections_active / db_connections_max) * 100 > 90
++        for: 5m
++        labels:
++          severity: critical
++          component: database
++        annotations:
++          summary: "Database connection pool nearly exhausted"
++          description: "Active connections are {{ $value }}% of maximum"
++
++  ##############################################################################
++  # Database Alerts
++  ##############################################################################
++  - name: database_alerts
++    interval: 30s
++    rules:
++      # MySQL Down
++      - alert: MySQLDown
++        expr: up{job="mysql"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: mysql
++        annotations:
++          summary: "MySQL database is down"
++          description: "MySQL at mysql:3306 is not responding"
++
++      # MySQL Slow Queries
++      - alert: MySQLSlowQueries
++        expr: mysql_global_status_slow_queries > 10
++        for: 5m
++        labels:
++          severity: warning
++          service: mysql
++        annotations:
++          summary: "MySQL experiencing slow queries"
++          description: "Slow query count is {{ $value }}"
++
++      # Redis Down
++      - alert: RedisDown
++        expr: up{job="redis"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: redis
++        annotations:
++          summary: "Redis cache is down"
++          description: "Redis at redis:6379 is not responding"
++
++  ##############################################################################
++  # Elasticsearch Alerts
++  ##############################################################################
++  - name: elasticsearch_alerts
++    interval: 30s
++    rules:
++      # Elasticsearch Down
++      - alert: ElasticsearchDown
++        expr: up{job="elasticsearch"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: elasticsearch
++        annotations:
++          summary: "Elasticsearch cluster is down"
++          description: "Elasticsearch at elasticsearch:9200 is not responding"
++
++      # Elasticsearch High Heap Usage
++      - alert: ElasticsearchHighHeapUsage
++        expr: |
++          (elasticsearch_jvm_memory_used_bytes{area="heap"} / elasticsearch_jvm_memory_max_bytes{area="heap"}) * 100 > 85
++        for: 5m
++        labels:
++          severity: warning
++          service: elasticsearch
++        annotations:
++          summary: "Elasticsearch heap usage is high"
++          description: "Heap usage is {{ $value }}%"
++
++      # Elasticsearch Unassigned Shards
++      - alert: ElasticsearchUnassignedShards
++        expr: elasticsearch_cluster_health_unassigned_shards > 0
++        for: 5m
++        labels:
++          severity: warning
++          service: elasticsearch
++        annotations:
++          summary: "Elasticsearch has unassigned shards"
++          description: "Number of unassigned shards: {{ $value }}"
++
++  ##############################################################################
++  # Container & Docker Alerts
++  ##############################################################################
++  - name: container_alerts
++    interval: 30s
++    rules:
++      # Container Restart Loop
++      - alert: ContainerRestartingTooOften
++        expr: |
++          rate(container_last_seen{name=~"invoiceshelf-.*"}[5m]) > 0.1
++        for: 5m
++        labels:
++          severity: warning
++          component: container
++        annotations:
++          summary: "Container {{ $labels.name }} is restarting frequently"
++          description: "Container restart rate: {{ $value }} restarts/sec"
++
++      # High Container Memory Usage
++      - alert: HighContainerMemoryUsage
++        expr: |
++          (container_memory_usage_bytes{name=~"invoiceshelf-.*"} / container_spec_memory_limit_bytes) * 100 > 90
++        for: 5m
++        labels:
++          severity: warning
++          component: container
++        annotations:
++          summary: "High memory usage in container {{ $labels.name }}"
++          description: "Memory usage is {{ $value }}% of limit"
++
++  ##############################################################################
++  # Network & Connectivity Alerts
++  ##############################################################################
++  - name: network_alerts
++    interval: 30s
++    rules:
++      # High Network Traffic
++      - alert: HighNetworkTraffic
++        expr: |
++          rate(node_network_transmit_bytes_total{device!~"lo"}[5m]) > 100000000
++        for: 5m
++        labels:
++          severity: warning
++          component: network
++        annotations:
++          summary: "High network traffic on {{ $labels.device }}"
++          description: "Traffic rate: {{ $value | humanize }}B/s"
++
++      # Network Errors
++      - alert: NetworkErrors
++        expr: |
++          rate(node_network_receive_errs_total[5m]) > 10 or rate(node_network_transmit_errs_total[5m]) > 10
++        for: 5m
++        labels:
++          severity: warning
++          component: network
++        annotations:
++          summary: "Network errors detected on {{ $labels.device }}"
++          description: "Error rate: {{ $value | humanize }}/s"
++
++  ##############################################################################
++  # Log Processing Alerts
++  ##############################################################################
++  - name: logging_alerts
++    interval: 30s
++    rules:
++      # Logstash Down
++      - alert: LogstashDown
++        expr: up{job="logstash"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: logstash
++        annotations:
++          summary: "Logstash is down"
++          description: "Logstash at logstash:9600 is not responding"
++
++      # Logstash Processing Lag
++      - alert: LogstashProcessingLag
++        expr: |
++          logstash_pipeline_queue_events_total > 10000
++        for: 5m
++        labels:
++          severity: warning
++          service: logstash
++        annotations:
++          summary: "Logstash has high queue backlog"
++          description: "Queued events: {{ $value }}"
++
++  ##############################################################################
++  # Distributed Tracing Alerts
++  ##############################################################################
++  - name: tracing_alerts
++    interval: 30s
++    rules:
++      # Jaeger Down
++      - alert: JaegerDown
++        expr: up{job="jaeger"} == 0
++        for: 2m
++        labels:
++          severity: critical
++          service: jaeger
++        annotations:
++          summary: "Jaeger tracing is down"
++          description: "Jaeger at jaeger:14269 is not responding"
+diff --git a/infrastructure/observability/prometheus.yml b/infrastructure/observability/prometheus.yml
+new file mode 100644
+index 00000000..99a48f06
+--- /dev/null
++++ b/infrastructure/observability/prometheus.yml
+@@ -0,0 +1,230 @@
++###############################################################################
++# Prometheus Configuration
++# Metrics collection and scraping configuration
++###############################################################################
++
++global:
++  scrape_interval: 15s
++  scrape_timeout: 10s
++  evaluation_interval: 15s
++  external_labels:
++    monitor: 'invoiceshelf-monitoring'
++    environment: 'production'
++
++# Alertmanager configuration
++alerting:
++  alertmanagers:
++    - static_configs:
++        - targets:
++            - alertmanager:9093
++
++# Load rules once and periodically evaluate them
++rule_files:
++  - /etc/prometheus/prometheus-rules.yml
++
++# Scrape configurations
++scrape_configs:
++  ##############################################################################
++  # Prometheus Self-Monitoring
++  ##############################################################################
++  - job_name: 'prometheus'
++    static_configs:
++      - targets: ['localhost:9090']
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Node Exporter - System Metrics
++  ##############################################################################
++  - job_name: 'node-exporter'
++    static_configs:
++      - targets: ['node-exporter:9100']
++        labels:
++          instance_type: 'host'
++
++  ##############################################################################
++  # cAdvisor - Container Metrics
++  ##############################################################################
++  - job_name: 'cadvisor'
++    static_configs:
++      - targets: ['cadvisor:8080']
++        labels:
++          instance_type: 'container'
++
++  ##############################################################################
++  # Invoice Service - DDD Domain (Port 8001, Metrics 9090)
++  ##############################################################################
++  - job_name: 'invoice-service'
++    static_configs:
++      - targets: ['invoice-service:9090']
++        labels:
++          service: 'invoice-service'
++          domain: 'invoice'
++          instance_id: 'invoice-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++      - source_labels: [__scheme__]
++        target_label: __scheme__
++        replacement: 'http'
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Expense Service - DDD Domain (Port 8002, Metrics 9091)
++  ##############################################################################
++  - job_name: 'expense-service'
++    static_configs:
++      - targets: ['expense-service:9091']
++        labels:
++          service: 'expense-service'
++          domain: 'expense'
++          instance_id: 'expense-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Product Service - DDD Domain (Port 8003, Metrics 9092)
++  ##############################################################################
++  - job_name: 'product-service'
++    static_configs:
++      - targets: ['product-service:9092']
++        labels:
++          service: 'product-service'
++          domain: 'product'
++          instance_id: 'product-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Customer Service - DDD Domain (Port 8004, Metrics 9093)
++  ##############################################################################
++  - job_name: 'customer-service'
++    static_configs:
++      - targets: ['customer-service:9093']
++        labels:
++          service: 'customer-service'
++          domain: 'customer'
++          instance_id: 'customer-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Settings Service - DDD Domain (Port 8005, Metrics 9094)
++  ##############################################################################
++  - job_name: 'settings-service'
++    static_configs:
++      - targets: ['settings-service:9094']
++        labels:
++          service: 'settings-service'
++          domain: 'settings'
++          instance_id: 'settings-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # Transport Service - DDD Domain (Port 8006, Metrics 9095)
++  ##############################################################################
++  - job_name: 'transport-service'
++    static_configs:
++      - targets: ['transport-service:9095']
++        labels:
++          service: 'transport-service'
++          domain: 'transport'
++          instance_id: 'transport-1'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 10s
++    scrape_timeout: 5s
++    metrics_path: '/metrics'
++
++  ##############################################################################
++  # MySQL Database Metrics
++  ##############################################################################
++  - job_name: 'mysql'
++    static_configs:
++      - targets: ['mysql:3306']
++        labels:
++          service: 'mysql-database'
++          instance_type: 'database'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++
++  ##############################################################################
++  # Redis Cache Metrics
++  ##############################################################################
++  - job_name: 'redis'
++    static_configs:
++      - targets: ['redis:6379']
++        labels:
++          service: 'redis-cache'
++          instance_type: 'cache'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++
++  ##############################################################################
++  # Elasticsearch Metrics
++  ##############################################################################
++  - job_name: 'elasticsearch'
++    static_configs:
++      - targets: ['elasticsearch:9200']
++        labels:
++          service: 'elasticsearch'
++          instance_type: 'search'
++    metrics_path: '/_prometheus/metrics'
++
++  ##############################################################################
++  # Logstash Metrics
++  ##############################################################################
++  - job_name: 'logstash'
++    static_configs:
++      - targets: ['logstash:9600']
++        labels:
++          service: 'logstash'
++          instance_type: 'log-processor'
++    metrics_path: '/_prometheus/metrics'
++
++  ##############################################################################
++  # Kong API Gateway Metrics
++  ##############################################################################
++  - job_name: 'kong'
++    static_configs:
++      - targets: ['kong:8001']
++        labels:
++          service: 'kong'
++          instance_type: 'api-gateway'
++    relabel_configs:
++      - source_labels: [__address__]
++        target_label: instance
++    scrape_interval: 15s
++
++  ##############################################################################
++  # Jaeger Tracing Metrics
++  ##############################################################################
++  - job_name: 'jaeger'
++    static_configs:
++      - targets: ['jaeger:14269']
++        labels:
++          service: 'jaeger'
++          instance_type: 'tracing'
++    metrics_path: '/metrics'
++    scrape_interval: 15s
+diff --git a/phpunit.xml b/phpunit.xml
+index 7132e9b9..7ebb03d0 100644
+--- a/phpunit.xml
++++ b/phpunit.xml
+@@ -6,6 +6,9 @@
+     </testsuite>
+     <testsuite name="Feature">
+       <directory suffix="Test.php">./tests/Feature</directory>
++      <!-- HisabKitab feature — module-host integration tests live in their modules -->
++      <directory suffix="Test.php">./Modules/LorryReceipt/tests/Feature</directory>
++      <directory suffix="Test.php">./Modules/Trips/tests/Feature</directory>
+     </testsuite>
+   </testsuites>
+   <php>

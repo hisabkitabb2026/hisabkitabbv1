@@ -7,7 +7,6 @@ use App\Domains\Purchases\Models\SupplierPayment;
 use App\Domains\Purchases\Models\SupplierRefund;
 use App\Domains\Receivables\Models\Payment;
 use App\Domains\Sales\Models\Invoice;
-use App\Support\ModuleExtensions;
 use App\Support\ReportingPeriod;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -46,15 +45,9 @@ class CashflowQuery
     {
         $span = [$period->from(), $period->to()];
 
-        $invoices = Invoice::query()
-            ->whereBetween('invoice_date', $span)
-            ->whereCompany()
-            ->when(
-                ModuleExtensions::salesTemplates() !== [],
-                fn (Builder $q) => $q->whereIn('template_name', ModuleExtensions::salesTemplates()),
-                fn (Builder $q) => $q->whereNull('template_name'),
-            )
-            ->when($customerId, fn (Builder $query) => $query->whereCustomer($customerId));
+        $invoices = CustomerInvoiceScope::apply(
+            Invoice::query()->whereBetween('invoice_date', $span)->whereCompany(),
+        )->when($customerId, fn (Builder $query) => $query->whereCustomer($customerId));
 
         $payments = Payment::query()
             ->whereBetween('payment_date', $span)

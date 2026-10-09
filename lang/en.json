@@ -1567,6 +1567,24 @@
         "preview_credit_note_number": "Preview Credit Note Number",
         "credit_note_settings_updated": "Credit Note Settings updated successfully"
       },
+      "lr_receipts": {
+        "lr_receipt_number_format": "LR Receipt Number Format",
+        "lr_receipt_number_format_description": "Customize how your LR Receipt number gets generated automatically when you create a new LR Receipt.",
+        "preview_lr_receipt_number": "Preview LR Receipt Number",
+        "lr_receipt_settings_updated": "LR Receipt number format updated successfully"
+      },
+      "invoice_receipts": {
+        "invoice_receipt_number_format": "Invoice Receipt Number Format",
+        "invoice_receipt_number_format_description": "Customize how your Invoice Receipt number gets generated automatically when you create a new Invoice Receipt.",
+        "preview_invoice_receipt_number": "Preview Invoice Receipt Number",
+        "invoice_receipt_settings_updated": "Invoice Receipt number format updated successfully"
+      },
+      "lorry_receipts": {
+        "lorry_receipt_number_format": "Lorry Receipt Number Format",
+        "lorry_receipt_number_format_description": "Customize how your Lorry Receipt number gets generated automatically when you create a new Lorry Receipt.",
+        "preview_lorry_receipt_number": "Preview Lorry Receipt Number",
+        "lorry_receipt_settings_updated": "Lorry Receipt number format updated successfully"
+      },
       "estimates": {
         "title": "Estimates",
         "estimate_number_format": "Estimate Number Format",
@@ -1591,6 +1609,12 @@
         "no_action": "No action",
         "delete_estimate": "Delete estimate",
         "mark_estimate_as_accepted": "Mark estimate as accepted"
+      },
+      "quotations": {
+        "quotation_number_format": "Quotation Number Format",
+        "quotation_number_format_description": "Customize how your Quotation number gets generated automatically when you create a new Quotation.",
+        "preview_quotation_number": "Preview Quotation Number",
+        "quotation_settings_updated": "Quotation number format updated successfully"
       },
       "payments": {
         "title": "Payments",

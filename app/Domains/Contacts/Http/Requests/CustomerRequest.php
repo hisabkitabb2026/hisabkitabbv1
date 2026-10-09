@@ -67,6 +67,8 @@ class CustomerRequest extends FormRequest
         'zip',
         'phone',
         'fax',
+        // HisabKitab feature — GST number per address
+        'tax_id',
     ];
 
     /**

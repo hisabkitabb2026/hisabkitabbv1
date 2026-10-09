@@ -37,6 +37,11 @@ const notificationStore = useNotificationStore()
 
 const isFetchingInitialData = ref<boolean>(false)
 
+// HisabKitab feature — hide Basic Info / Portal Access tabs when InvoiceReceipt module is enabled
+const isInvoiceReceiptModule = computed<boolean>(() =>
+  globalStore.modules.includes('InvoiceReceipt')
+)
+
 const { t } = useI18n()
 const route = useRoute()
 const isEdit = ref<boolean>(false)
@@ -177,7 +182,13 @@ async function submitCustomerData(): Promise<void> {
       isLoading.value = false
       // Automatically select newly created customer
       if (route.name === 'invoices.create' || route.name === 'invoices.edit') {
-        invoiceStore.selectCustomer(response.data.id)
+        // HisabKitab feature — consignee picker support (LR Receipt)
+        if (invoiceStore.isConsigneeMode) {
+          invoiceStore.selectConsignee(response.data.id)
+          invoiceStore.isConsigneeMode = false
+        } else {
+          invoiceStore.selectCustomer(response.data.id)
+        }
       }
       if (route.name === 'estimates.create' || route.name === 'estimates.edit') {
         estimateStore.selectCustomer(response.data.id)
@@ -219,7 +230,8 @@ function closeCustomerModal(): void {
     <form action="" @submit.prevent="submitCustomerData">
       <div class="px-6 pb-3 max-h-[calc(80vh-8rem)] overflow-y-auto">
         <BaseTabGroup>
-          <BaseTab :title="$t('customers.basic_info')">
+          <!-- HisabKitab feature — hide Basic Info tab in InvoiceReceipt mode -->
+          <BaseTab v-if="!isInvoiceReceiptModule" :title="$t('customers.basic_info')">
             <BaseInputGrid layout="one-column">
               <BaseInputGroup
                 :label="$t('customers.display_name')"
@@ -328,7 +340,8 @@ function closeCustomerModal(): void {
             </BaseInputGrid>
           </BaseTab>
 
-          <BaseTab :title="$t('customers.portal_access')">
+          <!-- HisabKitab feature — hide Portal Access tab in InvoiceReceipt mode -->
+          <BaseTab v-if="!isInvoiceReceiptModule" :title="$t('customers.portal_access')">
             <BaseInputGrid class="col-span-5 lg:col-span-4">
               <div class="md:col-span-2">
                 <p class="text-sm text-muted">
@@ -395,6 +408,16 @@ function closeCustomerModal(): void {
                 <BaseInput
                   v-model="customerStore.currentCustomer.billing.name"
                   type="text"
+                  class="mt-1 md:mt-0"
+                />
+              </BaseInputGroup>
+
+              <!-- HisabKitab feature — GST NO field on billing address -->
+              <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.billing.tax_id"
+                  type="text"
+                  name="billingTaxId"
                   class="mt-1 md:mt-0"
                 />
               </BaseInputGroup>
@@ -510,6 +533,16 @@ function closeCustomerModal(): void {
                 <BaseInput
                   v-model="customerStore.currentCustomer.shipping.name"
                   type="text"
+                  class="mt-1 md:mt-0"
+                />
+              </BaseInputGroup>
+
+              <!-- HisabKitab feature — GST NO field on shipping address -->
+              <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.shipping.tax_id"
+                  type="text"
+                  name="shippingTaxId"
                   class="mt-1 md:mt-0"
                 />
               </BaseInputGroup>

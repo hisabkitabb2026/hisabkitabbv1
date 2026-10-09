@@ -1,0 +1,692 @@
+diff --git a/app/Domains/Contacts/Http/Requests/CustomerRequest.php b/app/Domains/Contacts/Http/Requests/CustomerRequest.php
+index cde1272c..78b46e83 100644
+--- a/app/Domains/Contacts/Http/Requests/CustomerRequest.php
++++ b/app/Domains/Contacts/Http/Requests/CustomerRequest.php
+@@ -67,6 +67,8 @@ class CustomerRequest extends FormRequest
+         'zip',
+         'phone',
+         'fax',
++        // HisabKitab feature — GST number per address
++        'tax_id',
+     ];
+ 
+     /**
+diff --git a/app/Domains/Contacts/Http/Resources/AddressResource.php b/app/Domains/Contacts/Http/Resources/AddressResource.php
+index 02efcfd5..23e1bc03 100644
+--- a/app/Domains/Contacts/Http/Resources/AddressResource.php
++++ b/app/Domains/Contacts/Http/Resources/AddressResource.php
+@@ -28,6 +28,8 @@ class AddressResource extends JsonResource
+             'zip' => $this->zip,
+             'phone' => $this->phone,
+             'fax' => $this->fax,
++            // HisabKitab feature — GST number per address
++            'tax_id' => $this->tax_id,
+             'type' => $this->type,
+             'user_id' => $this->user_id,
+             'company_id' => $this->company_id,
+diff --git a/app/Domains/Contacts/Models/Customer.php b/app/Domains/Contacts/Models/Customer.php
+index 8c933eaa..8f28911a 100644
+--- a/app/Domains/Contacts/Models/Customer.php
++++ b/app/Domains/Contacts/Models/Customer.php
+@@ -252,6 +252,21 @@ class Customer extends Authenticatable implements HasMedia
+             'phone' => 'wherePhone',
+         ];
+ 
++        // HisabKitab feature — filter by customer type (CUSTOMER, CONSIGNEE, etc.)
++        if (! empty($filters['type'])) {
++            $query->where('type', $filters['type']);
++        }
++
++        // HisabKitab feature — Lorry Receipt: only show customers that are
++        // linked to a Lorry Party Profile (owner / driver / broker).
++        if (! empty($filters['lorry_party_only'])) {
++            $query->whereExists(function ($q) {
++                $q->select(\DB::raw(1))
++                    ->from('tr_lorry_party_profiles')
++                    ->whereColumn('tr_lorry_party_profiles.customer_id', $this->qualifyColumn('id'));
++            });
++        }
++
+         foreach ($scopes as $filter => $scope) {
+             $value = $filters[$filter] ?? null;
+ 
+diff --git a/app/Domains/Reporting/Http/Controllers/Company/DashboardController.php b/app/Domains/Reporting/Http/Controllers/Company/DashboardController.php
+index c071c664..70da94ce 100644
+--- a/app/Domains/Reporting/Http/Controllers/Company/DashboardController.php
++++ b/app/Domains/Reporting/Http/Controllers/Company/DashboardController.php
+@@ -1,18 +1,23 @@
+ <?php
+ 
++// HisabKitab feature
++
+ namespace App\Domains\Reporting\Http\Controllers\Company;
+ 
+ use App\Domains\Accounts\Models\Company;
+ use App\Domains\Accounts\Models\CompanySetting;
+ use App\Domains\Contacts\Models\Customer;
+ use App\Domains\Purchases\Models\Bill;
++// HisabKitab feature
+ use App\Domains\Reporting\Http\Requests\DashboardRequest;
+ use App\Domains\Reporting\Queries\CashflowQuery;
++use App\Domains\Reporting\Queries\CustomerInvoiceScope;
+ use App\Domains\Reporting\Queries\PurchasesQuery;
+ use App\Domains\Reporting\Queries\ReceivablesAgingQuery;
+ use App\Domains\Sales\Models\Estimate;
+ use App\Domains\Sales\Models\Invoice;
+ use App\Platform\Http\Controller;
++use App\Support\ModuleExtensions;
+ use Carbon\Carbon;
+ use Illuminate\Http\JsonResponse;
+ use Silber\Bouncer\BouncerFacade;
+@@ -50,22 +55,19 @@ class DashboardController extends Controller
+ 
+         $customerCount = Customer::query()->whereCompany()->count();
+ 
+-        // "How many invoices did we issue" counts issued documents, so the
+-        // reversals are left out. The money figures above deliberately keep
+-        // them: a credit note's negated total is exactly what nets a sale back
+-        // out. The outstanding sum below keeps them too, which is a quirk
+-        // rather than a decision — a credit note's due amount is always zero,
+-        // so it adds nothing, and the sum has always been taken over the lot.
+-        $invoiceCount = Invoice::query()
+-            ->whereCompany()
+-            ->where('type', Invoice::TYPE_INVOICE)
+-            ->count();
++        // "How many invoices did we issue" counts issued customer documents, so
++        // the reversals are left out. The money figures above deliberately keep
++        // them: a credit note's negated total is exactly what nets a sale back out.
++        $invoiceCount = CustomerInvoiceScope::apply(
++            Invoice::query()->whereCompany()->where('type', Invoice::TYPE_INVOICE),
++        )->count();
++
++        // HisabKitab feature — receipt counts come from registered module providers
++        $moduleCounts = ModuleExtensions::dashboardCounts((int) $companyId);
+ 
+         $estimateCount = Estimate::query()->whereCompany()->count();
+ 
+-        $amountDue = Invoice::query()
+-            ->whereCompany()
+-            ->sum('base_due_amount');
++        $amountDue = CustomerInvoiceScope::apply(Invoice::query()->whereCompany())->sum('base_due_amount');
+ 
+         // Raw models rather than InvoiceResource: each loaded relation is
+         // serialized with the full $appends set, so a column-limited
+@@ -74,8 +76,9 @@ class DashboardController extends Controller
+         // appends per credit note for nothing. Neither list needs the relation
+         // anyway — credited_status is a resource-level field, and a fully
+         // credited invoice has no due amount left, so it never reaches here.
+-        $recentDueInvoices = Invoice::with('customer')
+-            ->whereCompany()->where('base_due_amount', '>', 0)
++        $recentDueInvoices = CustomerInvoiceScope::apply(
++            Invoice::with('customer')->whereCompany()->where('base_due_amount', '>', 0),
++        )
+             ->take(5)
+             ->latest()
+             ->get();
+@@ -95,6 +98,8 @@ class DashboardController extends Controller
+             'receivables' => $receivables->summary($companyId, Carbon::now()),
+             'total_customer_count' => $customerCount,
+             'total_invoice_count' => $invoiceCount,
++            // HisabKitab feature — module-registered dashboard counts
++            'module_counts' => $moduleCounts,
+             'total_estimate_count' => $estimateCount,
+ 
+             'recent_due_invoices' => BouncerFacade::can('view-invoice', Invoice::class) ? $recentDueInvoices : [],
+diff --git a/app/Domains/Reporting/Queries/CashflowQuery.php b/app/Domains/Reporting/Queries/CashflowQuery.php
+index 07c0791a..17f8cd1e 100644
+--- a/app/Domains/Reporting/Queries/CashflowQuery.php
++++ b/app/Domains/Reporting/Queries/CashflowQuery.php
+@@ -45,10 +45,9 @@ class CashflowQuery
+     {
+         $span = [$period->from(), $period->to()];
+ 
+-        $invoices = Invoice::query()
+-            ->whereBetween('invoice_date', $span)
+-            ->whereCompany()
+-            ->when($customerId, fn (Builder $query) => $query->whereCustomer($customerId));
++        $invoices = CustomerInvoiceScope::apply(
++            Invoice::query()->whereBetween('invoice_date', $span)->whereCompany(),
++        )->when($customerId, fn (Builder $query) => $query->whereCustomer($customerId));
+ 
+         $payments = Payment::query()
+             ->whereBetween('payment_date', $span)
+diff --git a/app/Domains/Reporting/Queries/ReceivablesAgingQuery.php b/app/Domains/Reporting/Queries/ReceivablesAgingQuery.php
+index 4e5abce0..05e2dd8e 100644
+--- a/app/Domains/Reporting/Queries/ReceivablesAgingQuery.php
++++ b/app/Domains/Reporting/Queries/ReceivablesAgingQuery.php
+@@ -61,10 +61,10 @@ class ReceivablesAgingQuery
+      */
+     private function receivables(int|string $companyId): Builder
+     {
+-        return Invoice::query()
++        return CustomerInvoiceScope::apply(Invoice::query()
+             ->whereCompanyId($companyId)
+             ->where('type', Invoice::TYPE_INVOICE)
+             ->where('status', '!=', Invoice::STATUS_DRAFT)
+-            ->where('base_due_amount', '>', 0);
++            ->where('base_due_amount', '>', 0));
+     }
+ }
+diff --git a/app/Domains/Sales/Application/SerialNumberService.php b/app/Domains/Sales/Application/SerialNumberService.php
+index e01c4bfd..83d0e938 100644
+--- a/app/Domains/Sales/Application/SerialNumberService.php
++++ b/app/Domains/Sales/Application/SerialNumberService.php
+@@ -170,12 +170,16 @@ class SerialNumberService
+     public function getNextNumber(?string $format = null)
+     {
+         $derivedKey = strtolower(class_basename($this->model)).'_number_format';
++        $settingKey = $this->settingKey ?: $derivedKey;
+ 
+         if ($format === null) {
+-            $format = CompanySetting::getSetting(
+-                $this->settingKey ?: $derivedKey,
+-                $this->company
+-            );
++            $format = CompanySetting::getSetting($settingKey, $this->company);
++
++            // HisabKitab feature — fall back to the base format if a receipt-specific
++            // format is not yet configured (backward compatibility)
++            if (! $format && $this->settingKey && $this->settingKey !== $derivedKey) {
++                $format = CompanySetting::getSetting($derivedKey, $this->company);
++            }
+         }
+ 
+         $this->setNextNumbers();
+diff --git a/app/Domains/Sales/Http/Controllers/Company/SerialNumberController.php b/app/Domains/Sales/Http/Controllers/Company/SerialNumberController.php
+index 97fb8e41..7bc3c304 100644
+--- a/app/Domains/Sales/Http/Controllers/Company/SerialNumberController.php
++++ b/app/Domains/Sales/Http/Controllers/Company/SerialNumberController.php
+@@ -7,7 +7,9 @@ use App\Domains\Sales\Application\SerialNumberService;
+ use App\Domains\Sales\Models\Estimate;
+ use App\Domains\Sales\Models\Invoice;
+ use App\Platform\Http\Controller;
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\JsonResponse;
++// HisabKitab feature
+ use Illuminate\Http\Request;
+ 
+ /**
+@@ -55,7 +57,18 @@ class SerialNumberController extends Controller
+ 
+                 break;
+ 
++                // HisabKitab feature — module-registered serial number types
+             default:
++                $registered = ModuleExtensions::getSerialNumberType($request->key);
++                if ($registered !== null) {
++                    $model = $registered['model'] === Invoice::class ? $invoice : $estimate;
++                    // HisabKitab feature — each receipt type gets its own number format setting
++                    $serial->setModel($model)
++                        ->setSettingKey($request->key.'_number_format')
++                        ->setSequenceScope($registered['scope']);
++                    break;
++                }
++
+                 return response()->json([
+                     'success' => false,
+                 ]);
+diff --git a/app/Domains/Sales/Http/Requests/EstimatesRequest.php b/app/Domains/Sales/Http/Requests/EstimatesRequest.php
+index cff6f6b1..68aca33e 100644
+--- a/app/Domains/Sales/Http/Requests/EstimatesRequest.php
++++ b/app/Domains/Sales/Http/Requests/EstimatesRequest.php
+@@ -83,6 +83,15 @@ class EstimatesRequest extends FormRequest
+     {
+         $rule = Rule::unique('estimates')->where('company_id', $this->header('company'));
+ 
++        // HisabKitab feature — uniqueness scoped by template_name, no hardcoded template
++        $templateName = $this->input('template_name');
++
++        if ($templateName) {
++            $rule->where('template_name', $templateName);
++        } else {
++            $rule->whereNull('template_name');
++        }
++
+         return $this->isMethod('PUT')
+             ? $rule->ignore($this->route('estimate')->id)
+             : $rule;
+diff --git a/app/Domains/Sales/Http/Requests/InvoicesRequest.php b/app/Domains/Sales/Http/Requests/InvoicesRequest.php
+index 88b70fc8..04cce317 100644
+--- a/app/Domains/Sales/Http/Requests/InvoicesRequest.php
++++ b/app/Domains/Sales/Http/Requests/InvoicesRequest.php
+@@ -83,6 +83,15 @@ class InvoicesRequest extends FormRequest
+     {
+         $rule = Rule::unique('invoices')->where('company_id', $this->header('company'));
+ 
++        // HisabKitab feature — uniqueness scoped by template_name, no hardcoded list
++        $templateName = $this->input('template_name');
++
++        if ($templateName) {
++            $rule->where('template_name', $templateName);
++        } else {
++            $rule->whereNull('template_name');
++        }
++
+         return $this->isMethod('PUT')
+             ? $rule->ignore($this->route('invoice')->id)
+             : $rule;
+diff --git a/app/Domains/Sales/Http/Resources/CustomerPortal/InvoiceResource.php b/app/Domains/Sales/Http/Resources/CustomerPortal/InvoiceResource.php
+index 3fda31f9..9228921b 100644
+--- a/app/Domains/Sales/Http/Resources/CustomerPortal/InvoiceResource.php
++++ b/app/Domains/Sales/Http/Resources/CustomerPortal/InvoiceResource.php
+@@ -7,6 +7,7 @@ use App\Domains\Contacts\Http\Resources\CustomerPortal\CustomerResource;
+ use App\Domains\Metadata\Http\Resources\CustomerPortal\CustomFieldValueResource;
+ use App\Domains\Money\Http\Resources\CustomerPortal\CurrencyResource;
+ use App\Domains\Taxation\Http\Resources\CustomerPortal\TaxResource;
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\Request;
+ use Illuminate\Http\Resources\Json\JsonResource;
+ 
+@@ -96,6 +97,16 @@ class InvoiceResource extends JsonResource
+                 $invoice->currency()->exists(),
+                 fn () => new CurrencyResource($invoice->currency)
+             ),
++            'consignee_customer' => $this->when(
++                $invoice->consigneeCustomer()->exists(),
++                fn () => new CustomerResource($invoice->consigneeCustomer)
++            ),
++            'consignee_customer_id' => $invoice->tr_consignee_customer_id,
++            'gst_tax_payable_by' => $invoice->gst_tax_payable_by,
++            'tr_gst_payable_by' => $invoice->tr_gst_payable_by,
++
++            // Module-registered extra fields (tr_*, etc.)
++            ...ModuleExtensions::invoiceResourceFields($invoice),
+         ];
+     }
+ }
+diff --git a/app/Domains/Sales/Http/Resources/EstimateItemResource.php b/app/Domains/Sales/Http/Resources/EstimateItemResource.php
+index 878eb4c5..cd9216ec 100644
+--- a/app/Domains/Sales/Http/Resources/EstimateItemResource.php
++++ b/app/Domains/Sales/Http/Resources/EstimateItemResource.php
+@@ -4,7 +4,9 @@ namespace App\Domains\Sales\Http\Resources;
+ 
+ use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
+ use App\Domains\Taxation\Http\Resources\TaxResource;
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\Request;
++// HisabKitab feature
+ use Illuminate\Http\Resources\Json\JsonResource;
+ 
+ /**
+@@ -45,6 +47,8 @@ class EstimateItemResource extends JsonResource
+             'base_price' => $item->base_price,
+             'base_tax' => $item->base_tax,
+             'base_total' => $item->base_total,
++            // HisabKitab feature — module-registered extra item fields (tr_*, etc.)
++            ...ModuleExtensions::estimateItemResourceFields($item),
+             'taxes' => $this->when(
+                 $item->taxes()->exists(),
+                 fn () => TaxResource::collection($item->taxes)
+diff --git a/app/Domains/Sales/Http/Resources/InvoiceItemResource.php b/app/Domains/Sales/Http/Resources/InvoiceItemResource.php
+index 4bb719d5..d1fe7cf7 100644
+--- a/app/Domains/Sales/Http/Resources/InvoiceItemResource.php
++++ b/app/Domains/Sales/Http/Resources/InvoiceItemResource.php
+@@ -1,9 +1,12 @@
+ <?php
+ 
++// HisabKitab feature
++
+ namespace App\Domains\Sales\Http\Resources;
+ 
+ use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
+ use App\Domains\Taxation\Http\Resources\TaxResource;
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\Request;
+ use Illuminate\Http\Resources\Json\JsonResource;
+ 
+@@ -53,6 +56,9 @@ class InvoiceItemResource extends JsonResource
+                 $item->fields()->exists(),
+                 fn () => CustomFieldValueResource::collection($item->fields)
+             ),
++
++            // HisabKitab feature — module-registered extra item fields (tr_*, etc.)
++            ...ModuleExtensions::invoiceItemResourceFields($item),
+         ];
+     }
+ }
+diff --git a/app/Domains/Sales/Http/Resources/InvoiceResource.php b/app/Domains/Sales/Http/Resources/InvoiceResource.php
+index 18c09281..31c039ec 100644
+--- a/app/Domains/Sales/Http/Resources/InvoiceResource.php
++++ b/app/Domains/Sales/Http/Resources/InvoiceResource.php
+@@ -1,5 +1,7 @@
+ <?php
+ 
++// HisabKitab feature
++
+ namespace App\Domains\Sales\Http\Resources;
+ 
+ use App\Domains\Accounts\Http\Resources\CompanyResource;
+@@ -8,8 +10,10 @@ use App\Domains\Contacts\Http\Resources\CustomerResource;
+ use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
+ use App\Domains\Money\Http\Resources\CurrencyResource;
+ use App\Domains\Taxation\Http\Resources\TaxResource;
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\Request;
+ use Illuminate\Http\Resources\Json\JsonResource;
++// HisabKitab feature
+ use Illuminate\Support\Collection;
+ 
+ /**
+@@ -159,6 +163,9 @@ class InvoiceResource extends JsonResource
+                 $invoice->currency()->exists(),
+                 fn () => new CurrencyResource($invoice->currency)
+             ),
++
++            // HisabKitab feature — module-registered extra fields (tr_*, gst_tax_payable_by, etc.)
++            ...ModuleExtensions::invoiceResourceFields($invoice),
+         ];
+     }
+ 
+diff --git a/app/Domains/Sales/Models/Estimate.php b/app/Domains/Sales/Models/Estimate.php
+index bcbe1161..6d0be9a9 100644
+--- a/app/Domains/Sales/Models/Estimate.php
++++ b/app/Domains/Sales/Models/Estimate.php
+@@ -246,6 +246,17 @@ class Estimate extends Model implements HasMedia
+             }
+         }
+ 
++        // HisabKitab feature — template_name filter, no hardcoded template list
++        $templateName = $filters['template_name'] ?? null;
++
++        if ($templateName) {
++            if ($templateName === 'estimates') {
++                $query->whereNull($this->qualifyColumn('template_name'));
++            } else {
++                $query->where($this->qualifyColumn('template_name'), $templateName);
++            }
++        }
++
+         $from = $filters['from_date'] ?? null;
+         $to = $filters['to_date'] ?? null;
+ 
+diff --git a/app/Domains/Sales/Models/Invoice.php b/app/Domains/Sales/Models/Invoice.php
+index d447c1fd..b2fa3d6f 100644
+--- a/app/Domains/Sales/Models/Invoice.php
++++ b/app/Domains/Sales/Models/Invoice.php
+@@ -1,5 +1,7 @@
+ <?php
+ 
++// HisabKitab feature
++
+ namespace App\Domains\Sales\Models;
+ 
+ use App\Domains\Accounts\Models\Company;
+@@ -238,6 +240,14 @@ class Invoice extends Model implements HasMedia
+         return $this->belongsTo(Customer::class, 'customer_id');
+     }
+ 
++    /**
++     * Consignee customer for transport receipts (LR Receipt, etc.).
++     */
++    public function consigneeCustomer(): BelongsTo
++    {
++        return $this->belongsTo(Customer::class, 'tr_consignee_customer_id');
++    }
++
+     /**
+      * Schedule that generated this document, when it was not raised by hand.
+      */
+@@ -424,6 +434,22 @@ class Invoice extends Model implements HasMedia
+         return Carbon::parse($this->invoice_date)->translatedFormat($format);
+     }
+ 
++    /**
++     * Alias for tr_gst_payable_by with fallback to gst_tax_payable_by.
++     */
++    public function getTrGstPayableByAttribute(): ?string
++    {
++        return $this->attributes['tr_gst_payable_by'] ?? null;
++    }
++
++    /**
++     * Mutator for gst_tax_payable_by writes to tr_gst_payable_by column.
++     */
++    public function setGstTaxPayableByAttribute($value): void
++    {
++        $this->attributes['tr_gst_payable_by'] = $value;
++    }
++
+     /*
+     |--------------------------------------------------------------------------
+     | Query scopes
+@@ -531,6 +557,18 @@ class Invoice extends Model implements HasMedia
+             'paid_status' => fn ($value) => $query->wherePaidStatus($value),
+             'invoice_id' => fn ($value) => $query->whereInvoice($value),
+             'invoice_number' => fn ($value) => $query->whereInvoiceNumber($value),
++            // HisabKitab feature — template_name filter delegates to module-registered handlers
++            'template_name' => function ($value) use ($query) {
++                if ($value === 'one-time') {
++                    // Standard invoices: null template_name or the default 'invoice1'.
++                    $query->where(function ($q) {
++                        $q->whereNull($this->qualifyColumn('template_name'))
++                            ->orWhere($this->qualifyColumn('template_name'), 'invoice1');
++                    });
++                } else {
++                    $query->where($this->qualifyColumn('template_name'), $value);
++                }
++            },
+         ];
+ 
+         foreach ($clauses as $filter => $clause) {
+diff --git a/app/Platform/Operations/Http/Company/BootstrapController.php b/app/Platform/Operations/Http/Company/BootstrapController.php
+index 61d689df..4463f291 100644
+--- a/app/Platform/Operations/Http/Company/BootstrapController.php
++++ b/app/Platform/Operations/Http/Company/BootstrapController.php
+@@ -13,6 +13,8 @@ use App\Platform\Http\Controller;
+ use App\Platform\Modules\Models\Module;
+ use App\Platform\Operations\Http\Concerns\GeneratesMenu;
+ use App\Platform\Operations\Models\Setting;
++// HisabKitab feature
++use App\Support\ModuleExtensions;
+ use Illuminate\Http\JsonResponse;
+ use Illuminate\Http\Request;
+ use InvoiceShelf\Modules\Registry as ModuleRegistry;
+@@ -138,7 +140,8 @@ class BootstrapController extends Controller
+         return array_merge($this->envelope($user, $currency), [
+             'current_user_abilities' => $user->getAbilities(),
+             'companies' => CompanyResource::collection($memberships),
+-            'current_company' => new CompanyResource($company),
++            // HisabKitab feature
++            'current_company' => new CompanyResource($company->load('owner')),
+             'current_company_settings' => $companySettings,
+             'main_menu' => $mainMenu,
+             'setting_menu' => $settingMenu,
+@@ -170,6 +173,9 @@ class BootstrapController extends Controller
+     {
+         $menu = $this->generateMenu('main_menu', $user);
+ 
++        // HisabKitab feature — let modules filter the core menu (hide/replace entries)
++        $menu = ModuleExtensions::applyMenuFilters($menu);
++
+         foreach (ModuleRegistry::allMenu() as $slug => $entry) {
+             $menu[] = [
+                 'title' => __($entry['title']),
+diff --git a/app/Platform/Pdf/Rendering/ImageUtils.php b/app/Platform/Pdf/Rendering/ImageUtils.php
+index 432f7f4c..1df644bb 100644
+--- a/app/Platform/Pdf/Rendering/ImageUtils.php
++++ b/app/Platform/Pdf/Rendering/ImageUtils.php
+@@ -13,6 +13,10 @@ class ImageUtils
+      */
+     public static function toBase64Src($path)
+     {
++        if (! $path || ! File::exists($path)) {
++            return '';
++        }
++
+         return sprintf('data:%s;base64,%s', File::mimeType($path), base64_encode(File::get($path)));
+     }
+ }
+diff --git a/app/Support/Media/CustomPathGenerator.php b/app/Support/Media/CustomPathGenerator.php
+index 6bc63e94..d623b04f 100644
+--- a/app/Support/Media/CustomPathGenerator.php
++++ b/app/Support/Media/CustomPathGenerator.php
+@@ -3,6 +3,7 @@
+ namespace App\Support\Media;
+ 
+ use App\Platform\Persistence\ModelIdentityMap;
++use App\Support\ModuleExtensions;
+ use Spatie\MediaLibrary\MediaCollections\Models\Media;
+ use Spatie\MediaLibrary\Support\PathGenerator\PathGenerator;
+ 
+@@ -53,7 +54,8 @@ class CustomPathGenerator implements PathGenerator
+             ModelIdentityMap::INVOICE_ALIAS => 'Invoices',
+             ModelIdentityMap::ESTIMATE_ALIAS => 'Estimates',
+             ModelIdentityMap::PAYMENT_ALIAS => 'Payments',
+-            default => $media->getKey(),
++            // HisabKitab feature — module-registered media paths (e.g. Trips)
++            default => ModuleExtensions::mediaPathFor($media->model_type) ?? (string) $media->getKey(),
+         };
+     }
+ 
+diff --git a/tests/Feature/Admin/DashboardReceivablesTest.php b/tests/Feature/Admin/DashboardReceivablesTest.php
+index b1b26d52..72a6d714 100644
+--- a/tests/Feature/Admin/DashboardReceivablesTest.php
++++ b/tests/Feature/Admin/DashboardReceivablesTest.php
+@@ -3,6 +3,7 @@
+ use App\Domains\Accounts\Models\Company;
+ use App\Domains\Accounts\Models\User;
+ use App\Domains\Sales\Models\Invoice;
++use App\Support\ModuleExtensions;
+ use Carbon\Carbon;
+ use Illuminate\Support\Facades\Artisan;
+ use Laravel\Sanctum\Sanctum;
+@@ -23,6 +24,7 @@ beforeEach(function () {
+ 
+ afterEach(function () {
+     Carbon::setTestNow();
++    ModuleExtensions::flush();
+ });
+ 
+ /**
+@@ -98,3 +100,131 @@ test('another company\'s invoices stay out of the figures', function () {
+ 
+     expect(dashboardReceivables())->toEqual($before);
+ });
++
++/**
++ * An issued invoice from one template, dated in June 2026 and worth $baseTotal in the company currency.
++ */
++function dashboardSale(string $template, int $baseTotal): Invoice
++{
++    return Invoice::factory()->create([
++        'status' => Invoice::STATUS_SENT,
++        'type' => Invoice::TYPE_INVOICE,
++        'template_name' => $template,
++        'invoice_date' => '2026-06-10',
++        'total' => $baseTotal,
++        'base_total' => $baseTotal,
++        'due_amount' => 0,
++        'base_due_amount' => 0,
++        'paid_status' => Invoice::STATUS_PAID,
++    ]);
++}
++
++function dashboardSales(): int
++{
++    return getJson('api/v1/dashboard?from_date=2026-06-01&to_date=2026-06-30')->assertOk()->json('total_sales');
++}
++
++test('with no receipt module on, a standard invoice is a receivable', function () {
++    $before = dashboardReceivables();
++
++    dashboardReceivable('2026-06-01', 1000, ['template_name' => 'invoice1']);
++
++    expect(dashboardReceivables()['outstanding'] - $before['outstanding'])->toBe(1000);
++});
++
++test('once Invoice Receipt is on, a standard invoice stops being a receivable', function () {
++    ModuleExtensions::registerReceiptModule('invoice-receipt');
++    ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
++    $before = dashboardReceivables();
++
++    dashboardReceivable('2026-06-01', 1000, ['template_name' => 'invoice1']);
++    dashboardReceivable('2026-06-01', 2000, ['template_name' => 'invoice_receipt']);
++
++    expect(dashboardReceivables()['outstanding'] - $before['outstanding'])->toBe(2000);
++});
++
++test('a Lorry Receipt is a hire owed to the owner, never a receivable', function () {
++    ModuleExtensions::registerReceiptModule('invoice-receipt');
++    ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
++    ModuleExtensions::registerReceiptModule('lorry-receipt');
++    ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
++    $before = dashboardReceivables();
++
++    dashboardReceivable('2026-06-01', 1500, ['template_name' => 'lorry_receipt']);
++
++    expect(dashboardReceivables())->toEqual($before);
++});
++
++test('an LR Receipt is not a customer receivable even though it replaces the standard invoice', function () {
++    ModuleExtensions::registerReceiptModule('lr-receipt');
++    $before = dashboardReceivables();
++
++    dashboardReceivable('2026-06-01', 700, ['template_name' => 'lr_receipt']);
++    dashboardReceivable('2026-06-01', 1000, ['template_name' => 'invoice1']);
++
++    expect(dashboardReceivables())->toEqual($before);
++});
++
++test('with only the Lorry Receipt module on, there are no customer receivables', function () {
++    ModuleExtensions::registerReceiptModule('lorry-receipt');
++    ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
++    $before = dashboardReceivables();
++
++    dashboardReceivable('2026-06-01', 1000, ['template_name' => 'invoice1']);
++    dashboardReceivable('2026-06-01', 1500, ['template_name' => 'lorry_receipt']);
++
++    expect(dashboardReceivables())->toEqual($before);
++});
++
++test('the amount due and the invoice count follow the same receipt rule', function () {
++    ModuleExtensions::registerReceiptModule('invoice-receipt');
++    ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
++    ModuleExtensions::registerReceiptModule('lorry-receipt');
++    ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
++    $before = getJson('api/v1/dashboard')->assertOk()->json();
++
++    dashboardReceivable('2026-06-01', 1000, ['template_name' => 'invoice1']);
++    dashboardReceivable('2026-06-01', 2000, ['template_name' => 'invoice_receipt']);
++    dashboardReceivable('2026-06-01', 4000, ['template_name' => 'lorry_receipt']);
++
++    $after = getJson('api/v1/dashboard')->assertOk()->json();
++
++    expect($after['total_amount_due'] - $before['total_amount_due'])->toBe(2000)
++        ->and($after['total_invoice_count'] - $before['total_invoice_count'])->toBe(1);
++});
++
++test('the due invoices list leaves out lorry receipts', function () {
++    ModuleExtensions::registerReceiptModule('invoice-receipt');
++    ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
++    ModuleExtensions::registerReceiptModule('lorry-receipt');
++    ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
++
++    dashboardReceivable('2026-06-01', 4000, ['template_name' => 'lorry_receipt']);
++    $due = dashboardReceivable('2026-06-01', 2000, ['template_name' => 'invoice_receipt']);
++
++    $ids = collect(getJson('api/v1/dashboard')->assertOk()->json('recent_due_invoices'))->pluck('id');
++
++    expect($ids)->toContain($due->id)->toHaveCount(1);
++});
++
++test('Sales counts the customer receipts only once a receipt module is on', function () {
++    ModuleExtensions::registerReceiptModule('invoice-receipt');
++    ModuleExtensions::registerSalesTemplate('invoice-receipt', 'invoice_receipt');
++    ModuleExtensions::registerReceiptModule('lorry-receipt');
++    ModuleExtensions::registerSupplierTemplate('lorry-receipt', 'lorry_receipt');
++    $before = dashboardSales();
++
++    dashboardSale('invoice1', 1000);
++    dashboardSale('lorry_receipt', 4000);
++    dashboardSale('invoice_receipt', 2500);
++
++    expect(dashboardSales() - $before)->toBe(2500);
++});
++
++test('Sales counts standard invoices while no receipt module is on', function () {
++    $before = dashboardSales();
++
++    dashboardSale('invoice1', 1000);
++
++    expect(dashboardSales() - $before)->toBe(1000);
++});

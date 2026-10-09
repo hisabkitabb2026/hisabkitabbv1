@@ -34,6 +34,9 @@ interface ExtensionApi {
     labelPlural: string
     listLink: string
     priority?: number
+    // HisabKitab feature — per-template field labels
+    dateLabel?: string
+    numberLabel?: string
   }): () => void
   addMessages(messages: Record<string, Record<string, unknown>>): void
   notify(type: 'success' | 'error' | 'warning' | 'info', message: string): void
@@ -86,5 +89,8 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
     label: 'Invoice Receipt',
     labelPlural: 'Invoice Receipts',
     listLink: '/admin/invoices?view=invoice_receipt',
+    // HisabKitab feature — per-template field labels
+    dateLabel: 'Receipt Date',
+    numberLabel: 'Receipt No.',
   })
 })

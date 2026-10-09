@@ -5,11 +5,12 @@ import { extensionRegistry, extensionItems } from './runtime'
 import type { RichEditorContext } from './types'
 
 const props = defineProps<{
-  name: 'header-actions' | 'company-layout-overlays' | 'rich-editor-toolbar-actions' | 'invoice-form-sections' | 'estimate-form-sections'
+  name: 'header-actions' | 'company-layout-overlays' | 'rich-editor-toolbar-actions' | 'invoice-form-sections' | 'estimate-form-sections' | 'invoice-permission-missing'
   context?: RichEditorContext
   // HisabKitab feature
   templateName?: string
   store?: Record<string, unknown>
+  viewModeLabel?: string
 }>()
 
 const contributions = computed(() => {
@@ -19,6 +20,7 @@ const contributions = computed(() => {
     'rich-editor-toolbar-actions': extensionRegistry.richEditorToolbarActions.value,
     'invoice-form-sections': extensionRegistry.invoiceFormSections.value,
     'estimate-form-sections': extensionRegistry.estimateFormSections.value,
+    'invoice-permission-missing': extensionRegistry.invoicePermissionMissing.value,
   }[props.name]
 
   return extensionItems(items)
@@ -29,6 +31,7 @@ function componentProps(props_: Record<string, unknown> | undefined): Record<str
   if (props.context !== undefined) extra.context = props.context
   if (props.templateName !== undefined) extra.templateName = props.templateName
   if (props.store !== undefined) extra.store = props.store
+  if (props.viewModeLabel !== undefined) extra.viewModeLabel = props.viewModeLabel
   return { ...props_, ...extra }
 }
 </script>

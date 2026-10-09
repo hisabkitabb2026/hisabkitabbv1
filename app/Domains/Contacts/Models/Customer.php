@@ -257,6 +257,16 @@ class Customer extends Authenticatable implements HasMedia
             $query->where('type', $filters['type']);
         }
 
+        // HisabKitab feature — Lorry Receipt: only show customers that are
+        // linked to a Lorry Party Profile (owner / driver / broker).
+        if (! empty($filters['lorry_party_only'])) {
+            $query->whereExists(function ($q) {
+                $q->select(\DB::raw(1))
+                    ->from('tr_lorry_party_profiles')
+                    ->whereColumn('tr_lorry_party_profiles.customer_id', $this->qualifyColumn('id'));
+            });
+        }
+
         foreach ($scopes as $filter => $scope) {
             $value = $filters[$filter] ?? null;
 

@@ -12,7 +12,7 @@
     >
       <!-- HisabKitab feature — label from registered estimate document meta -->
       <BaseInputGroup
-        :label="currentDocMeta?.label ? `${currentDocMeta.label} Date` : $t('reports.estimates.estimate_date')"
+        :label="currentDocMeta?.dateLabel ?? (currentDocMeta?.label ? `${currentDocMeta.label} Date` : $t('reports.estimates.estimate_date'))"
         :content-loading="isLoading"
         required
         :error="v.estimate_date.$error && v.estimate_date.$errors[0].$message"
@@ -39,7 +39,7 @@
 
       <!-- HisabKitab feature — label from registered estimate document meta -->
       <BaseInputGroup
-        :label="currentDocMeta?.label ? `${currentDocMeta.label} Number` : $t('estimates.estimate_number')"
+        :label="currentDocMeta?.numberLabel ?? (currentDocMeta?.label ? `${currentDocMeta.label} Number` : $t('estimates.estimate_number'))"
         :content-loading="isLoading"
         required
         :error="

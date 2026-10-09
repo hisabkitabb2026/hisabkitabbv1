@@ -45,6 +45,9 @@ interface ExtensionApi {
     labelPlural: string
     listLink: string
     priority?: number
+    // HisabKitab feature — per-template field labels
+    dateLabel?: string
+    numberLabel?: string
   }): () => void
   registerDashboardCount(contribution: {
     id: string
@@ -133,6 +136,9 @@ window.InvoiceShelf.booting((_app, _router, extensions) => {
     label: 'LR Receipt',
     labelPlural: 'LR Receipts',
     listLink: '/admin/invoices?view=lr_receipt',
+    // HisabKitab feature — per-template field labels
+    dateLabel: 'Docket Date',
+    numberLabel: 'Docket No.',
   })
 
   // Customer portal page

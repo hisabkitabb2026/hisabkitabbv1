@@ -48,6 +48,15 @@ const sendAsAttachmentField = computed<boolean>({
 <template>
   <NumberCustomizer type="estimate" :type-store="estimateStore" />
 
+  <!-- HisabKitab feature — Quotation number format customizer -->
+  <BaseDivider class="mt-6 mb-2" />
+
+  <NumberCustomizer
+    type="quotation"
+    :type-store="estimateStore"
+    default-series="QUO"
+  />
+
   <BaseDivider class="mt-6 mb-2" />
   <EstimatesTabExpiryDate />
   <BaseDivider class="mt-6 mb-2" />

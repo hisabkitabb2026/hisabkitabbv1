@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Trips\Support;
 
+use App\Support\ModuleExtensions;
 use InvoiceShelf\Modules\Registry;
 
 final class ModuleRegistration
@@ -15,6 +16,7 @@ final class ModuleRegistration
 
         self::registerMenu();
         self::registerAbilities();
+        self::registerModuleExtensions();
     }
 
     /**
@@ -53,5 +55,14 @@ final class ModuleRegistration
                 'depends_on' => $dependsOn,
             ]);
         }
+    }
+
+    /**
+     * HisabKitab feature — register backend extensions with the host.
+     */
+    private static function registerModuleExtensions(): void
+    {
+        // Register the media library path folder for Trip model uploads.
+        ModuleExtensions::registerMediaPath('trip', 'Trips');
     }
 }

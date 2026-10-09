@@ -61,10 +61,10 @@ class ReceivablesAgingQuery
      */
     private function receivables(int|string $companyId): Builder
     {
-        return Invoice::query()
+        return CustomerInvoiceScope::apply(Invoice::query()
             ->whereCompanyId($companyId)
             ->where('type', Invoice::TYPE_INVOICE)
             ->where('status', '!=', Invoice::STATUS_DRAFT)
-            ->where('base_due_amount', '>', 0);
+            ->where('base_due_amount', '>', 0));
     }
 }

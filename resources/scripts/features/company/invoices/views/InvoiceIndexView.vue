@@ -152,35 +152,12 @@
       </BaseInputGroup>
     </BaseFilterWrapper>
 
-    <!-- HisabKitab feature -->
-    <div
+    <!-- HisabKitab feature — permission-missing UI is module-driven via extension slot -->
+    <ExtensionSlot
       v-if="receiptPermissionMissing"
-      class="flex flex-col items-center justify-center gap-4 py-16 text-center"
-    >
-      <span class="flex items-center justify-center w-14 h-14 rounded-full bg-surface-secondary">
-        <BaseIcon name="LockClosedIcon" class="w-7 h-7 text-muted" />
-      </span>
-      <div>
-        <h2 class="text-lg font-semibold text-heading">{{ viewModeLabel }}s</h2>
-        <p class="max-w-md mt-1 text-sm text-muted">
-          You don't have permission to view {{ viewModeLabel }}s. Ask the company owner for access.
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <BaseButton variant="primary" @click="openRequestModal">
-          <template #left="slotProps">
-            <BaseIcon name="EnvelopeIcon" :class="slotProps.class" />
-          </template>
-          Request Access
-        </BaseButton>
-        <BaseButton variant="white" @click="copyRequestMessage">
-          <template #left="slotProps">
-            <BaseIcon name="ClipboardDocumentIcon" :class="slotProps.class" />
-          </template>
-          Copy Request
-        </BaseButton>
-      </div>
-    </div>
+      name="invoice-permission-missing"
+      :view-mode-label="viewModeLabel"
+    />
 
     <!-- One-time invoices section (also used for LR Receipt & Lorry Receipt modes) -->
     <template v-if="viewMode !== 'recurring' && !receiptPermissionMissing">
@@ -281,9 +258,13 @@
             </span>
           </template>
 
-          <!-- HisabKitab feature — Paid To cell for lorry_receipt view -->
-          <template #cell-tr_paid_to="{ row }">
-            <span class="text-sm text-heading">{{ row.data.tr_paid_to ?? '-' }}</span>
+          <!-- HisabKitab feature — generic cell template for module-registered extra columns -->
+          <template
+            v-for="col in extraViewModeColumns"
+            :key="col.key"
+            #[`cell-${col.key}`]="{ row }"
+          >
+            <span class="text-sm text-heading">{{ row.data[col.key] ?? '-' }}</span>
           </template>
 
           <template #cell-invoice_date="{ row }">
@@ -291,7 +272,14 @@
           </template>
 
           <template #cell-total="{ row }">
+            <!-- HisabKitab feature — Lorry Receipt: Total = Advance (+ Net Amount Payable if final settlement done) -->
             <BaseFormatMoney
+              v-if="viewMode === 'lorry_receipt'"
+              :amount="lorryReceiptTotal(row.data)"
+              :currency="row.data.customer.currency"
+            />
+            <BaseFormatMoney
+              v-else
               :amount="row.data.total"
               :currency="row.data.customer.currency"
             />
@@ -304,7 +292,22 @@
           </template>
 
           <template #cell-due_amount="{ row }">
-            <div class="flex items-center justify-between gap-3">
+            <!-- HisabKitab feature — Lorry Receipt: Amount Due = Net Amount Payable (0 after final settlement) -->
+            <div v-if="viewMode === 'lorry_receipt'" class="flex items-center justify-between gap-3">
+              <BaseFormatMoney
+                :amount="lorryReceiptDueAmount(row.data)"
+                :currency="row.data.customer.currency"
+              />
+
+              <BasePaidStatusBadge
+                :status="lorryReceiptDueAmount(row.data) === 0 ? 'PAID' : 'UNPAID'"
+              >
+                <BaseInvoiceStatusLabel
+                  :status="lorryReceiptDueAmount(row.data) === 0 ? 'PAID' : 'UNPAID'"
+                />
+              </BasePaidStatusBadge>
+            </div>
+            <div v-else class="flex items-center justify-between gap-3">
               <BaseFormatMoney
                 :amount="row.data.due_amount"
                 :currency="row.data.currency"
@@ -523,10 +526,9 @@ import RecurringInvoiceDropdown from '../../recurring-invoices/components/Recurr
 import { useUserStore } from '../../../../stores/user.store'
 import { useGlobalStore } from '../../../../stores/global.store'
 import { useDialogStore } from '../../../../stores/dialog.store'
-import { useCompanyStore } from '../../../../stores/company.store'
-import { useNotificationStore } from '../../../../stores/notification.store'
 // HisabKitab feature
 import { extensionRegistry, extensionItems } from '@/scripts/extensions/runtime'
+import ExtensionSlot from '@/scripts/extensions/ExtensionSlot.vue'
 import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 import type { Invoice } from '../../../../types/domain/invoice'
 import type { RecurringInvoice } from '../../../../types/domain/recurring-invoice'
@@ -566,8 +568,6 @@ const invoiceStore = useInvoiceStore()
 const recurringInvoiceStore = useRecurringInvoiceStore()
 const userStore = useUserStore()
 const globalStore = useGlobalStore()
-const companyStore = useCompanyStore()
-const notificationStore = useNotificationStore()
 const dialogStore = useDialogStore()
 const route = useRoute()
 const router = useRouter()
@@ -602,49 +602,17 @@ const registeredViewModeValues = computed(() =>
 // HisabKitab feature — document meta (labels) for the current view mode
 const { currentDocMeta } = useDocumentMeta(() => viewMode.value)
 
+// HisabKitab feature — extra columns registered by the current view mode's module
+const extraViewModeColumns = computed(() => {
+  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  return (vm as any)?.columns ?? []
+})
+
 // True when the current view mode is a receipt type the member may not see.
 const receiptPermissionMissing = computed<boolean>(() => {
   if (viewMode.value === 'one-time' || viewMode.value === 'recurring') return false
   return !registeredViewModeValues.value.has(viewMode.value)
 })
-
-// "Request access" message the member can mail or paste to the company owner.
-const requestAccessMessage = computed<string>(() => {
-  const companyName = companyStore.selectedCompany?.name ?? ''
-  const label = viewModeLabel.value
-  const userName = userStore.currentUser?.name ?? ''
-  return [
-    'Hello,',
-    '',
-    `I need access to ${label}s in ${companyName}.`,
-    '',
-    'Could you grant me the permission to view them? You can do this under Settings → Roles → my role.',
-    '',
-    'Thank you,',
-    userName,
-  ].join('\n')
-})
-
-// HisabKitab feature — access request modal is handled by the AccessRequest module
-// via a companyLayoutOverlay. The host just dispatches a DOM event.
-function openRequestModal(): void {
-  window.dispatchEvent(new CustomEvent('access-request:open', {
-    detail: {
-      subject: `Request: Access to ${viewModeLabel.value}s`,
-      message: requestAccessMessage.value,
-      recipient: companyStore.selectedCompany?.owner?.email ?? 'the company owner',
-    },
-  }))
-}
-
-async function copyRequestMessage(): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(requestAccessMessage.value)
-    notificationStore.showNotification({ type: 'success', message: 'Request copied — paste it to the owner in chat or email' })
-  } catch {
-    notificationStore.showNotification({ type: 'error', message: 'Could not copy the request' })
-  }
-}
 
 // The ?view= query param must win at setup time: the table fetches its first
 // page in a child onMounted hook that runs before this view's onMounted, so
@@ -899,6 +867,31 @@ const hasAtLeastOneAbility = computed<boolean>(() => {
 
 type TableColumn = Omit<ColumnDef, 'label'> & { label?: string }
 
+// HisabKitab feature — Lorry Receipt: convert tr_ text (major units) to cents
+function trToCents(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.round(n * 100) : 0
+}
+
+// HisabKitab feature — Lorry Receipt Total:
+//   Before final settlement: Advance only
+//   After final settlement (tr_final_balance_on set): Advance + Net Amount Payable
+function lorryReceiptTotal(row: Record<string, any>): number {
+  const advance = trToCents(row.tr_advance_amount)
+  const finalSettled = !!row.tr_final_balance_on
+  if (!finalSettled) return advance
+  return advance + trToCents(row.tr_net_amount_payable)
+}
+
+// HisabKitab feature — Lorry Receipt Amount Due:
+//   Before final settlement: Net Amount Payable (remaining after advance)
+//   After final settlement: 0 (settled)
+function lorryReceiptDueAmount(row: Record<string, any>): number {
+  const finalSettled = !!row.tr_final_balance_on
+  if (finalSettled) return 0
+  return trToCents(row.tr_net_amount_payable)
+}
+
 const invoiceColumns = computed<TableColumn[]>(() => [
   {
     key: 'checkbox',
@@ -914,12 +907,10 @@ const invoiceColumns = computed<TableColumn[]>(() => [
     mobile: 'subtitle',
   },
   // HisabKitab feature — column labels from registered document meta
-  { key: 'invoice_number', label: currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('invoices.number'), mobile: 'subtitle' },
+  { key: 'invoice_number', label: currentDocMeta.value?.numberLabel ?? (currentDocMeta.value?.label ? `${currentDocMeta.value.label} No.` : t('invoices.number')), mobile: 'subtitle' },
   { key: 'name', label: currentDocMeta.value?.labelPlural ? currentDocMeta.value.labelPlural.replace(/s$/, '') : t('invoices.customer'), mobile: 'title' },
-  // HisabKitab feature — Paid To column for lorry_receipt view
-  ...(viewMode.value === 'lorry_receipt'
-    ? [{ key: 'tr_paid_to', label: 'Paid To' }]
-    : []),
+  // HisabKitab feature — extra columns from the current view mode's module
+  ...extraViewModeColumns.value,
   { key: 'status', label: t('invoices.status') },
   {
     key: 'due_amount',

@@ -1,15 +1,21 @@
 <template>
   <div class="grid grid-cols-12 gap-4 mt-5 mb-6 md:gap-8 md:mb-8">
     <div class="col-span-12 lg:col-span-6 pe-0 space-y-4">
+      <!-- HisabKitab feature — Lorry Receipt: customer list is filtered
+           server-side to only party-profile-linked customers -->
       <BaseCustomerSelectPopup
         :valid="v.customer_id"
         :content-loading="isLoading"
         type="invoice"
+        :label="isLrReceipt ? 'Consignor' : null"
       />
-
-      <!-- HisabKitab feature — Consignee picker for LR Receipt, sits below customer picker -->
-      <ConsigneeSelectPopup
+      <!-- HisabKitab feature — consignee picker (LR Receipt only) -->
+      <BaseCustomerSelectPopup
+        v-if="isLrReceipt"
         :content-loading="isLoading"
+        type="invoice"
+        consignee-mode
+        label="Consignee"
       />
     </div>
 
@@ -26,7 +32,7 @@
       class="col-span-12 p-4 border lg:col-span-6 glass rounded-xl md:p-5 self-start"
     >
       <BaseInputGroup
-        :label="$t('invoices.invoice_date')"
+        :label="currentDocMeta?.dateLabel ?? $t('invoices.invoice_date')"
         :content-loading="isLoading"
         required
         :error="v.invoice_date.$error && v.invoice_date.$errors[0].$message"
@@ -54,7 +60,7 @@
       </BaseInputGroup>
 
       <BaseInputGroup
-        :label="$t('invoices.invoice_number')"
+        :label="currentDocMeta?.numberLabel ?? $t('invoices.invoice_number')"
         :content-loading="isLoading"
         :error="v.invoice_number.$error && v.invoice_number.$errors[0].$message"
         required
@@ -75,10 +81,11 @@
         :customer-currency="invoiceStore.newInvoice.currency_id"
       />
 
-      <!-- Document-level custom fields sit with the number and the dates:
-           they are attributes of the document, not a separate section. -->
+      <!-- HisabKitab feature — custom fields removed for transport receipts
+           (all fields now live in the module form sections). -->
       <CustomFieldInput
         v-for="field in customFields"
+        v-if="!isTransportReceipt"
         :key="field.id"
         :custom-field-scope="customFieldScope"
         :field="field"
@@ -92,9 +99,10 @@ import { computed } from 'vue'
 import { ExchangeRateConverter } from '../../../shared/document-form'
 import { useInvoiceStore } from '../store'
 import RecurringFields from './RecurringFields.vue'
-import ConsigneeSelectPopup from './ConsigneeSelectPopup.vue'
 import CustomFieldInput from '@/scripts/features/shared/custom-fields/CustomFieldInput.vue'
 import { useCustomFields } from '@/scripts/features/shared/custom-fields/use-custom-fields'
+// HisabKitab feature — per-template field labels
+import { useDocumentMeta } from '@/scripts/composables/use-document-meta'
 
 interface ValidationField {
   $error: boolean
@@ -136,4 +144,21 @@ const time24h = computed<boolean>(() => {
   const format = props.companySettings?.carbon_time_format ?? ''
   return format.indexOf('H') > -1
 })
+
+// HisabKitab feature — consignee picker (LR Receipt only)
+const isLrReceipt = computed<boolean>(
+  () => invoiceStore.newInvoice.template_name === 'lr_receipt',
+)
+
+// HisabKitab feature — transport receipts have their own fields, hide custom fields
+const isTransportReceipt = computed<boolean>(() => {
+  const t = invoiceStore.newInvoice.template_name
+  return t === 'lr_receipt' || t === 'lorry_receipt' || t === 'invoice_receipt'
+})
+
+// HisabKitab feature — per-template field labels from registered document meta
+const { currentDocMeta } = useDocumentMeta(() => invoiceStore.newInvoice.template_name ?? undefined)
+
+const dateLabel = computed<string>(() => currentDocMeta.value?.dateLabel ?? 'invoices.invoice_date')
+const numberLabel = computed<string>(() => currentDocMeta.value?.numberLabel ?? 'invoices.invoice_number')
 </script>

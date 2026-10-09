@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LorryReceipt\Application;
 
+use App\Domains\Contacts\Application\CustomerService;
+use App\Domains\Contacts\Models\Customer;
 use App\Domains\Purchases\Application\PurchaseDocumentService;
 use App\Domains\Purchases\Application\PurchaseInputs;
 use App\Domains\Purchases\Application\SupplierService;
@@ -48,6 +50,7 @@ class LorryReceiptPayablesService
         private readonly SupplierService $suppliers,
         private readonly PurchaseDocumentService $documents,
         private readonly SupplierSettlementService $settlements,
+        private readonly CustomerService $customers,
     ) {}
 
     /**
@@ -102,6 +105,61 @@ class LorryReceiptPayablesService
         }
 
         return $supplier;
+    }
+
+    /**
+     * The Customer behind a party profile, created on first use and kept in
+     * step with the profile's contact details. Every profile — owner, driver
+     * or broker — gets a Customer so it can be selected in the Lorry Receipt
+     * customer dropdown.
+     */
+    public function ensureCustomer(LorryPartyProfile $profile): Customer
+    {
+        $companyId = (int) $profile->company_id;
+
+        $existing = $profile->customer_id
+            ? Customer::query()->where('company_id', $companyId)->find($profile->customer_id)
+            : null;
+
+        $attributes = [
+            'name' => $profile->name,
+            'phone' => $profile->phone,
+            'company_id' => $companyId,
+            'currency_id' => PurchaseInputs::companyCurrency($companyId),
+        ];
+
+        $shippingAddress = $profile->address
+            ? ['address_street_1' => trim((string) $profile->address)]
+            : null;
+
+        if ($existing) {
+            $this->customers->updateProfile($existing, $attributes, $shippingAddress);
+            $customer = $existing->fresh();
+        } else {
+            $customer = $this->customers->create($attributes, $shippingAddress);
+        }
+
+        if ($profile->customer_id !== $customer->id) {
+            $profile->forceFill(['customer_id' => $customer->id])->saveQuietly();
+        }
+
+        return $customer;
+    }
+
+    /**
+     * Link a party profile to a Customer the company already has.
+     */
+    public function linkCustomer(LorryPartyProfile $profile, int $customerId): Customer
+    {
+        $customer = Customer::query()
+            ->where('company_id', (int) $profile->company_id)
+            ->findOrFail($customerId);
+
+        if ($profile->customer_id !== $customer->id) {
+            $profile->forceFill(['customer_id' => $customer->id])->saveQuietly();
+        }
+
+        return $customer;
     }
 
     /**

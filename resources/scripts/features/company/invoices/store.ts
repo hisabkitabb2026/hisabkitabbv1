@@ -98,6 +98,9 @@ export interface InvoiceFormData {
   currency_id?: number
   // Invoice Receipt (office invoice) module: GST Tax Through selector
   gst_tax_payable_by?: string | null
+  // HisabKitab feature — consignee picker (LR Receipt)
+  consignee?: Customer | null
+  tr_consignee_customer_id?: number | null
 }
 
 function createInvoiceStub(): InvoiceFormData {
@@ -128,6 +131,9 @@ function createInvoiceStub(): InvoiceFormData {
     fields: [],
     selectedNote: null,
     selectedCurrency: '',
+    // HisabKitab feature — consignee picker (LR Receipt)
+    consignee: null,
+    tr_consignee_customer_id: null,
   }
 }
 
@@ -468,6 +474,24 @@ export const useInvoiceStore = defineStore('invoice', {
     resetSelectedCustomer(): void {
       this.newInvoice.customer = null
       this.newInvoice.customer_id = null
+    },
+
+    // HisabKitab feature — consignee picker support (LR Receipt)
+    isConsigneeMode: false,
+
+    async selectConsignee(id: number): Promise<unknown> {
+      const { customerService } = await import(
+        '../../../api/services/customer.service'
+      )
+      const response = await customerService.get(id)
+      this.newInvoice.consignee = response.data as unknown as Customer
+      this.newInvoice.tr_consignee_customer_id = response.data.id
+      return response
+    },
+
+    resetSelectedConsignee(): void {
+      this.newInvoice.consignee = null
+      this.newInvoice.tr_consignee_customer_id = null
     },
 
     addItem(): void {
