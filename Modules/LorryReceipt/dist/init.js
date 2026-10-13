@@ -650,10 +650,10 @@ var E = ["aria-label"], D = { class: "flex items-start gap-3" }, te = {
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),
-						l(p, { label: "No Of Pages" }, {
+ l(p, { label: "LR Number" }, {
 							default: C(() => [l(c, {
-								modelValue: n.value.tr_no_of_pages,
-								"onUpdate:modelValue": t[2] ||= (e) => n.value.tr_no_of_pages = e
+ modelValue: n.value.tr_received_no_bilties,
+ "onUpdate:modelValue": t[2] ||= (e) => n.value.tr_received_no_bilties = e
 							}, null, 8, ["modelValue"])]),
 							_: 1
 						}),

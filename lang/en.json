@@ -247,6 +247,17 @@
       "empty_description": "Estimates you send show up here.",
       "portal_empty_description": "Estimates sent to you show up here."
     },
+    "recent_quotation_card": {
+      "title": "Recent quotations",
+      "date": "Date",
+      "customer": "Customer",
+      "amount_due": "Amount",
+      "actions": "Actions",
+      "view_all": "View all",
+      "empty_title": "No quotations yet",
+      "empty_description": "Quotations you send show up here.",
+      "portal_empty_description": "Quotations sent to you show up here."
+    },
     "receivables": {
       "title": "Owed to you",
       "on_invoices": "On {count} sent invoice | On {count} sent invoices",
@@ -551,6 +562,10 @@
       "type_item_description": "Type Item Description (optional)"
     },
     "mark_as_default_estimate_template_description": "If enabled, the selected template will be automatically selected for new estimates."
+  },
+  "quotations": {
+    "title": "Quotations",
+    "new_quotation": "New Quotation"
   },
   "invoices": {
     "title": "Invoices",

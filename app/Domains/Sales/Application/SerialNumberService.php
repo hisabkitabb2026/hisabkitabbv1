@@ -177,9 +177,14 @@ class SerialNumberService
 
             // HisabKitab feature — fall back to the base format if a receipt-specific
             // format is not yet configured (backward compatibility)
-            if (! $format && $this->settingKey && $this->settingKey !== $derivedKey) {
+            if ($format === null && $this->settingKey && $this->settingKey !== $derivedKey) {
                 $format = CompanySetting::getSetting($derivedKey, $this->company);
             }
+        }
+
+        // HisabKitab feature — Return empty string if format is empty/blank (manual numbering mode)
+        if ($format === '' || $format === null) {
+            return '';
         }
 
         $this->setNextNumbers();

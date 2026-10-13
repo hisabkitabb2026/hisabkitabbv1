@@ -21,7 +21,9 @@ export function poweredBy(): PoweredBy | null {
   return window.powered_by === undefined ? DEFAULT_POWERED_BY : window.powered_by
 }
 
-/** Where the source code of the running version is (AGPL section 13). */
+// HisabKitab feature
+/** Where the source code of the running version is (disabled). */
 export function sourceUrl(): string | null {
-  return window.source_url ?? null
+  return null
 }
+

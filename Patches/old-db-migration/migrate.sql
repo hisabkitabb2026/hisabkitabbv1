@@ -461,7 +461,17 @@ INSERT INTO assigned_roles (role_id, entity_id, entity_type, restricted_to_id,
 SELECT role_id, entity_id, 'user', restricted_to_id, restricted_to_type, scope
 FROM ssgls_old.assigned_roles;
 
--- Step 35: Update morph map types in abilities
+-- Step 35: permissions (Bouncer role→ability mappings)
+-- CRITICAL: Without this table every authorize() check returns 403, because
+-- Bouncer sees the user's role but that role has no abilities linked to it.
+-- The old DB's permissions only cover the core abilities that existed back then
+-- (47 of 141); module abilities (tasks-projects, trips, etc.) are added by
+-- Step 37 below, and `php artisan modules:sync-abilities` (post-migration).
+INSERT INTO permissions (id, ability_id, entity_id, entity_type, forbidden, scope)
+SELECT id, ability_id, entity_id, entity_type, forbidden, scope
+FROM ssgls_old.permissions;
+
+-- Step 36: Update morph map types in abilities
 UPDATE abilities SET entity_type = 'customer'     WHERE entity_type = 'App\\Models\\Customer';
 UPDATE abilities SET entity_type = 'item'         WHERE entity_type = 'App\\Models\\Item';
 UPDATE abilities SET entity_type = 'invoice'      WHERE entity_type = 'App\\Models\\Invoice';
@@ -474,13 +484,21 @@ UPDATE abilities SET entity_type = 'note'         WHERE entity_type = 'App\\Mode
 UPDATE abilities SET entity_type = 'custom_field' WHERE entity_type = 'App\\Models\\CustomField';
 UPDATE abilities SET entity_type = 'exchange_rate_provider' WHERE entity_type = 'App\\Models\\ExchangeRateProvider';
 
+-- Step 37: Grant ALL abilities to super admin roles
+-- The old DB's super admin role only had 47 of the 141 core abilities that
+-- existed at the time. The current app has 188+ abilities (core + modules).
+-- Without this, super admin gets 403 on any ability not in the old set
+-- (custom-fields, tasks-projects, trips, module abilities, etc.).
+-- This cross-joins every ability with every 'super admin' role.
+INSERT IGNORE INTO permissions (ability_id, entity_id, entity_type, forbidden, scope)
+SELECT a.id, r.id, 'roles', 0, r.scope
+FROM abilities a
+CROSS JOIN roles r
+WHERE r.name = 'super admin';
+
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ============================================================
--- DONE. Run post-migration steps:
---   php artisan roles:apply-preset-defaults
---   php artisan optimize:clear
---   See README.md Section 10 for full verification
+--   php artisan modules:sync-abilities
 -- ============================================================
 
 

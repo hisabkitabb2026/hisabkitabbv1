@@ -232,15 +232,15 @@
             </div>
           </template>
 
+          <!-- HisabKitab feature — customer name as plain text, not a link.
+               On mobile the name cell is the largest tap target on the row, so a
+               router-link here intercepts the row click and navigates to the
+               customer page instead of the invoice. Plain text lets the row's
+               :row-to binding handle navigation consistently. -->
           <template #cell-name="{ row }">
-            <router-link
-              v-if="row.data.customer?.id"
-              :to="`/admin/customers/${row.data.customer.id}/view`"
-              class="font-medium text-heading hover:text-primary-600"
-            >
-              {{ row.data.customer.name }}
-            </router-link>
-            <span v-else>{{ row.data.customer?.name ?? '-' }}</span>
+            <span class="font-medium text-heading">
+              {{ row.data.customer?.name ?? '-' }}
+            </span>
           </template>
 
           <template #cell-invoice_number="{ row }">
@@ -873,23 +873,16 @@ function trToCents(value: unknown): number {
   return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-// HisabKitab feature — Lorry Receipt Total:
-//   Before final settlement: Advance only
-//   After final settlement (tr_final_balance_on set): Advance + Net Amount Payable
+// HisabKitab feature — Lorry Receipt Total & Amount Due:
+//   The InvoiceObserver calculates total = lorry_hire + other_charges and
+//   due_amount = total - advance (0 after final settlement). These are stored
+//   in the invoices table, so we use the DB values directly.
 function lorryReceiptTotal(row: Record<string, any>): number {
-  const advance = trToCents(row.tr_advance_amount)
-  const finalSettled = !!row.tr_final_balance_on
-  if (!finalSettled) return advance
-  return advance + trToCents(row.tr_net_amount_payable)
+  return Number(row.total) || 0
 }
 
-// HisabKitab feature — Lorry Receipt Amount Due:
-//   Before final settlement: Net Amount Payable (remaining after advance)
-//   After final settlement: 0 (settled)
 function lorryReceiptDueAmount(row: Record<string, any>): number {
-  const finalSettled = !!row.tr_final_balance_on
-  if (finalSettled) return 0
-  return trToCents(row.tr_net_amount_payable)
+  return Number(row.due_amount) || 0
 }
 
 const invoiceColumns = computed<TableColumn[]>(() => [

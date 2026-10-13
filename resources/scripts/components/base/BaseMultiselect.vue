@@ -1488,7 +1488,8 @@ function handleKeydown(event: KeyboardEvent): void {
     }
   }
 
-  if (props.addTagOn.includes(event.key.toLowerCase()) || event.key === 'Enter') {
+  // HisabKitab feature — guard against undefined event.key (IME composition, non-standard events)
+  if (props.addTagOn.includes((event.key ?? '').toLowerCase()) || event.key === 'Enter') {
     if (!dropdownVisible.value && !createTagOption.value) {
       return
     }

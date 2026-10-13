@@ -138,6 +138,10 @@ function selectNewCustomer(id: number): void {
   if (route.params.id) params.model_id = route.params.id
 
   if (props.type === 'invoice') {
+    // HisabKitab feature — preserve active receipt template key so serial number format doesn't revert to invoice
+    if (invoiceStore.newInvoice.template_name) {
+      params.key = invoiceStore.newInvoice.template_name
+    }
     invoiceStore.getNextNumber(params, true)
     invoiceStore.selectCustomer(id)
   } else if (props.type === 'estimate') {

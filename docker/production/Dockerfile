@@ -75,7 +75,7 @@ FROM base AS production
         COMPOSER_AUTH="$(cat /run/secrets/composer_auth 2>/dev/null || true)" \
         composer install --prefer-dist --no-dev --optimize-autoloader
 
-    USER root
+    # Copy entrypoint and inject script, and make sure they are executable
     COPY --chmod=755 docker/production/inject.sh /inject.sh
     COPY --chmod=755 docker/production/entrypoint.d/ /etc/entrypoint.d/
 
@@ -83,12 +83,8 @@ FROM base AS production
     # starts neither a cron daemon nor a scheduler, so without this service
     # nothing in routes/console.php ever runs: no recurring invoices, no
     # overdue flagging, no estimate expiry. Set SCHEDULER_ENABLED=false to run
-    # the schedule from somewhere else instead. The service is registered in
-    # user-bundles.d/user/contents.d, where S6 Overlay 3.2.3 (serversideup v5)
-    # keeps the user bundle; an /etc/s6-overlay/s6-rc.d/user directory makes the
-    # container fail at boot.
-    COPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/
-    RUN chown -R www-data:www-data /etc/s6-overlay && chmod -R 775 /etc/s6-overlay
+    # the schedule from somewhere else instead.
+    # HisabKitab feature — s6-overlay removed (permission conflict with www-data user)
 
     USER www-data
 

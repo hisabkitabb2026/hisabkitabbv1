@@ -12,6 +12,7 @@ use App\Domains\Sales\Contracts\RecurringInvoiceNotifier;
 use App\Domains\Sales\Models\Invoice;
 use App\Domains\Sales\Models\RecurringInvoice;
 use App\Support\MoneyConversion;
+use App\Support\ModuleExtensions;
 use App\Support\PublicToken;
 use App\Support\Recurrence\Cadence;
 use App\Support\Recurrence\RecurrenceRunner;
@@ -274,12 +275,26 @@ class RecurringInvoiceService
 
         $customer = $this->checkTemplate($recurringInvoice);
 
+        // HisabKitab feature — scope sequence number resolution to template type
+        $scope = ['type' => Invoice::TYPE_INVOICE];
+        if ($recurringInvoice->template_name) {
+            $registered = ModuleExtensions::getSerialNumberType($recurringInvoice->template_name);
+            if ($registered !== null && isset($registered['scope'])) {
+                $scope = $registered['scope'];
+            }
+        }
+
         $serial = (new SerialNumberService)
             ->setModel(new Invoice)
             ->setCompany($recurringInvoice->company_id)
             ->setCustomer($recurringInvoice->customer_id)
-            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
-            ->setNextNumbers();
+            ->setSequenceScope($scope);
+
+        if ($recurringInvoice->template_name && ModuleExtensions::hasSerialNumberType($recurringInvoice->template_name)) {
+            $serial->setSettingKey($recurringInvoice->template_name.'_number_format');
+        }
+
+        $serial->setNextNumbers();
 
         $days = intval(CompanySetting::getSetting('invoice_due_date_days', $recurringInvoice->company_id));
 

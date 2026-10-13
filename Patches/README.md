@@ -103,11 +103,13 @@ git diff invoiceshelf/3.x -- \
   resources/scripts/api/services/invoice.service.ts \
   resources/scripts/components/base/BaseCustomerSelectPopup.vue \
   resources/scripts/components/base/BaseFileUploader.vue \
+  resources/scripts/components/base/BaseMultiselect.vue \
   resources/scripts/composables/use-active-menu-link.ts \
   resources/scripts/composables/use-create-actions.ts \
   resources/scripts/features/company/customers/components/CustomerModal.vue \
   resources/scripts/features/company/customers/store.ts \
   resources/scripts/features/company/dashboard/components/ReceivablesHero.vue \
+  resources/scripts/features/company/dashboard/components/DashboardTable.vue \
   resources/scripts/features/company/dashboard/store.ts \
   resources/scripts/features/company/dashboard/views/DashboardView.vue \
   resources/scripts/features/company/estimates/components/EstimateBasicFields.vue \
@@ -126,6 +128,7 @@ git diff invoiceshelf/3.x -- \
   resources/scripts/features/customer-portal/views/CustomerInvoiceDetailView.vue \
   resources/scripts/features/customer-portal/views/CustomerInvoicesView.vue \
   resources/scripts/layouts/partials/MobileTabBar.vue \
+  resources/scripts/main.ts \
   resources/scripts/stores/global.store.ts \
   resources/scripts/utils/format-money.ts \
   > patches/frontend/02-host-hooks.patch
@@ -139,7 +142,9 @@ git diff invoiceshelf/3.x -- \
   composer.json config/database.php database/seeders/DemoSeeder.php \
   docker-compose.ec2.yml docker/production/Dockerfile \
   docker/production/docker-compose.mysql.yml docker/production/docker-compose.sqlite.yml \
-  infrastructure/observability/ phpunit.xml \
+  infrastructure/observability/ lang/en.json \
+  public/favicons/site.webmanifest public/sw.js \
+  phpunit.xml \
   > patches/environment/01-deployment.patch
 ```
 

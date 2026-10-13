@@ -520,6 +520,10 @@
         return '';
     };
 
+    $companyField = function ($keys) use ($invoice, $fieldValue) {
+        return $invoice->company ? $fieldValue($invoice->company->fields ?? [], $keys) : '';
+    };
+
     $numericField = function ($value) {
         return (float) preg_replace('/[^0-9.\-]/', '', (string) $value);
     };
@@ -682,11 +686,10 @@
             e($address?->country_name),
         ]));
     }
-    // PAN No: Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
-    $panNo = $invoiceField(['pan_no', 'pan']) ?: ($invoice->company?->tax_id ?: ($invoice->company?->pan_no ?: ''));
-    // GSTIN: VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
-    $companyGstin = $invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->vat_id ?: ($invoice->company?->gstin ?: ''));
-    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
+    // PAN No, GSTIN and Enrollment No come from the company custom fields set on /admin/settings/company-info
+    $panNo = $companyField(['PAN No.', 'pan_no', 'pan']);
+    $companyGstin = $companyField(['GSTIN', 'gstin', 'gst_no']);
+    $companyEnrollmentNo = $companyField(['Enrollment No', 'enrollment_no', 'enrollment']);
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
     $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
 

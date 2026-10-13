@@ -149,27 +149,47 @@ watch(selectedFields, () => {
 setInitialFields()
 
 async function setInitialFields(): Promise<void> {
-  const data = {
-    format: companyStore.selectedCompanySettings[`${props.type}_number_format`],
+  const currentSetting = companyStore.selectedCompanySettings[`${props.type}_number_format`]
+
+  // HisabKitab feature — If the setting is explicitly empty string, user intentionally removed all components (manual mode)
+  if (currentSetting === '') {
+    selectedFields.value = []
+    nextNumber.value = ''
+    return
+  }
+
+  // HisabKitab feature — Fallback to default receipt format if not configured yet
+  const formatToLoad = currentSetting ?? (
+    props.defaultSeries
+      ? `{{SERIES:${props.defaultSeries}}}{{DELIMITER:-}}{{SEQUENCE:6}}`
+      : companyStore.selectedCompanySettings[`${props.type === 'quotation' ? 'estimate' : 'invoice'}_number_format`]
+  )
+
+  if (!formatToLoad) {
+    selectedFields.value = []
+    nextNumber.value = ''
+    return
   }
 
   isLoadingPlaceholders.value = true
 
-  const res = await globalStore.fetchPlaceholders(data as { key: string })
+  try {
+    const res = await globalStore.fetchPlaceholders({ format: formatToLoad } as { key: string })
 
-  res.placeholders.forEach((placeholder) => {
-    const found = allFields.value.find((field) => field.name === placeholder.name)
-    if (!found) return
+    res.placeholders?.forEach((placeholder) => {
+      const found = allFields.value.find((field) => field.name === placeholder.name)
+      if (!found) return
 
-    selectedFields.value.push({
-      ...found,
-      value: placeholder.value ?? found.value,
-      id: generateClientId(),
+      selectedFields.value.push({
+        ...found,
+        value: placeholder.value ?? found.value,
+        id: generateClientId(),
+      })
     })
-  })
-
-  isLoadingPlaceholders.value = false
-  fetchNextNumber()
+  } finally {
+    isLoadingPlaceholders.value = false
+    fetchNextNumber()
+  }
 }
 
 function isFieldAdded(field: Omit<NumberField, 'id'>): boolean {
@@ -263,16 +283,19 @@ async function submitForm(): Promise<boolean> {
 
   isSaving.value = true
 
-  const data: { settings: Record<string, string> } = { settings: {} }
-  data.settings[props.type + '_number_format'] = getNumberFormat.value
+  try {
+    const data: { settings: Record<string, string> } = { settings: {} }
+    data.settings[props.type + '_number_format'] = getNumberFormat.value
 
-  await companyStore.updateCompanySettings({
-    data,
-    message: `settings.customization.${props.type}s.${props.type}_settings_updated`,
-  })
-
-  isSaving.value = false
-  return true
+    await companyStore.updateCompanySettings({
+      data,
+      message: `settings.customization.${props.type}s.${props.type}_settings_updated`,
+    })
+    return true
+  } finally {
+    // HisabKitab feature — Ensure isSaving resets even on API error to avoid infinite button rotation
+    isSaving.value = false
+  }
 }
 </script>
 

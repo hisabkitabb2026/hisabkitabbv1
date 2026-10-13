@@ -41,3 +41,24 @@ declare global {
 const invoiceShelf = new InvoiceShelf()
 window.InvoiceShelf = invoiceShelf
 window.loadLanguage = (locale: string) => invoiceShelf.loadLanguage(locale)
+
+
+// HisabKitab feature — Disable right-click context menu across the application
+document.addEventListener('contextmenu', (e: MouseEvent) => {
+  e.preventDefault()
+})
+
+// HisabKitab feature — Unregister any existing service workers and clear cache storage
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((reg) => reg.unregister())
+    })
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key))
+      })
+    }
+  })
+}
+

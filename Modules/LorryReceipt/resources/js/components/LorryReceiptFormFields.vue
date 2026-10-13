@@ -13,7 +13,6 @@
  *   6. Owner Details (auto-filled by party selector, editable)
  *   7. Driver Details (auto-filled by party selector, editable)
  *   8. Broker Details (auto-filled by party selector, editable)
- *   9. Received Bilties
  */
 import { computed, watch, ref, shallowRef, onMounted } from 'vue'
 import type { AxiosInstance } from 'vue'
@@ -283,8 +282,8 @@ onMounted(() => {
         <BaseInputGroup label="To">
           <BaseInput v-model="invoiceData.tr_to_name" />
         </BaseInputGroup>
-        <BaseInputGroup label="No Of Pages">
-          <BaseInput v-model="invoiceData.tr_no_of_pages" />
+        <BaseInputGroup label="LR Number">
+          <BaseInput v-model="invoiceData.tr_received_no_bilties" />
         </BaseInputGroup>
         <BaseInputGroup label="No Of Packages">
           <BaseInput v-model="invoiceData.tr_no_of_packages" />

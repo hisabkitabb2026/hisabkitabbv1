@@ -18,6 +18,7 @@ use App\Platform\Pdf\Facades\Pdf;
 use App\Platform\Pdf\Rendering\PdfMetadata;
 use App\Platform\Pdf\Rendering\PdfTemplateUtils;
 use App\Support\MoneyConversion;
+use App\Support\ModuleExtensions;
 use App\Support\PublicToken;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -53,10 +54,11 @@ class InvoiceService implements InvoicePdfDataProvider
     ): Invoice {
         $invoice = Invoice::create($attributes);
 
+        // HisabKitab feature — scope sequence number resolution to template type
         $serial = (new SerialNumberService)
             ->setCompany($invoice->company_id)
             ->setCustomer($invoice->customer_id)
-            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
+            ->setSequenceScope($this->resolveSequenceScope($invoice->template_name ?? ($attributes['template_name'] ?? null)))
             ->setModel($invoice)
             ->setNextNumbers();
 
@@ -98,11 +100,14 @@ class InvoiceService implements InvoicePdfDataProvider
         ?array $taxes = null,
         ?iterable $customFields = null,
     ): Invoice {
+        $templateName = $attributes['template_name'] ?? $invoice->template_name;
+
+        // HisabKitab feature — scope sequence number resolution to template type
         $serial = (new SerialNumberService)
             ->setCompany($invoice->company_id)
             ->setModel($invoice)
             ->setCustomer($attributes['customer_id'])
-            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
+            ->setSequenceScope($this->resolveSequenceScope($templateName))
             ->setModelObject($invoice->id)
             ->setNextNumbers();
 
@@ -347,12 +352,18 @@ class InvoiceService implements InvoicePdfDataProvider
     {
         $date = Carbon::now();
 
+        // HisabKitab feature — scope sequence number resolution to template type
         $serial = (new SerialNumberService)
             ->setCompany($invoice->company_id)
             ->setCustomer($invoice->customer_id)
-            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
-            ->setModel($invoice)
-            ->setNextNumbers();
+            ->setSequenceScope($this->resolveSequenceScope($invoice->template_name))
+            ->setModel($invoice);
+
+        if ($invoice->template_name && ModuleExtensions::hasSerialNumberType($invoice->template_name)) {
+            $serial->setSettingKey($invoice->template_name.'_number_format');
+        }
+
+        $serial->setNextNumbers();
 
         $dueDate = null;
         $autoDueDate = CompanySetting::getSetting('invoice_set_due_date_automatically', $invoice->company_id);
@@ -388,7 +399,7 @@ class InvoiceService implements InvoicePdfDataProvider
         $newInvoice = Invoice::create([
             'invoice_date' => $date->toDateString(),
             'due_date' => $dueDate,
-            'invoice_number' => $serial->getNextNumber(),
+            'invoice_number' => $serial->getNextNumber() ?: $invoice->invoice_number.'-COPY',
             'sequence_number' => $serial->nextSequenceNumber,
             'customer_sequence_number' => $serial->nextCustomerSequenceNumber,
             'status' => Invoice::STATUS_DRAFT,
@@ -519,5 +530,22 @@ class InvoiceService implements InvoicePdfDataProvider
 
             $invoice->changeInvoiceStatus((int) $invoice->due_amount);
         }
+    }
+
+    /**
+     * HisabKitab feature — Scope the sequence number resolution to the template type if registered.
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveSequenceScope(?string $templateName): array
+    {
+        if ($templateName) {
+            $registered = ModuleExtensions::getSerialNumberType($templateName);
+            if ($registered !== null && isset($registered['scope'])) {
+                return $registered['scope'];
+            }
+        }
+
+        return ['type' => Invoice::TYPE_INVOICE];
     }
 }

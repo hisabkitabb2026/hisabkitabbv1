@@ -27,6 +27,10 @@
 
         return $matchedValue ?? '';
     };
+    $companyField = function ($keys) use ($invoice, $fieldValue) {
+        return $invoice->company ? $fieldValue($invoice->company->fields ?? [], $keys) : '';
+    };
+
     $fv = function ($keys, $fallback = '') use ($fieldValue, $invoice) {
         $value = '';
         foreach ((array) $keys as $key) {
@@ -109,23 +113,17 @@
             $normalizedKey = $columnAliases[$normalizedKey] ?? $normalizedKey;
 
             if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
-                if (isset($invoice->company?->vat_id) && trim((string)$invoice->company->vat_id) !== '') {
-                    $value = $invoice->company->vat_id;
-                    break;
-                }
-                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
-                    $value = $invoice->gstin;
-                    break;
-                }
-                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
-                    $value = $invoice->gst_no;
+                $companyGstin = $companyField(['GSTIN', 'gstin', 'gst_no']);
+                if ($companyGstin !== '') {
+                    $value = $companyGstin;
                     break;
                 }
             }
 
             if ($normalizedKey === 'company_pan' || $normalizedKey === 'pan' || $normalizedKey === 'pan_no') {
-                if (isset($invoice->company?->tax_id) && trim((string)$invoice->company->tax_id) !== '') {
-                    $value = $invoice->company->tax_id;
+                $companyPan = $companyField(['PAN No.', 'pan_no', 'pan']);
+                if ($companyPan !== '') {
+                    $value = $companyPan;
                     break;
                 }
             }
