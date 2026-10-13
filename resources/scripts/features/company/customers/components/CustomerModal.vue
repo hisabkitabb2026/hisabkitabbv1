@@ -37,9 +37,12 @@ const notificationStore = useNotificationStore()
 
 const isFetchingInitialData = ref<boolean>(false)
 
-// HisabKitab feature — hide Basic Info / Portal Access tabs when InvoiceReceipt module is enabled
+// HisabKitab feature — hide Basic Info / Portal Access tabs when any receipt module is enabled
+// Covers InvoiceReceipt, LrReceipt, LorryReceipt — all use the same simplified customer form
 const isInvoiceReceiptModule = computed<boolean>(() =>
-  globalStore.modules.includes('InvoiceReceipt')
+  globalStore.modules.includes('InvoiceReceipt') ||
+  globalStore.modules.includes('LrReceipt') ||
+  globalStore.modules.includes('LorryReceipt')
 )
 
 const { t } = useI18n()
@@ -53,14 +56,22 @@ const modalActive = computed<boolean>(
 
 const rules = computed(() => ({
   name: {
-    required: helpers.withMessage(t('validation.required'), required),
+    // HisabKitab feature — name not required in InvoiceReceipt mode (Basic Info tab hidden)
+    required: helpers.withMessage(
+      t('validation.required'),
+      requiredIf(!isInvoiceReceiptModule.value)
+    ),
     minLength: helpers.withMessage(
       t('validation.name_min_length', { count: 3 }),
       minLength(3)
     ),
   },
   currency_id: {
-    required: helpers.withMessage(t('validation.required'), required),
+    // HisabKitab feature — currency not required in InvoiceReceipt mode (Basic Info tab hidden)
+    required: helpers.withMessage(
+      t('validation.required'),
+      requiredIf(!isInvoiceReceiptModule.value)
+    ),
   },
   password: {
     required: helpers.withMessage(
@@ -153,9 +164,24 @@ async function setInitialData(): Promise<void> {
 }
 
 async function submitCustomerData(): Promise<void> {
+  // HisabKitab feature — auto-populate name from billing address when Basic Info tab is hidden
+  if (
+    isInvoiceReceiptModule.value &&
+    !customerStore.currentCustomer.name &&
+    customerStore.currentCustomer.billing?.name
+  ) {
+    customerStore.currentCustomer.name =
+      customerStore.currentCustomer.billing.name
+  }
+
   v$.value.$touch()
 
-  if (v$.value.$invalid && customerStore.currentCustomer.email === '') {
+  // HisabKitab feature — only show "please enter email" when portal is enabled (email is actually required)
+  if (
+    v$.value.$invalid &&
+    customerStore.currentCustomer.email === '' &&
+    customerStore.currentCustomer.enable_portal
+  ) {
     notificationStore.showNotification({
       type: 'error',
       message: t('settings.notification.please_enter_email'),

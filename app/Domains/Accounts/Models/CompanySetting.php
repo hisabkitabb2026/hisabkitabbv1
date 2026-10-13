@@ -46,9 +46,10 @@ class CompanySetting extends Model
     public static function setSettings(array $settings, mixed $company_id): void
     {
         foreach ($settings as $option => $value) {
+            // HisabKitab feature — Default null to empty string to avoid NOT NULL constraint violations on empty formats
             self::updateOrCreate(
                 ['option' => $option, 'company_id' => $company_id],
-                ['option' => $option, 'company_id' => $company_id, 'value' => $value]
+                ['option' => $option, 'company_id' => $company_id, 'value' => $value ?? '']
             );
         }
     }

@@ -45,6 +45,7 @@ var v = {
 				discount: 0,
 				discount_type: "fixed",
 				discount_val: 0,
+ tax: 0,
 				taxes: [],
 				tr_consignment_number: "",
 				tr_consignment_date: "",

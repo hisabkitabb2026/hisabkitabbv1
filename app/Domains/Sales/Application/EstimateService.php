@@ -17,6 +17,7 @@ use App\Platform\Pdf\Facades\Pdf;
 use App\Platform\Pdf\Rendering\PdfMetadata;
 use App\Platform\Pdf\Rendering\PdfTemplateUtils;
 use App\Support\MoneyConversion;
+use App\Support\ModuleExtensions;
 use App\Support\PublicToken;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -45,11 +46,20 @@ class EstimateService implements EstimatePdfDataProvider
     ): Estimate {
         $estimate = Estimate::create($attributes);
         $estimate->unique_hash = PublicToken::make();
+
+        // HisabKitab feature — scope sequence number resolution to template type
+        $scope = $this->resolveSequenceScope($estimate->template_name ?? ($attributes['template_name'] ?? null));
+
         $serial = (new SerialNumberService)
             ->setCompany($estimate->company_id)
             ->setCustomer($estimate->customer_id)
-            ->setModel($estimate)
-            ->setNextNumbers();
+            ->setModel($estimate);
+
+        if (! empty($scope)) {
+            $serial->setSequenceScope($scope);
+        }
+
+        $serial->setNextNumbers();
 
         // Both sequences fall out of the same resolution pass. The visible
         // number itself is rendered client-side and arrived with the payload.
@@ -84,12 +94,21 @@ class EstimateService implements EstimatePdfDataProvider
         ?array $taxes = null,
         ?iterable $customFields = null,
     ): Estimate {
+        $templateName = $attributes['template_name'] ?? $estimate->template_name;
+        // HisabKitab feature — scope sequence number resolution to template type
+        $scope = $this->resolveSequenceScope($templateName);
+
         $serial = (new SerialNumberService)
             ->setCompany($estimate->company_id)
             ->setModel($estimate)
             ->setCustomer($attributes['customer_id'])
-            ->setModelObject($estimate->id)
-            ->setNextNumbers();
+            ->setModelObject($estimate->id);
+
+        if (! empty($scope)) {
+            $serial->setSequenceScope($scope);
+        }
+
+        $serial->setNextNumbers();
 
         $attributes['customer_sequence_number'] = $serial->nextCustomerSequenceNumber;
 
@@ -238,11 +257,23 @@ class EstimateService implements EstimatePdfDataProvider
     {
         $date = Carbon::now();
 
+        // HisabKitab feature — scope sequence number resolution to template type
+        $scope = $this->resolveSequenceScope($estimate->template_name);
+
         $serial = (new SerialNumberService)
             ->setCompany($estimate->company_id)
             ->setCustomer($estimate->customer_id)
-            ->setModel($estimate)
-            ->setNextNumbers();
+            ->setModel($estimate);
+
+        if (! empty($scope)) {
+            $serial->setSequenceScope($scope);
+        }
+
+        if ($estimate->template_name && ModuleExtensions::hasSerialNumberType($estimate->template_name)) {
+            $serial->setSettingKey($estimate->template_name.'_number_format');
+        }
+
+        $serial->setNextNumbers();
 
         $expiryDate = null;
         $expiryEnabled = CompanySetting::getSetting(
@@ -263,7 +294,7 @@ class EstimateService implements EstimatePdfDataProvider
         $newEstimate = Estimate::create([
             'estimate_date' => $date->format('Y-m-d'),
             'expiry_date' => $expiryDate,
-            'estimate_number' => $serial->getNextNumber(),
+            'estimate_number' => $serial->getNextNumber() ?: $estimate->estimate_number.'-COPY',
             'sequence_number' => $serial->nextSequenceNumber,
             'customer_sequence_number' => $serial->nextCustomerSequenceNumber,
             'reference_number' => $estimate->reference_number,
@@ -330,14 +361,28 @@ class EstimateService implements EstimatePdfDataProvider
             $dueDate = Carbon::now()->addDays($dueDateDays)->format('Y-m-d');
         }
 
+        $invoiceTemplate = $estimate->getInvoiceTemplateName();
+
+        // HisabKitab feature — scope sequence number resolution to template type
+        $scope = ['type' => Invoice::TYPE_INVOICE];
+        if ($invoiceTemplate) {
+            $registered = ModuleExtensions::getSerialNumberType($invoiceTemplate);
+            if ($registered !== null && isset($registered['scope'])) {
+                $scope = $registered['scope'];
+            }
+        }
+
         $serial = (new SerialNumberService)
             ->setCompany($estimate->company_id)
             ->setCustomer($estimate->customer_id)
-            ->setSequenceScope(['type' => Invoice::TYPE_INVOICE])
-            ->setModel(new Invoice)
-            ->setNextNumbers();
+            ->setSequenceScope($scope)
+            ->setModel(new Invoice);
 
-        $invoiceTemplate = $estimate->getInvoiceTemplateName();
+        if ($invoiceTemplate && ModuleExtensions::hasSerialNumberType($invoiceTemplate)) {
+            $serial->setSettingKey($invoiceTemplate.'_number_format');
+        }
+
+        $serial->setNextNumbers();
         $exchangeRate = $estimate->exchange_rate;
 
         // Columns the invoice inherits unchanged from the offer it settles.
@@ -362,12 +407,12 @@ class EstimateService implements EstimatePdfDataProvider
             'creator_id' => Auth::id(),
             'invoice_date' => $invoiceDate->format('Y-m-d'),
             'due_date' => $dueDate,
-            'invoice_number' => $serial->getNextNumber(),
+            'invoice_number' => $serial->getNextNumber() ?: 'INV-'.strtoupper(bin2hex(random_bytes(3))),
             'sequence_number' => $serial->nextSequenceNumber,
             'customer_sequence_number' => $serial->nextCustomerSequenceNumber,
             // A second, independent rendering of the same number format rather
             // than a copy of the number above.
-            'reference_number' => $serial->getNextNumber(),
+            'reference_number' => $serial->getNextNumber() ?: null,
             'template_name' => $invoiceTemplate,
             'status' => Invoice::STATUS_DRAFT,
             'paid_status' => Invoice::STATUS_UNPAID,
@@ -411,5 +456,22 @@ class EstimateService implements EstimatePdfDataProvider
     public function changeStatus(Estimate $estimate, string $status): void
     {
         $estimate->update(['status' => $status]);
+    }
+
+    /**
+     * HisabKitab feature — Scope the sequence number resolution to the template type if registered.
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveSequenceScope(?string $templateName): array
+    {
+        if ($templateName) {
+            $registered = ModuleExtensions::getSerialNumberType($templateName);
+            if ($registered !== null && isset($registered['scope'])) {
+                return $registered['scope'];
+            }
+        }
+
+        return [];
     }
 }

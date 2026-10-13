@@ -29,11 +29,7 @@ afterEach(function () {
 
 function periodInvoice(string $date, int $baseTotal): Invoice
 {
-    return Invoice::factory()->create([
-        'invoice_date' => $date,
-        'base_total' => $baseTotal,
-        'template_name' => null,
-    ]);
+    return Invoice::factory()->create(['invoice_date' => $date, 'base_total' => $baseTotal]);
 }
 
 function periodExpense(string $date, int $baseAmount): Expense

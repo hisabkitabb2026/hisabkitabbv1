@@ -1,6 +1,8 @@
 {
-    "name": "InvoiceShelf",
-    "short_name": "InvoiceShelf",
+    "name": "HisabKitab",
+    "short_name": "HisabKitab",
+    "start_url": "/",
+    "scope": "/",
     "icons": [
         {
             "src": "/favicons/android-chrome-192x192.png",

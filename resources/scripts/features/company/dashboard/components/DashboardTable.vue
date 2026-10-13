@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDashboardStore } from '../store'
 import { useUserStore } from '../../../../stores/user.store'
+import { useGlobalStore } from '../../../../stores/global.store'
 import InvoiceDropdown from '@/scripts/features/company/invoices/components/InvoiceDropdown.vue'
 import EstimateDropdown from '@/scripts/features/company/estimates/components/EstimateDropdown.vue'
 
@@ -27,6 +28,14 @@ const ABILITIES = {
 const dashboardStore = useDashboardStore()
 const { t } = useI18n()
 const userStore = useUserStore()
+const globalStore = useGlobalStore()
+
+// HisabKitab feature — when the Quotation module replaces the Estimates menu,
+// show "Recent Quotations" instead of "Recent Estimates"
+const isQuotationMode = computed(() => {
+  const visibleNames = new Set(globalStore.menuGroups.flat().map((m) => m.name))
+  return !visibleNames.has('Estimates')
+})
 
 const invoiceTableComponent = ref<InstanceType<typeof Object> | null>(null)
 const estimateTableComponent = ref<InstanceType<typeof Object> | null>(null)
@@ -209,7 +218,7 @@ const canCreateInvoiceFromEstimate = computed(() => userStore.hasAbilities(ABILI
         </BaseTable>
       </div>
 
-      <!-- Recent Estimates -->
+      <!-- HisabKitab feature — Recent Estimates / Quotations -->
       <div
         v-if="userStore.hasAbilities(ABILITIES.VIEW_ESTIMATE)"
         class="recent-estimates"
@@ -219,11 +228,11 @@ const canCreateInvoiceFromEstimate = computed(() => userStore.hasAbilities(ABILI
             <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600" aria-hidden="true">
               <BaseIcon name="DocumentIcon" class="w-4.5 h-4.5" />
             </span>
-            {{ $t('dashboard.recent_estimate_card.title') }}
+            {{ isQuotationMode ? $t('dashboard.recent_quotation_card.title') : $t('dashboard.recent_estimate_card.title') }}
           </h2>
 
           <router-link
-            to="/admin/estimates"
+            :to="isQuotationMode ? '/admin/estimates?view=quotation' : '/admin/estimates'"
             class="text-sm font-medium rounded-md text-primary-600 hover:text-primary-700 focus-visible:outline-2"
           >
             {{ $t('dashboard.recent_estimate_card.view_all') }}
@@ -272,15 +281,15 @@ const canCreateInvoiceFromEstimate = computed(() => userStore.hasAbilities(ABILI
               compact
               art="estimate"
               :ghost="3"
-              :title="$t('dashboard.recent_estimate_card.empty_title')"
-              :description="$t('dashboard.recent_estimate_card.empty_description')"
+              :title="isQuotationMode ? $t('dashboard.recent_quotation_card.empty_title') : $t('dashboard.recent_estimate_card.empty_title')"
+              :description="isQuotationMode ? $t('dashboard.recent_quotation_card.empty_description') : $t('dashboard.recent_estimate_card.empty_description')"
             >
               <template v-if="userStore.hasAbilities(ABILITIES.CREATE_ESTIMATE)" #actions>
-                <BaseButton size="sm" variant="primary-outline" @click="$router.push('/admin/estimates/create')">
+                <BaseButton size="sm" variant="primary-outline" @click="$router.push(isQuotationMode ? '/admin/estimates/create?template=quotation' : '/admin/estimates/create')">
                   <template #left="slotProps">
                     <BaseIcon name="PlusIcon" :class="slotProps.class" />
                   </template>
-                  {{ $t('estimates.new_estimate') }}
+                  {{ isQuotationMode ? $t('quotations.new_quotation') : $t('estimates.new_estimate') }}
                 </BaseButton>
               </template>
             </BaseEmptyPlaceholder>

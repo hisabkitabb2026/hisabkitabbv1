@@ -70,6 +70,7 @@ the new data goes into `invoiceshelf_production` (the default connection).
 | `lorry_receipts` | 115 | Merge into `invoices` with `template_name='lorry_receipt'`, map columns to `tr_*` |
 | `lorry_party_profiles` | 302 | Migrate to `tr_lorry_party_profiles` |
 | `payments` | 9 | Split into `customer_payments` + `customer_payment_allocations` |
+| `permissions` | 196 | Copy directly — Bouncer role→ability mappings. **CRITICAL: without this every API call returns 403.** |
 | `transport_invoices` | 0 | **Skip** (no data, table deleted) |
 | `transport_invoice_rows` | 0 | **Skip** (no data, table deleted) |
 | `chatbot_histories` | 0 | **Skip** (no data, table deleted) |
@@ -737,22 +738,39 @@ UPDATE assigned_roles SET entity_type = 'user' WHERE entity_type = 'App\\Models\
 
 The old DB uses the old model namespaces in `abilities.entity_type`. The new
 DB's `stabilize_model_type_aliases` migration already converted the seeded
-abilities to aliases. **Do not copy old abilities/roles/permissions directly**
-— instead:
+abilities to aliases. The approach is:
 
 1. Keep the new DB's seeded abilities/roles (they have the correct aliases).
-2. Only copy `assigned_roles` from the old DB (after updating `entity_type`
+2. Copy `assigned_roles` from the old DB (after updating `entity_type`
    from `App\Models\User` → `user`).
-3. Re-run `php artisan roles:apply-preset-defaults` to sync role abilities.
+3. **Copy `permissions` from the old DB** — this is the Bouncer role→ability
+   mapping table. Without it, every role has zero abilities and all API calls
+   return 403. (See Section 12 for details.)
+4. **Grant ALL abilities to super admin roles** — the old DB's permissions only
+   cover the 47 core abilities that existed at the time; the current app has
+   188+ abilities (core + modules).
+5. Run `php artisan modules:sync-abilities` (post-migration) to register
+   module abilities (tasks-projects, trips, receipts, etc.).
+6. Re-run `php artisan roles:apply-preset-defaults` to sync role abilities.
 
 ```sql
--- Copy role assignments (after updating entity_type)
 INSERT INTO assigned_roles (role_id, entity_id, entity_type, restricted_to_id, restricted_to_type, scope)
 SELECT role_id, entity_id, 'user', restricted_to_id, restricted_to_type, scope
 FROM ssgls_old.assigned_roles;
+
+-- Copy permissions (role→ability mappings) — CRITICAL, without this every API returns 403
+INSERT INTO permissions (id, ability_id, entity_id, entity_type, forbidden, scope)
+SELECT id, ability_id, entity_id, entity_type, forbidden, scope
+FROM ssgls_old.permissions;
+
+-- Grant ALL abilities to super admin roles (old DB only had 47 of 188+)
+INSERT IGNORE INTO permissions (ability_id, entity_id, entity_type, forbidden, scope)
+SELECT a.id, r.id, 'roles', 0, r.scope
+FROM abilities a
+CROSS JOIN roles r
+WHERE r.name = 'super admin';
 ```
 
----
 
 ## 10. Post-Migration Steps
 
@@ -767,20 +785,23 @@ mysql -e "
   AND auto_increment IS NOT NULL;
 " | mysql invoiceshelf_production
 
-# 2. Re-run role preset defaults
+# 2. Sync module abilities (tasks-projects, trips, receipts, etc.)
+php artisan modules:sync-abilities
+
+# 3. Re-run role preset defaults
 php artisan roles:apply-preset-defaults
 
-# 3. Clear all caches
+# 4. Clear all caches
 php artisan optimize:clear
 
-# 4. Verify the app boots
+# 5. Verify the app boots
 php artisan serve &
 sleep 2
 curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000
 # Expected: 200
 kill %1
 
-# 5. Verify data counts
+# 6. Verify data counts
 php artisan tinker --execute="
   echo 'Users: ' . DB::table('users')->count() . PHP_EOL;
   echo 'Companies: ' . DB::table('companies')->count() . PHP_EOL;
@@ -837,6 +858,7 @@ php artisan tinker --execute="
 | `customers` | 613 | |
 | `addresses` | 585 | |
 | `payments` | 9 | Split into customer_payments + allocations |
+| `permissions` | 196 | Bouncer role→ability mappings (CRITICAL — without this, 403 on all APIs) |
 | `estimates` | 3 | |
 | `estimate_items` | 4 | |
 | `expenses` | 4 | |
@@ -860,9 +882,74 @@ php artisan tinker --execute="
 | `recurring_invoices` | 0 | |
 | `notes` | 0 | |
 
+
+## 12. Troubleshooting: 403 Forbidden on All API Calls
+
+### Symptom
+
+After migration, the app boots (HTTP 200/302) but every API call returns
+**403 Forbidden** — `/api/v1/custom-fields`, `/api/v1/tasks-projects/timer`,
+etc. all fail, even for the super admin user.
+
+### Root Cause
+
+The `permissions` table (Bouncer's role→ability mappings) was not copied from
+the old DB. Bouncer sees the user's role assignment (`assigned_roles`), but
+without `permissions` that role has **zero abilities** linked to it, so every
+`$this->authorize()` check fails.
+
+Additionally, the old DB's `permissions` table only covers the 47 core
+abilities that existed at the time. The current app has 188+ abilities (core +
+modules). The super admin role needs ALL of them.
+
+### Fix (already in migrate.sql Steps 35–37)
+
+The `migrate.sql` script now handles this automatically:
+
+- **Step 35** — Copies the `permissions` table from the old DB
+- **Step 37** — Grants ALL abilities to every `super admin` role (cross-join)
+- **Post-migration** — `php artisan modules:sync-abilities` registers module
+  abilities (tasks-projects: 13, trips: 4, receipts, quotations, etc.)
+
+### Manual fix (if you ran an older version of migrate.sql)
+
+```sql
+-- 1. Copy permissions from old DB
+INSERT INTO permissions (id, ability_id, entity_id, entity_type, forbidden, scope)
+SELECT id, ability_id, entity_id, entity_type, forbidden, scope
+FROM ssgls_old.permissions;
+
+-- 2. Grant ALL abilities to super admin roles
+INSERT IGNORE INTO permissions (ability_id, entity_id, entity_type, forbidden, scope)
+SELECT a.id, r.id, 'roles', 0, r.scope
+FROM abilities a
+CROSS JOIN roles r
+WHERE r.name = 'super admin';
+```
+
+```bash
+# 3. Sync module abilities
+php artisan modules:sync-abilities
+
+# 4. Clear cache
+php artisan optimize:clear
+```
+
+### Verification
+
+```sql
+-- Super admin should have all abilities
+SELECT r.id, r.name, r.scope, COUNT(*) as ability_count
+FROM permissions p
+JOIN roles r ON r.id = p.entity_id AND p.entity_type = 'roles'
+WHERE r.name = 'super admin'
+GROUP BY r.id, r.name, r.scope;
+-- Expected: 188+ abilities per super admin role
+```
+
 ---
 
-## 12. Quick Reference: Complete Migration Script
+## 13. Quick Reference: Complete Migration Script
 
 See `migrate.sql` in this directory for a single runnable SQL script that
 executes the full migration in dependency order.

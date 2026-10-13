@@ -50,7 +50,6 @@ test('the invoice count excludes credit notes while the sales total nets them ou
         ])
         ->create([
             'status' => Invoice::STATUS_SENT,
-            'template_name' => null,
             'invoice_date' => now()->format('Y-m-d'),
             'sub_total' => 10000,
             'total' => 10000,

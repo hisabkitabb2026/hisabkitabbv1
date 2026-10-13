@@ -414,8 +414,13 @@ export const useInvoiceStore = defineStore('invoice', {
       params?: Record<string, unknown>,
       setState = false,
     ): Promise<{ data: { nextNumber: string } }> {
-      const response = await invoiceService.getNextNumber(params as never)
-      if (setState) {
+      const mergedParams: Record<string, unknown> = { ...params }
+      // HisabKitab feature — preserve active receipt template key so serial number format doesn't revert to invoice
+      if (!mergedParams.key && this.newInvoice.template_name) {
+        mergedParams.key = this.newInvoice.template_name
+      }
+      const response = await invoiceService.getNextNumber(mergedParams as never)
+      if (setState && response.nextNumber) {
         this.newInvoice.invoice_number = response.nextNumber
       }
       return { data: response }
@@ -577,12 +582,11 @@ export const useInvoiceStore = defineStore('invoice', {
           Promise.resolve(), // placeholder for items fetch
           this.resetSelectedNote(),
           this.fetchInvoiceTemplates(),
-          // HisabKitab feature — pass template_name as key if set, for serial number scoping
-          this.getNextNumber(
-            this.newInvoice.template_name
-              ? { key: this.newInvoice.template_name as string }
-              : undefined,
-          ),
+          // HisabKitab feature — pass template_name as key and customer userId if set, for serial number scoping
+          this.getNextNumber({
+            ...(this.newInvoice.template_name ? { key: this.newInvoice.template_name as string } : {}),
+            ...(this.newInvoice.customer_id ? { userId: this.newInvoice.customer_id } : {}),
+          }),
           Promise.resolve(), // placeholder for tax types fetch
           ...editActions,
         ])
@@ -592,7 +596,7 @@ export const useInvoiceStore = defineStore('invoice', {
             this.newInvoice.invoice_number = nextNumRes.data.nextNumber
           }
 
-          if (templatesRes?.data?.invoiceTemplates?.length) {
+          if (templatesRes?.data?.invoiceTemplates?.length && !this.newInvoice.template_name) {
             this.setTemplate(this.templates[0].name)
             const { currentUserSettings } = useUserStore()
             if (currentUserSettings.default_invoice_template) {

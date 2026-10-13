@@ -54,6 +54,14 @@
             border: 2px solid #000;
         }
 
+        .jurisdiction {
+            font-size: 11px;
+            line-height: 13px;
+            margin-bottom: 2px;
+            text-align: right;
+            text-decoration: underline;
+        }
+
         .master {
             border: 0;
             table-layout: fixed;
@@ -78,7 +86,7 @@
         }
 
         .brand-row {
-            background: #ffffff;
+            background: #f8f8f8;
             border-bottom: 2px solid #000;
             min-height: 104px;
             table-layout: fixed;
@@ -93,17 +101,13 @@
         }
 
         .logo-cell {
-            padding-left: 14px !important;
-            padding-right: 8px !important;
             text-align: center;
-            width: 22%;
+            width: 20%;
         }
 
         .company-logo {
-            display: block;
-            margin: 0 auto;
-            max-height: 72px;
-            max-width: 110px;
+            max-height: 100px;
+            max-width: 150px;
         }
 
         .brand-fallback {
@@ -123,36 +127,33 @@
 
         .company-cell {
             text-align: center;
-            width: 78%;
+            width: 80%;
         }
 
         .company-name {
-            color: #111;
-            font-size: 23px;
+            font-size: 30px;
             font-weight: bold;
-            line-height: 26px;
+            line-height: 32px;
             margin-top: 1px;
         }
 
         .company-tagline {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: bold;
-            line-height: 15px;
+            line-height: 18px;
         }
 
         .company-address {
             font-size: 13px;
-            line-height: 16px;
-            margin-top: 2px;
+            line-height: 15px;
+            margin-top: 4px;
             text-align: center;
-            word-break: break-word;
-            overflow-wrap: anywhere;
         }
 
         .company-contact {
             font-size: 13px;
             font-weight: bold;
-            line-height: 16px;
+            line-height: 15px;
             margin-top: 2px;
             text-align: center;
         }
@@ -186,7 +187,7 @@
 
         .tax-box div {
             font-size: 13px;
-            font-weight: normal;
+            font-weight: bold;
             line-height: 16px;
             overflow: hidden;
             overflow-wrap: anywhere;
@@ -209,40 +210,37 @@
             border-left: 0;
             border-right: 0;
             border-top: 0;
-            font-size: 12.5px;
-            line-height: 16px;
+            font-size: 19px;
             min-height: 18px;
-            padding: 3px 6px;
+            padding: 3px 8px;
         }
 
         .party-address-lines {
-            font-size: 12.5px;
-            line-height: 16px;
+            font-size: 16px;
+            line-height: 20px;
             overflow: hidden;
-            padding: 3px 6px 6px;
-            word-break: break-word;
-            overflow-wrap: anywhere;
+            padding: 3px 8px 20px;
         }
 
         .party-display-name {
-            font-size: 13px;
-            font-weight: bold;
+            font-size: 17px;
+            font-weight: normal;
             margin-bottom: 2px;
         }
 
         .party-gstin {
             border-top: 1px solid #111;
             bottom: 0;
-            font-size: 12.5px;
-            line-height: 16px;
+            font-size: 16px;
+            line-height: 20px;
             overflow: hidden;
-            padding: 3px 6px;
+            padding: 4px 8px;
             text-overflow: clip;
             white-space: nowrap;
         }
 
         .party-gstin b {
-            font-size: 12.5px;
+            font-size: 19px;
         }
 
         .bill-details td {
@@ -352,22 +350,13 @@
         }
 
         .terms {
-            font-size: 11px;
-            line-height: 14.5px;
-            padding: 5px 7px;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-        }
-
-        .terms-title {
-            font-weight: bold;
-            margin-bottom: 3px;
+            font-size: 12px;
+            line-height: 17px;
         }
 
         .term-item {
-            margin-bottom: 3px;
-            padding-left: 14px;
-            text-indent: -14px;
+            margin-bottom: 4px;
+            padding-left: 12px;
         }
 
         .prepared {
@@ -392,9 +381,9 @@
         }
 
         .for-company {
-            font-size: 13px;
+            font-size: 15px;
             font-weight: bold;
-            line-height: 16px;
+            line-height: 18px;
             text-align: center;
         }
 
@@ -464,38 +453,36 @@
         }
 
         .tax-box div {
-            font-size: 13px;
-            line-height: 16px;
+            font-size: 15px;
         }
 
         .tax-box .highlight-value {
-            font-size: 13px;
+            font-size: 15px;
         }
 
         .bill-details td {
-            font-size: 13px;
-            line-height: 16px;
+            font-size: 14px;
             overflow: hidden;
             word-break: break-word;
         }
 
         .bill-details .highlight-value {
-            font-size: 13px;
+            font-size: 15px;
             white-space: nowrap;
         }
 
         .words-row .highlight-value {
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .footer-head .highlight-value {
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .sig-label {
-            font-size: 12.5px;
-            letter-spacing: 0.5px;
-            padding-top: 4px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            padding-top: 6px;
         }
     </style>
 </head>
@@ -533,6 +520,11 @@
         }
 
         return '';
+    };
+
+    // HisabKitab feature — read company custom fields (GSTIN, PAN, etc.)
+    $companyField = function ($keys) use ($invoice, $fieldValue) {
+        return $invoice->company ? $fieldValue($invoice->company->fields ?? [], $keys) : '';
     };
 
     $numericField = function ($value) {
@@ -710,9 +702,12 @@
     $logo = $logo ?? ($invoice->company?->logo_path ?? null);
     // Billing Branch: dynamically read from Address 2nd box (address_street_2),
     // or company billing_branch, or custom invoice field
-    $billingBranch = $invoice->company?->address?->address_street_2
+    // HisabKitab feature — Billing Branch: read from company custom field first, then address, then invoice field
+    $billingBranch = $companyField(['Billing Br. Name & Address'])
+        ?: $invoice->company?->address?->address_street_2
         ?: ($invoice->company?->billing_branch
-            ?: ($invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch']) ?: ''));
+            ?: ($invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch'])
+                ?: 'Vapi Branch Office: B38, Param Logistics And Industrial Pack, Opp Bharat Petroleum Karvad Vapi -396195'));
     $billingBranchHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billingBranch);
     $billingBranchHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $billingBranchHtml);
     $billingBranchHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $billingBranchHtml);
@@ -722,17 +717,13 @@
         ->filter()
         ->values();
     $companyTagline = $invoice->company?->tagline ?: '';
-    // GSTIN: read from VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
-    $companyGstin = $invoiceField(['company_gstin', 'gstin', 'gst_no'])
-        ?: ($invoice->company?->vat_id
-            ?: ($invoice->company?->gstin ?: ''));
-    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
+    $companyTopHeading = $invoice->company?->top_heading ?: 'Subject to Vapi Jurisdiction';
+    // HisabKitab feature — PAN No, GSTIN and Enrollment No come from company custom fields with fallbacks
+    $companyGstin = $companyField(['GSTIN', 'gstin', 'gst_no']) ?: ($invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->gstin ?: ''));
+    $companyEnrollmentNo = $companyField(['Enrollment No', 'enrollment_no', 'enrollment']) ?: '24BHLPS2943H1Z3';
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
     $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
-    // PAN No: read from Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
-    $panNo = $invoiceField(['company_pan', 'pan_no', 'pan'])
-        ?: ($invoice->company?->tax_id
-            ?: ($invoice->company?->pan_no ?: ''));
+    $panNo = $companyField(['PAN No.', 'pan_no', 'pan']) ?: 'BHLPS2943H';
     $partyGstin = $invoice->customer?->tax_id ?: ($invoiceField(['party_gstin', 'consignor_gst', 'consignor_gst_no', 'gstin', 'gst_no']) ?: $customerField(['gstin', 'gst_no']));
     $partyCode = $invoiceField(['party_code', 'customer_code', 'consignor_code']) ?: ($invoice->customer?->prefix ?: '');
     $branchCode = $invoiceField(['branch_code']);
@@ -841,12 +832,13 @@
     };
 
     // Pre-calculate auto-fit styles for key fields that commonly overflow.
-    $partyDisplayNameStyle = '';
-    $partyGstinStyle = '';
-    $companyNameStyle = $getFontForWidth($companyName, 430, 23, 10);
-    $branchAddressStyle = '';
+    $partyDisplayNameStyle = $getFontForWidth($partyDisplayName, 330, 11.5, 6.5);
+    $partyGstinStyle = $getFontForWidth($partyGstin, 170, 16, 6.5);
+    $companyNameStyle = $getFontForWidth($companyName, 430, 27, 10);
+    $branchAddressStyle = $getFontForWidth($billingBranchLines->implode(' '), 360, 11, 6.5);
 @endphp
 
+    <div class="jurisdiction">{{ $companyTopHeading }}</div>
     <div class="invoice-shell">
         <table class="master">
             <tr>
@@ -893,20 +885,20 @@
                     </div>
                 </td>
                 <td class="tax-box">
-                    <div>PAN No.: {{ $panNo }}</div>
-                    <div>{{ $companyTaxIdentityLabel }} : {{ $companyTaxIdentityValue }}</div>
+                    <div>PAN No.: <span class="highlight-value">{{ $panNo }}</span></div>
+                    <div>{{ $companyTaxIdentityLabel }} : <span class="highlight-value">{{ $companyTaxIdentityValue }}</span></div>
                 </td>
             </tr>
             <tr>
                 <td>
                     <table class="bill-details">
                         <tr>
-                            <td width="50%">Bill No.: {{ $invoice->invoice_number }}</td>
-                            <td>Branch Code : {{ $branchCode }}</td>
+                            <td width="50%"><b>Bill No.:</b> <span class="highlight-value">{{ $invoice->invoice_number }}</span></td>
+                            <td><b>Branch Code :</b> {{ $branchCode }}</td>
                         </tr>
                         <tr>
-                            <td>Bill Date : {{ $invoice->formattedInvoiceDate }}</td>
-                            <td>Due Date : {{ $invoice->formattedDueDate }}</td>
+                            <td><b>Bill Date :</b> <span class="highlight-value">{{ $invoice->formattedInvoiceDate }}</span></td>
+                            <td><b>Due Date :</b> {{ $invoice->formattedDueDate }}</td>
                         </tr>
                     </table>
                 </td>
@@ -939,17 +931,17 @@
                 <col style="width: 3%;">
                 <col style="width: 7%;">
                 <col style="width: 7%;">
+                <col style="width: 7%;">
+                <col style="width: 6%;">
+                <col style="width: 6%;">
                 <col style="width: 8%;">
-                <col style="width: 6.8%;">
-                <col style="width: 6.8%;">
-                <col style="width: 9%;">
-                <col style="width: 5.5%;">
-                <col style="width: 7.4%;">
-                <col style="width: 8.5%;">
-                <col style="width: 6.8%;">
-                <col style="width: 6.8%;">
-                <col style="width: 6.8%;">
-                <col style="width: 12.2%;">
+                <col style="width: 5%;">
+                <col style="width: 7%;">
+                <col style="width: 7%;">
+                <col style="width: 8%;">
+                <col style="width: 8%;">
+                <col style="width: 8%;">
+                <col style="width: 13%;">
             </colgroup>
             <thead>
                 <tr class="group-head">
@@ -1069,9 +1061,8 @@
             </tr>
             <tr class="footer-body">
                 <td width="42%" class="terms">
-                    <div class="terms-title">Terms &amp; Conditions :</div>
-                    <div class="term-item">• Payment should be made by payee A/c Cheque / D.D. in favour of {{ $companyName }}.</div>
-                    <div class="term-item">• Interest @ 10% per annum will be charged if bill not paid within 7 days from date of bill.</div>
+                    <div class="term-item">1) Payment should be made by payee A/c Cheque /<br>D.D. Favour of {{ $companyName }}</div>
+                    <div class="term-item">2) Interest @ 10% per annum will be charged if bill<br>not paid within 7 days from date of bill</div>
                 </td>
 
                 <td width="10%" class="prepared text-center">Prepared by :<br>{{ $preparedBy }}</td>
@@ -1088,11 +1079,6 @@
                                 @elseif (file_exists($signaturePath))
                                     <img class="signature-image" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
                                 @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="font-size: 13px; font-weight: bold; text-align: center; padding-top: 4px;">
-                                {{ auth()->user()?->name ?: $preparedBy }}
                             </td>
                         </tr>
                         <tr>
