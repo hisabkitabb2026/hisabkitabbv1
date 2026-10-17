@@ -39,7 +39,7 @@ log "==> Step 0: Fetching latest code from GitHub (origin/main)..."
 
 # Check if GITHUB_TOKEN is defined in environment or .env file
 if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$PROJECT_ROOT/.env" ]; then
-    ENV_TOKEN=$(grep -E '^GITHUB_TOKEN=' "$PROJECT_ROOT/.env" | cut -d '=' -f2- | tr -d '"'"' ' || true)
+    ENV_TOKEN=$(grep -E '^GITHUB_TOKEN=' "$PROJECT_ROOT/.env" | cut -d '=' -f2- | tr -d ' "' | tr -d "'" || true)
     if [ -n "$ENV_TOKEN" ]; then
         GITHUB_TOKEN="$ENV_TOKEN"
     fi
