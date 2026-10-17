@@ -33,7 +33,7 @@ if [ ! -f "$COMPOSE_FILE" ]; then
 fi
 
 log "==> Step 1: Building Docker image with latest application code..."
-docker compose -f "$COMPOSE_FILE" build webapp
+docker build -t hisabkitabb-app:latest -f docker/production/Dockerfile .
 
 log "==> Step 2: Starting containers (database data volume is preserved)..."
 docker compose -f "$COMPOSE_FILE" up -d

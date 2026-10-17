@@ -24,6 +24,9 @@ services:
   webapp:
     container_name: invoiceshelf-variant-mariadb
     image: hisabkitabb-app:latest
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
     environment:
       - APP_NAME=HisabKitab
       - APP_ENV=production
