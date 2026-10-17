@@ -32,6 +32,27 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 1
 fi
 
+# ------------------------------------------------------------------------------
+# Step 0: Fetch Latest Code from GitHub
+# ------------------------------------------------------------------------------
+log "==> Step 0: Fetching latest code from GitHub (origin/main)..."
+
+# Check if GITHUB_TOKEN is defined in environment or .env file
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$PROJECT_ROOT/.env" ]; then
+    ENV_TOKEN=$(grep -E '^GITHUB_TOKEN=' "$PROJECT_ROOT/.env" | cut -d '=' -f2- | tr -d '"'"' ' || true)
+    if [ -n "$ENV_TOKEN" ]; then
+        GITHUB_TOKEN="$ENV_TOKEN"
+    fi
+fi
+
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    log "Pulling latest code using GITHUB_TOKEN..."
+    git pull "https://${GITHUB_TOKEN}@github.com/hisabkitabb2026/hisabkitabbv1.git" main
+else
+    log "Pulling latest code using server's git credentials..."
+    git pull origin main
+fi
+
 log "==> Step 1: Building Docker image with latest application code..."
 docker build -t hisabkitabb-app:latest -f docker/production/Dockerfile .
 
