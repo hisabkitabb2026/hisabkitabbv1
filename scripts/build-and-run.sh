@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 WEBAPP_CONTAINER="invoiceshelf-variant-mariadb"
 DB_CONTAINER="invoiceshelf-mysql"
-MODULES="LorryReceipt LrReceipt AiAssistant ChangeName InvoiceReceipt Quotation Trips TasksProjects AccessRequest"
+MODULES="LorryReceipt LrReceipt AiAssistant ChangeName InvoiceReceipt Quotation Trips"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
