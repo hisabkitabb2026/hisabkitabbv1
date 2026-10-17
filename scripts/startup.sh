@@ -12,7 +12,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
 WEBAPP_CONTAINER="invoiceshelf-variant-mariadb"
 DB_CONTAINER="invoiceshelf-mysql"
 MODULES="LorryReceipt LrReceipt AiAssistant ChangeName InvoiceReceipt Quotation Trips TasksProjects AccessRequest"
@@ -25,9 +24,18 @@ log() {
 
 cd "$PROJECT_ROOT"
 
-if [ ! -f "$COMPOSE_FILE" ]; then
-    log "ERROR: Could not find compose file at $COMPOSE_FILE" >&2
-    exit 1
+# Auto-detect existing compose file used by the running containers
+RUNNING_COMPOSE=$(docker inspect "$WEBAPP_CONTAINER" --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' 2>/dev/null || true)
+
+if [ -n "$RUNNING_COMPOSE" ] && [ -f "$RUNNING_COMPOSE" ]; then
+    COMPOSE_FILE="$RUNNING_COMPOSE"
+    COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
+elif [ -f "$PROJECT_ROOT/docker/production/docker-compose.mysql.yml" ]; then
+    COMPOSE_FILE="$PROJECT_ROOT/docker/production/docker-compose.mysql.yml"
+    COMPOSE_DIR="$PROJECT_ROOT/docker/production"
+else
+    COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
+    COMPOSE_DIR="$PROJECT_ROOT"
 fi
 
 is_container_healthy() {
@@ -64,9 +72,9 @@ run_module_commands() {
 # Full restart mode: stop and start
 if [ "$ACTION" = "restart" ] || [ "$ACTION" = "--restart" ] || [ "$ACTION" = "stop-start" ]; then
     log "Stopping containers..."
-    docker compose -f "$COMPOSE_FILE" stop
+    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" stop)
     log "Starting containers..."
-    docker compose -f "$COMPOSE_FILE" up -d
+    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
     run_module_commands
     log "SUCCESS: Containers restarted and modules active."
     docker ps --filter "name=invoiceshelf"
@@ -93,7 +101,7 @@ fi
 
 log "One or more containers are down (DB healthy: $db_ok, Webapp healthy: $webapp_ok)."
 log "Starting containers..."
-docker compose -f "$COMPOSE_FILE" up -d
+(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
 run_module_commands
 
 log "SUCCESS: Containers started and modules active."

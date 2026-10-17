@@ -16,7 +16,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
 WEBAPP_CONTAINER="invoiceshelf-variant-mariadb"
 DB_CONTAINER="invoiceshelf-mysql"
 MODULES="LorryReceipt LrReceipt AiAssistant ChangeName InvoiceReceipt Quotation Trips TasksProjects AccessRequest"
@@ -27,10 +26,21 @@ log() {
 
 cd "$PROJECT_ROOT"
 
-if [ ! -f "$COMPOSE_FILE" ]; then
-    log "ERROR: Could not find compose file at $COMPOSE_FILE" >&2
-    exit 1
+# Auto-detect existing compose file used by the running containers
+RUNNING_COMPOSE=$(docker inspect "$WEBAPP_CONTAINER" --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' 2>/dev/null || true)
+
+if [ -n "$RUNNING_COMPOSE" ] && [ -f "$RUNNING_COMPOSE" ]; then
+    COMPOSE_FILE="$RUNNING_COMPOSE"
+    COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
+elif [ -f "$PROJECT_ROOT/docker/production/docker-compose.mysql.yml" ]; then
+    COMPOSE_FILE="$PROJECT_ROOT/docker/production/docker-compose.mysql.yml"
+    COMPOSE_DIR="$PROJECT_ROOT/docker/production"
+else
+    COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
+    COMPOSE_DIR="$PROJECT_ROOT"
 fi
+
+log "Using Docker Compose config: $COMPOSE_FILE"
 
 # ------------------------------------------------------------------------------
 # Step 0: Fetch Latest Code from GitHub
@@ -54,10 +64,10 @@ else
 fi
 
 log "==> Step 1: Building Docker image with latest application code..."
-docker build -t hisabkitabb-app:latest -f docker/production/Dockerfile .
+(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" build webapp)
 
 log "==> Step 2: Starting containers (database data volume is preserved)..."
-docker compose -f "$COMPOSE_FILE" up -d
+(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
 
 log "==> Step 3: Waiting for database container '$DB_CONTAINER' to be healthy..."
 max_wait=60
