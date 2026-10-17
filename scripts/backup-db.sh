@@ -13,7 +13,7 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 # Configuration (override with environment variables if desired)
 # ------------------------------------------------------------------------------
-BACKUP_DIR="${BACKUP_DIR:-/home/ubuntu/db_backups}"
+BACKUP_DIR="${BACKUP_DIR:-$HOME/db_backups}"
 CONTAINER_NAME="${DB_CONTAINER:-invoiceshelf-mysql}"
 DB_NAME="${DB_NAME:-invoiceshelf}"
 DB_USER="${DB_USER:-invoiceshelf}"
