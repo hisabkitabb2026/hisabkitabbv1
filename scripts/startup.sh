@@ -71,10 +71,10 @@ run_module_commands() {
 
 # Full restart mode: stop and start
 if [ "$ACTION" = "restart" ] || [ "$ACTION" = "--restart" ] || [ "$ACTION" = "stop-start" ]; then
-    log "Stopping containers..."
-    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" stop)
-    log "Starting containers..."
-    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
+    log "Restarting containers..."
+    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" stop webapp)
+    docker restart "$DB_CONTAINER" || docker start "$DB_CONTAINER" || true
+    (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d --no-deps webapp)
     run_module_commands
     log "SUCCESS: Containers restarted and modules active."
     docker ps --filter "name=invoiceshelf"
@@ -100,8 +100,13 @@ if [ "$db_ok" = true ] && [ "$webapp_ok" = true ] && [ "$ACTION" != "force" ]; t
 fi
 
 log "One or more containers are down (DB healthy: $db_ok, Webapp healthy: $webapp_ok)."
-log "Starting containers..."
-(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
+if [ "$db_ok" = false ]; then
+    log "Starting database container '$DB_CONTAINER'..."
+    docker start "$DB_CONTAINER" || (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d database)
+fi
+
+log "Starting webapp container..."
+(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d --no-deps webapp)
 run_module_commands
 
 log "SUCCESS: Containers started and modules active."
