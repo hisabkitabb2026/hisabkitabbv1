@@ -1042,11 +1042,11 @@
                     </div>
                     <table class="top-detail-table">
                         <tr>
-                            <td width="36%"><span class="label">Date :</span> <span class="value">{{ $invoice->formattedInvoiceDate }}</span></td>
+                            <td width="36%"><span class="label">Date :</span> <span class="value">{{ $toUpper($invoice->formattedInvoiceDate) }}</span></td>
                             <td><span class="label">Docket No.:</span> <span class="docket-no" style="{{ $docketNoStyle }}">{{ $docketNumber }}</span></td>
                         </tr>
                         <tr>
-                            <td width="36%"><span class="label">Time :</span> <span class="value">{{ $invoiceField(['time']) }}</span></td>
+                            <td width="36%"><span class="label">Time :</span> <span class="value">{{ $toUpper($invoiceField(['time'])) }}</span></td>
                             <td><span class="label">From :</span> <span class="value" style="{{ $fromStyle }}">{{ $fromLocation }}</span></td>
                         </tr>
                         <tr>
@@ -1054,7 +1054,7 @@
                             <td><span class="label">To :</span> <span class="value" style="{{ $toStyle }}">{{ $toLocation }}</span></td>
                         </tr>
                         <tr><td colspan="2"><span class="label">Truck No.:</span> <span class="value" style="{{ $truckNoStyle }}">{{ $truckNo }}</span></td></tr>
-                        <tr><td colspan="2" class="tax-line"><span class="label">PAN No.:</span> <span class="value" style="{{ $panNoStyle }}">{{ $panNo }}</span><br><span class="label">{{ $companyTaxIdentityLabel }} :</span> <span class="value" style="{{ $taxIdentityStyle }}">{{ $companyTaxIdentityValue }}</span></td></tr>
+                        <tr><td colspan="2" class="tax-line"><span class="label">PAN No.:</span> <span class="value" style="{{ $panNoStyle }}">{{ $panNo }}</span><br><span class="label">{{ $toUpper($companyTaxIdentityLabel) }} :</span> <span class="value" style="{{ $taxIdentityStyle }}">{{ $companyTaxIdentityValue }}</span></td></tr>
                     </table>
 
                     <table class="charges">
@@ -1108,12 +1108,12 @@
                     <table>
                         <tr>
                             <td class="gst-payable" style="{{ $gstPayableByStyle }}">
-                                GST Tax Payable By<br>{{ $gstPayableBy }}
+                                GST TAX PAYABLE BY<br>{{ $toUpper($gstPayableBy) }}
                             </td>
                         </tr>
                         <tr>
                             <td class="for-company">
-                                <div class="company-separator"></div>For {{ $companyName }}
+                                <div class="company-separator"></div>FOR {{ $toUpper($companyName) }}
                                 @if (file_exists($signaturePath))
                                     <img class="signature-image" src="{{ \App\Platform\Pdf\Rendering\ImageUtils::toBase64Src($signaturePath) }}" alt="Signature">
                                 @endif
