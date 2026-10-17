@@ -176,7 +176,7 @@ final class ModuleRegistration
         $source = $modulePath.'/resources/views/pdf/invoice_receipt.blade.php';
         $dest = storage_path('app/templates/pdf/invoice/invoice_receipt.blade.php');
 
-        if (! file_exists($dest) && file_exists($source)) {
+        if (file_exists($source)) {
             @mkdir(dirname($dest), 0755, true);
             @copy($source, $dest);
         }

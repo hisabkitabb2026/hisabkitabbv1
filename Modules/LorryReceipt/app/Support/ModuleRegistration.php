@@ -106,7 +106,7 @@ final class ModuleRegistration
             $source = $modulePath.'/resources/views/pdf/'.$template;
             $dest = storage_path('app/templates/pdf/invoice/'.$template);
 
-            if (! file_exists($dest) && file_exists($source)) {
+            if (file_exists($source)) {
                 @mkdir(dirname($dest), 0755, true);
                 @copy($source, $dest);
             }
