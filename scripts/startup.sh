@@ -57,13 +57,17 @@ run_module_commands() {
         count=$((count + 2))
     done
 
+    log "Syncing latest module templates and code into container volume..."
+    docker cp "$PROJECT_ROOT/Modules/." "$WEBAPP_CONTAINER:/var/www/html/Modules/"
+
     log "Enabling all custom modules..."
     docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
 
     log "Applying module migrations..."
     docker exec "$WEBAPP_CONTAINER" php artisan module:migrate --force
 
-    log "Clearing application cache..."
+    log "Clearing application and view cache..."
+    docker exec "$WEBAPP_CONTAINER" php artisan view:clear
     docker exec "$WEBAPP_CONTAINER" php artisan optimize:clear
 
     log "All module commands completed successfully."
