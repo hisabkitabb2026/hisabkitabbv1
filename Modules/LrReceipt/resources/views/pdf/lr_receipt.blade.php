@@ -934,9 +934,9 @@
                                 @endif
                             </td>
                             <td class="company-cell">
-                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
-                                <div class="company-tagline">{{ $companyTagline }}</div>
-                                <div class="company-address" style="{{ $companyAddrStyle }}">{!! $displayCompanyAddress !!}</div>
+                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $toUpper($companyName) }}</div>
+                                <div class="company-tagline">{{ $toUpper($companyTagline) }}</div>
+                                <div class="company-address" style="{{ $companyAddrStyle }}">{!! $toUpper($displayCompanyAddress) !!}</div>
                                 <div class="company-contact">Mob. {{ $mobile }} &nbsp;|&nbsp; E-mail : {{ $email }}</div>
                             </td>
                         </tr>

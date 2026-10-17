@@ -87,7 +87,7 @@
     <div class="wrapper">
         <div class="company-details-container">
             <div class="company-address-container company-address">
-                {!! $company_address !!}
+                {!! mb_strtoupper((string) $company_address, 'UTF-8') !!}
             </div>
 
             <div class="estimate-details-container">
@@ -115,7 +115,7 @@
                 <div class="billing-address-container billing-address">
                     @if ($billing_address)
                         <b>Quotation To</b> <br>
-                        {!! $billing_address !!}
+                        {!! mb_strtoupper((string) $billing_address, 'UTF-8') !!}
                     @endif
                 </div>
             @endif
@@ -123,7 +123,7 @@
             <div @if ($billing_address !== '<br />') class="shipping-address-container shipping-address" @else class="shipping-address-container--left shipping-address" style="padding-left:30px;" @endif>
                 @if ($shipping_address)
                     <b>Ship To </b> <br>
-                    {!! $shipping_address !!}
+                    {!! mb_strtoupper((string) $shipping_address, 'UTF-8') !!}
                 @endif
             </div>
 

@@ -884,9 +884,9 @@
                                 @endif
                             </td>
                             <td class="company-cell">
-                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $companyName }}</div>
-                                <div class="company-tagline">{{ $companyTagline }}</div>
-                                <div class="company-address">{!! $displayCompanyAddress !!}</div>
+                                <div class="company-name" style="{{ $companyNameStyle }}">{{ $toUpper($companyName) }}</div>
+                                <div class="company-tagline">{{ $toUpper($companyTagline) }}</div>
+                                <div class="company-address">{!! $toUpper($displayCompanyAddress) !!}</div>
                                 <div class="company-contact">Mob. {{ $mobile }} &nbsp;|&nbsp; E-mail : {{ $email }}</div>
                             </td>
                         </tr>
@@ -924,7 +924,7 @@
                 <td>
                     <table class="bill-details">
                         <tr>
-                            <td width="50%">Bill No.: {{ $invoice->invoice_number }}</td>
+                            <td width="50%">Bill No.: {{ $toUpper($invoice->invoice_number) }}</td>
                             <td>Branch Code : {{ $branchCode }}</td>
                         </tr>
                         <tr>

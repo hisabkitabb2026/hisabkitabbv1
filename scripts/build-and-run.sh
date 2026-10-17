@@ -102,13 +102,17 @@ while [ $count -lt $max_wait ]; do
     count=$((count + 2))
 done
 
-log "==> Step 5: Enabling all custom modules..."
+log "==> Step 5: Syncing latest module templates and code into container volume..."
+docker cp "$PROJECT_ROOT/Modules/." "$WEBAPP_CONTAINER:/var/www/html/Modules/"
+
+log "==> Step 6: Enabling all custom modules..."
 docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
 
-log "==> Step 6: Running module migrations..."
+log "==> Step 7: Running module migrations..."
 docker exec "$WEBAPP_CONTAINER" php artisan module:migrate --force
 
-log "==> Step 7: Clearing and refreshing application cache..."
+log "==> Step 8: Clearing compiled view and application cache..."
+docker exec "$WEBAPP_CONTAINER" php artisan view:clear
 docker exec "$WEBAPP_CONTAINER" php artisan optimize:clear
 
 log "==> SUCCESS: Build complete and application is up and running!"
