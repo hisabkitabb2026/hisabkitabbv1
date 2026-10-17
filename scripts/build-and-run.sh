@@ -66,8 +66,17 @@ fi
 log "==> Step 1: Building Docker image with latest application code..."
 (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" build webapp)
 
-log "==> Step 2: Starting containers (database data volume is preserved)..."
-(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d)
+log "==> Step 2: Updating web application container (database data volume is preserved)..."
+# Ensure the existing database container is running if it was stopped
+if docker ps -a --format '{{.Names}}' | grep -Eq "^${DB_CONTAINER}$"; then
+    if ! docker ps --format '{{.Names}}' | grep -Eq "^${DB_CONTAINER}$"; then
+        log "Starting database container '$DB_CONTAINER'..."
+        docker start "$DB_CONTAINER"
+    fi
+fi
+
+# Recreate webapp container with the newly built image without conflicting with database
+(cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d --no-deps webapp)
 
 log "==> Step 3: Waiting for database container '$DB_CONTAINER' to be healthy..."
 max_wait=60
