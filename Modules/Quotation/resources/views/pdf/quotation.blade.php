@@ -27,19 +27,19 @@
         .company-address { margin-top: 2px; text-align: left; font-size: 12px; line-height: 15px; color: #595959; width: 280px; word-wrap: break-word; }
         .estimate-details-container { float: right; padding: 10px 30px 0 0; }
         .attribute-label { font-size: 12px; line-height: 18px; padding-right: 40px; text-align: left; color: #55547A }
-        .attribute-value { font-size: 12px; line-height: 18px; text-align: right; }
+        .attribute-value { font-size: 12px; line-height: 18px; text-align: right; text-transform: uppercase; }
 
         /* -- Customer Address -- */
-        .customer-address-container { width: 45%; padding: 0px 0 0 0px; }
+        .customer-address-container { width: 45%; padding: 0px 0 0 0px; text-transform: uppercase; }
         .shipping-address-container { float: right; padding-left: 40px; width: 160px; }
         .shipping-address-container--left { float: left; padding-left: 0px; }
         .shipping-address-label { font-size: 12px; line-height: 18px; padding: 0px; margin-top: 27px; margin-bottom: 0px; }
         .shipping-address-name { max-width: 160px; font-size: 15px; line-height: 22px; padding: 0px; margin: 0px; }
-        .shipping-address { font-size: 12px; line-height: 15px; color: #595959; padding-top: 45px; padding-left: 40px; margin: 0px; width: 160px; word-wrap: break-word; }
+        .shipping-address { font-size: 12px; line-height: 15px; color: #595959; padding-top: 45px; padding-left: 40px; margin: 0px; width: 160px; word-wrap: break-word; text-transform: uppercase; }
         .billing-address-container { padding-top: 50px; float: left; padding-left: 30px; }
         .billing-address-label { font-size: 12px; line-height: 18px; padding: 0px; margin-top: 27px; margin-bottom: 0px; }
         .billing-address-name { max-width: 160px; font-size: 15px; line-height: 22px; padding: 0px; margin: 0px; }
-        .billing-address { font-size: 12px; line-height: 15px; color: #595959; padding: 45px 0px 0px 30px; margin: 0px; width: 160px; word-wrap: break-word; }
+        .billing-address { font-size: 12px; line-height: 15px; color: #595959; padding: 45px 0px 0px 30px; margin: 0px; width: 160px; word-wrap: break-word; text-transform: uppercase; }
 
         /* -- Items Table -- */
         .items-table-wrapper { padding-top: 35px; padding-bottom: 10px; }
@@ -49,10 +49,10 @@
         tr.item-table-heading-row th { border-bottom: 0.620315px solid #E8E8E8; font-size: 12px; line-height: 18px; }
         .item-table-heading-row { margin-bottom: 10px; }
         tr.item-row td { font-size: 12px; line-height: 18px; }
-        .item-cell { font-size: 13; color: #040405; text-align: center; padding: 5px; padding-top: 10px; border-color: #d9d9d9; }
+        .item-cell { font-size: 13; color: #040405; text-align: center; padding: 5px; padding-top: 10px; border-color: #d9d9d9; text-transform: uppercase; }
 
         /* -- Notes -- */
-        .notes { font-size: 12px; color: #595959; margin-top: 80px; margin-left: 30px; width: 442px; text-align: left; page-break-inside: avoid; }
+        .notes { font-size: 12px; color: #595959; margin-top: 80px; margin-left: 30px; width: 442px; text-align: left; page-break-inside: avoid; text-transform: uppercase; }
         .notes-label { font-size: 15px; line-height: 22px; letter-spacing: 0.05em; color: #040405; width: 108px; white-space: nowrap; height: 19.87px; padding-bottom: 10px; }
 
         /* -- Helpers -- */
@@ -94,7 +94,7 @@
                 <table class="estimate-details-table">
                     <tr>
                         <td class="attribute-label">Quotation Number</td>
-                        <td class="attribute-value"> &nbsp;{{ $estimate->estimate_number }}</td>
+                        <td class="attribute-value"> &nbsp;{{ mb_strtoupper((string) $estimate->estimate_number) }}</td>
                     </tr>
                     <tr>
                         <td class="attribute-label">Quotation Date</td>
@@ -151,7 +151,7 @@
                     @foreach ($estimate->items as $item)
                         <tr class="item-row">
                             <td class="pr-20 text-right item-cell" style="vertical-align: top;">{{ $sl }}</td>
-                            <td class="pl-0 text-left item-cell">{{ $item->tr_station_name ?: $item->name }}</td>
+                            <td class="pl-0 text-left item-cell">{{ mb_strtoupper((string) ($item->tr_station_name ?: $item->name)) }}</td>
                             @foreach ($capacities as $mt)
                                 <td class="text-right item-cell" style="vertical-align: top;">
                                     {{ number_format((float) ($item->{"tr_rate_{$mt}mt"} ?? 0), 2) }}

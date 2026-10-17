@@ -97,8 +97,11 @@
         />
       </BaseInputGroup>
 
-      <BaseInputGroup :label="$t('invoices.invoice_number')">
-        <BaseInput v-model="filters.invoice_number">
+      <BaseInputGroup :label="numberFilterLabel">
+        <BaseInput
+          v-model="filters.invoice_number"
+          :placeholder="numberFilterLabel"
+        >
           <template #left="slotProps">
             <BaseIcon name="HashtagIcon" :class="slotProps.class" />
           </template>
@@ -648,6 +651,18 @@ const viewModeLabel = computed(() => {
   const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
   if (vm) return vm.label
   return t('invoices.one_time')
+})
+
+// HisabKitab feature — dynamic number label in the filter panel based on active view mode
+const numberFilterLabel = computed<string>(() => {
+  const currentView = viewMode.value || (route.query.view as string)
+  if (currentView === 'lr_receipt') {
+    return 'LR Number'
+  }
+  if (currentView === 'lorry_receipt') {
+    return 'Challan Number'
+  }
+  return t('invoices.invoice_number')
 })
 
 // HisabKitab feature — create link from registered view mode

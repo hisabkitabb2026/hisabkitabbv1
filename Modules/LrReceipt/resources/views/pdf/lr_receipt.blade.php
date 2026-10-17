@@ -165,6 +165,7 @@
             font-size: 13px;
             min-height: 24px;
             padding: 4px 7px;
+            text-transform: uppercase;
             vertical-align: middle;
         }
 
@@ -188,6 +189,7 @@
             border-left: 1px solid #ccc;
             min-height: 132px;
             padding: 6px 8px;
+            text-transform: uppercase;
             width: 50%;
             word-break: break-word;
             overflow-wrap: anywhere;
@@ -204,6 +206,7 @@
             min-height: 24px;
             line-height: 22px;
             margin-top: 0;
+            text-transform: uppercase;
         }
 
         .party-details {
@@ -211,6 +214,7 @@
             min-height: 59px;
             line-height: 16px;
             padding-top: 4px;
+            text-transform: uppercase;
         }
 
         .side-cell {
@@ -221,6 +225,7 @@
         .side-table td {
             min-height: 20px;
             padding: 2px 6px;
+            text-transform: uppercase;
             vertical-align: middle;
         }
 
@@ -253,6 +258,7 @@
             min-height: 22px;
             line-height: 15px;
             padding: 4px 6px;
+            text-transform: uppercase;
             word-break: break-word;
             overflow-wrap: anywhere;
         }
@@ -305,6 +311,7 @@
             min-height: 22px;
             line-height: 15px;
             padding: 4px 6px;
+            text-transform: uppercase;
         }
 
         /* Zebra striping via class (dompdf :nth-child unreliable) */
@@ -471,6 +478,7 @@
             color: #111;
             font-size: 13px;
             font-weight: bold;
+            text-transform: uppercase;
         }
 
         /* ── Page-break protection for key sections ── */
@@ -518,10 +526,6 @@
         }
 
         return '';
-    };
-
-    $companyField = function ($keys) use ($invoice, $fieldValue) {
-        return $invoice->company ? $fieldValue($invoice->company->fields ?? [], $keys) : '';
     };
 
     $numericField = function ($value) {
@@ -686,18 +690,27 @@
             e($address?->country_name),
         ]));
     }
-    // PAN No, GSTIN and Enrollment No come from the company custom fields set on /admin/settings/company-info
-    $panNo = $companyField(['PAN No.', 'pan_no', 'pan']);
-    $companyGstin = $companyField(['GSTIN', 'gstin', 'gst_no']);
-    $companyEnrollmentNo = $companyField(['Enrollment No', 'enrollment_no', 'enrollment']);
+    $toUpper = function ($value) {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        return mb_strtoupper((string) $value, 'UTF-8');
+    };
+
+    // PAN No: Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
+    $panNo = $toUpper($invoiceField(['pan_no', 'pan']) ?: ($invoice->company?->tax_id ?: ($invoice->company?->pan_no ?: '')));
+    // GSTIN: VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
+    $companyGstin = $toUpper($invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->vat_id ?: ($invoice->company?->gstin ?: '')));
+    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
-    $companyTaxIdentityValue = $companyEnrollmentNo ?: $companyGstin;
+    $companyTaxIdentityValue = $toUpper($companyEnrollmentNo ?: $companyGstin);
 
     $basicFreight = $invoiceField(['basic_freight']);
     $localCollection = $invoiceField(['local_collection']);
     $doorDelivery = $invoiceField(['door_delivery']);
     $hamali = $invoiceField(['hamali']);
-    $docketCharge = $invoiceField(['docket_charge']) ?: 100;
+    $rawDocket = $invoiceField(['docket_charge']);
+    $docketCharge = ($rawDocket !== '' && $rawDocket !== null && $numericField($rawDocket) > 0) ? $rawDocket : 100;
     $otherCharge = $invoiceField(['other_charge']);
     $fov = $invoiceField(['fov']);
     $calculatedNet = (
@@ -712,7 +725,7 @@
     $storedNet = $numericField($invoiceField(['net_amount'])) * 100;
     $netAmount = $calculatedNet > 0 ? $calculatedNet : ($storedNet > 0 ? $storedNet : 0);
 
-    $modeOfPayment = $invoiceField(['mode_of_payment']) ?: 'TO PAY';
+    $modeOfPayment = $toUpper($invoiceField(['mode_of_payment']) ?: 'TO PAY');
     $selectedMode = $normalize($modeOfPayment);
     if ($selectedMode === 'TO_BE_BILLED') {
         $selectedMode = 'TO_BE_BILLED_AT';
@@ -725,39 +738,39 @@
         return '<span class="mode-struck">'.e($label).'</span>';
     };
 
-    $gstPayableBy = $invoiceField(['gst_tax_payable_by', 'gst_payable_by']) ?: 'Consignor / Consignee';
+    $gstPayableBy = $toUpper($invoiceField(['gst_tax_payable_by', 'gst_payable_by']) ?: 'Consignor / Consignee');
 
     // Consignor (Customer)
     $consignorCustomer = $invoice->customer;
     $parsedConsignor = $parseParty($invoiceField(['consignor', 'tr_consignor']));
-    $consignorName = $consignorCustomer?->name ?: ($parsedConsignor['name'] ?: '');
+    $consignorName = $toUpper($consignorCustomer?->name ?: ($parsedConsignor['name'] ?: ''));
     $consignorAddrFromCust = $formatAddress($consignorCustomer);
-    $consignorAddress = (strlen($consignorAddrFromCust) > strlen($parsedConsignor['address']))
+    $consignorAddress = $toUpper((strlen($consignorAddrFromCust) > strlen($parsedConsignor['address']))
         ? $consignorAddrFromCust
-        : ($parsedConsignor['address'] ?: $consignorAddrFromCust);
-    $consignorPhone = $invoiceField(['consignor_phone', 'consignor_phone_no', 'tr_consignor_phone'])
-        ?: ($consignorCustomer?->phone ?: ($consignorCustomer?->billingAddress?->phone ?: ''));
-    $consignorGstin = $invoiceField(['consignor_gst', 'consignor_gst_no', 'tr_consignor_gst'])
-        ?: ($consignorCustomer?->tax_id ?: '');
+        : ($parsedConsignor['address'] ?: $consignorAddrFromCust));
+    $consignorPhone = $toUpper($invoiceField(['consignor_phone', 'consignor_phone_no', 'tr_consignor_phone'])
+        ?: ($consignorCustomer?->phone ?: ($consignorCustomer?->billingAddress?->phone ?: '')));
+    $consignorGstin = $toUpper($invoiceField(['consignor_gst', 'consignor_gst_no', 'tr_consignor_gst'])
+        ?: ($consignorCustomer?->tax_id ?: ''));
 
     // Consignee
     $consigneeCustomer = $invoice->relationLoaded('consigneeCustomer')
         ? $invoice->consigneeCustomer
         : ($invoice->tr_consignee_customer_id ? \App\Domains\Contacts\Models\Customer::with(['addresses', 'billingAddress', 'shippingAddress'])->find($invoice->tr_consignee_customer_id) : null);
     $parsedConsignee = $parseParty($invoiceField(['consignee', 'tr_consignee']));
-    $consigneeName = $consigneeCustomer?->name ?: ($parsedConsignee['name'] ?: '');
+    $consigneeName = $toUpper($consigneeCustomer?->name ?: ($parsedConsignee['name'] ?: ''));
     $consigneeAddrFromCust = $formatAddress($consigneeCustomer);
-    $consigneeAddress = (strlen($consigneeAddrFromCust) > strlen($parsedConsignee['address']))
+    $consigneeAddress = $toUpper((strlen($consigneeAddrFromCust) > strlen($parsedConsignee['address']))
         ? $consigneeAddrFromCust
-        : ($parsedConsignee['address'] ?: $consigneeAddrFromCust);
-    $consigneePhone = $invoiceField(['consignee_phone', 'consignee_phone_no', 'tr_consignee_phone'])
-        ?: ($consigneeCustomer?->phone ?: ($consigneeCustomer?->billingAddress?->phone ?: ''));
-    $consigneeGstin = $invoiceField(['consignee_gst', 'consignee_gst_no', 'tr_consignee_gst'])
-        ?: ($consigneeCustomer?->tax_id ?: '');
+        : ($parsedConsignee['address'] ?: $consigneeAddrFromCust));
+    $consigneePhone = $toUpper($invoiceField(['consignee_phone', 'consignee_phone_no', 'tr_consignee_phone'])
+        ?: ($consigneeCustomer?->phone ?: ($consigneeCustomer?->billingAddress?->phone ?: '')));
+    $consigneeGstin = $toUpper($invoiceField(['consignee_gst', 'consignee_gst_no', 'tr_consignee_gst'])
+        ?: ($consigneeCustomer?->tax_id ?: ''));
 
-    $docketNumber = $invoice->invoice_number;
-    $descriptionOfGoods = trim((string) $invoiceField(['description_of_goods', 'description_goods']));
-    $noOfArticles = trim((string) $invoiceField(['no_of_articles', 'articles', 'no_of_packages', 'packages']));
+    $docketNumber = $toUpper($invoice->invoice_number);
+    $descriptionOfGoods = $toUpper(trim((string) $invoiceField(['description_of_goods', 'description_goods'])));
+    $noOfArticles = $toUpper(trim((string) $invoiceField(['no_of_articles', 'articles', 'no_of_packages', 'packages'])));
 
     if (preg_match('/^LR Receipt\s+\d+$/i', $descriptionOfGoods)) {
         $descriptionOfGoods = '';
@@ -796,15 +809,15 @@
     $consigneeAddrStyle = '';
 
     // Top-detail-table fields
-    $fromLocation = $invoiceField(['from']);
-    $toLocation = $invoiceField(['to']);
-    $truckNo = $invoiceField(['truck_no']);
+    $fromLocation = $toUpper($invoiceField(['from']));
+    $toLocation = $toUpper($invoiceField(['to']));
+    $truckNo = $toUpper($invoiceField(['truck_no']));
     $fromStyle = $getFontForWidth($fromLocation, 250, 12, 7);
     $toStyle = $getFontForWidth($toLocation, 250, 12, 7);
     $truckNoStyle = $getFontForWidth($truckNo, 400, 12, 7);
 
     // Delivery At
-    $deliveryAt = $invoiceField(['delivery_at']);
+    $deliveryAt = $toUpper($invoiceField(['delivery_at']));
     $deliveryAtStyle = $getFontForWidth($deliveryAt, 480, 12, 7);
 
     // PAN No and tax identity
@@ -812,20 +825,20 @@
     $taxIdentityStyle = $getFontForWidth($companyTaxIdentityValue, 200, 13.5, 7);
 
     // Goods table secondary fields
-    $hsnCode = $invoiceField(['hsn_code']);
+    $hsnCode = $toUpper($invoiceField(['hsn_code']));
     $hsnCodeStyle = $getFontForWidth($hsnCode, 480, 12, 7);
-    $partyInvoiceNo = $invoiceField(['party_invoice_no', 'invoice_no']) ?: $itemField(['party_inv_no', 'invoice_no']);
+    $partyInvoiceNo = $toUpper($invoiceField(['party_invoice_no', 'invoice_no']) ?: $itemField(['party_inv_no', 'invoice_no']));
     $partyInvoiceNoStyle = $getFontForWidth($partyInvoiceNo, 200, 12, 7);
     $invoiceNo = $partyInvoiceNo;
     $invoiceNoStyle = $partyInvoiceNoStyle;
-    $goodsValue = $invoiceField(['goods_value']);
+    $goodsValue = $toUpper($invoiceField(['goods_value']));
     $goodsValueStyle = $getFontForWidth($goodsValue, 200, 12, 7);
-    $ewayBillNo = $invoiceField(['e_way_bill_no']);
+    $ewayBillNo = $toUpper($invoiceField(['e_way_bill_no']));
     $ewayBillStyle = $getFontForWidth($ewayBillNo, 480, 12, 7);
-    $actualWeight = $invoiceField(['actual_weight']);
-    $chargedWeight = $invoiceField(['charged_weight']);
-    $packing = $invoiceField(['packing']);
-    $podRequired = $invoiceField(['pod_required']);
+    $actualWeight = $toUpper($invoiceField(['actual_weight']));
+    $chargedWeight = $toUpper($invoiceField(['charged_weight']));
+    $packing = $toUpper($invoiceField(['packing']));
+    $podRequired = $toUpper($invoiceField(['pod_required']));
 
     // Charges table
     $basicFreightStyle = $getFontForWidth($basicFreight, 140, 12, 7);
@@ -1071,7 +1084,7 @@
                         </tr>
                         <tr class="alt-row">
                             <td><span class="label">Docket Charge</span></td>
-                            <td class="text-right">{{ $docketCharge ? $docketCharge.'/-' : '' }}</td>
+                            <td class="text-right">{{ $docketCharge ? $docketCharge.'/-' : '100/-' }}</td>
                         </tr>
                         <tr>
                             <td><span class="label">Other Charge</span></td>
