@@ -27,10 +27,6 @@
 
         return $matchedValue ?? '';
     };
-    $companyField = function ($keys) use ($invoice, $fieldValue) {
-        return $invoice->company ? $fieldValue($invoice->company->fields ?? [], $keys) : '';
-    };
-
     $fv = function ($keys, $fallback = '') use ($fieldValue, $invoice) {
         $value = '';
         foreach ((array) $keys as $key) {
@@ -53,8 +49,8 @@
                 'final_balance_code' => 'tr_final_balance_paid_at',
                 'final_balance_amount_paid_at' => 'tr_final_balance_paid_at',
                 'received_no_of_bilties' => 'tr_received_no_bilties',
-                'from' => 'tr_from_name',
-                'to' => 'tr_to_name',
+                'from' => 'tr_from_code',
+                'to' => 'tr_to_code',
                 'no_of_pages' => 'tr_no_of_pages',
                 'no_of_packages' => 'tr_no_of_packages',
                 'actual_weight' => 'tr_actual_weight',
@@ -113,17 +109,23 @@
             $normalizedKey = $columnAliases[$normalizedKey] ?? $normalizedKey;
 
             if ($normalizedKey === 'gst_no' || $normalizedKey === 'gstin') {
-                $companyGstin = $companyField(['GSTIN', 'gstin', 'gst_no']);
-                if ($companyGstin !== '') {
-                    $value = $companyGstin;
+                if (isset($invoice->company?->vat_id) && trim((string)$invoice->company->vat_id) !== '') {
+                    $value = $invoice->company->vat_id;
+                    break;
+                }
+                if (isset($invoice->gstin) && trim((string)$invoice->gstin) !== '') {
+                    $value = $invoice->gstin;
+                    break;
+                }
+                if (isset($invoice->gst_no) && trim((string)$invoice->gst_no) !== '') {
+                    $value = $invoice->gst_no;
                     break;
                 }
             }
 
             if ($normalizedKey === 'company_pan' || $normalizedKey === 'pan' || $normalizedKey === 'pan_no') {
-                $companyPan = $companyField(['PAN No.', 'pan_no', 'pan']);
-                if ($companyPan !== '') {
-                    $value = $companyPan;
+                if (isset($invoice->company?->tax_id) && trim((string)$invoice->company->tax_id) !== '') {
+                    $value = $invoice->company->tax_id;
                     break;
                 }
             }
@@ -170,7 +172,13 @@
 
         return trim((string) $value) === '' ? $fallback : $value;
     };
-    $v = fn ($keys, $fallback = '') => $fv($keys, $fallback);
+    $toUpper = function ($value) {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        return mb_strtoupper((string) $value, 'UTF-8');
+    };
+    $v = fn ($keys, $fallback = '') => $toUpper($fv($keys, $fallback));
     $number = function ($keys) use ($fv) {
         $value = trim(str_replace(',', '', (string) $fv($keys)));
 
@@ -261,8 +269,8 @@
         $balanceNumber = $grossHireNumber - $advanceNumber;
     }
     $balanceAmount = $formatAmount($balanceNumber);
-    $grossHireRupeesOnly = $fv('Gross Hire Rupees') ?: $rupeesInWords($grossHireRupees);
-    $balanceRupeesOnly = $fv('Balance Rupees Only') ?: $rupeesInWords($balanceAmount);
+    $grossHireRupeesOnly = $toUpper($fv('Gross Hire Rupees') ?: $rupeesInWords($grossHireRupees));
+    $balanceRupeesOnly = $toUpper($fv('Balance Rupees Only') ?: $rupeesInWords($balanceAmount));
     $detentionAmount = $fv(['Add Detention Rs.', 'Detention Amount']);
     $extraHireAmount = $fv(['Extra Hire Rs', 'Extra Hire Amount']);
     $finalOtherAmount = $fv(['Other Rs', 'Final Other Amount']);
@@ -304,7 +312,7 @@
     $totalLessAmount = $formatAmount($deductionTotalNumber);
     $netAmountPayable = $formatAmount($netAmountPayableNumber);
     $finalRupeesValue = $netAmountPayable !== '' ? $netAmountPayable : '';
-    $finalRupeesOnly = $fv('Final Rupees Only') ?: $rupeesInWords($finalRupeesValue);
+    $finalRupeesOnly = $toUpper($fv('Final Rupees Only') ?: $rupeesInWords($finalRupeesValue));
     $company = $invoice->company ?? null;
     $companyName = $company?->name ?: '';
     $companyInitials = collect(preg_split('/\s+/', trim($companyName)))
@@ -473,6 +481,7 @@
             overflow: hidden;
             padding-left: 2pt;
             position: absolute;
+            text-transform: uppercase;
             white-space: nowrap;
         }
         .sig { border-top: .75pt solid #222; height: 1pt; position: absolute; }
@@ -486,6 +495,7 @@
             padding-left: 2pt;
             position: absolute;
             text-align: center;
+            text-transform: uppercase;
         }
         .e-label {
             font-family: 'NotoSans', sans-serif !important;
@@ -591,7 +601,7 @@
     {{-- Row 1 values --}}
     <div class="t c b" style="left:0; top:116pt; width:135pt; font-size:9.5pt;">{{ $v('From') }}</div>
     <div class="t c b" style="left:135pt; top:116pt; width:135pt; font-size:9.5pt;">{{ $v('To') }}</div>
-    <div class="t c b" style="left:270pt; top:116pt; width:135pt; font-size:9.5pt;">{{ $invoice->invoice_number }}</div>
+    <div class="t c b" style="left:270pt; top:116pt; width:135pt; font-size:9.5pt;">{{ $toUpper($invoice->invoice_number) }}</div>
     <div class="t c b" style="left:405pt; top:116pt; width:135pt; font-size:9.5pt;">{{ $v('Lorry No') }}</div>
     {{-- Row 2 labels --}}
     <div class="t c" style="left:0; top:132pt; width:90pt;">No. Of Pages</div>
