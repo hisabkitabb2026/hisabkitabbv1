@@ -15,9 +15,23 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 BACKUP_DIR="${BACKUP_DIR:-$HOME/db_backups}"
 CONTAINER_NAME="${DB_CONTAINER:-invoiceshelf-mysql}"
+WEBAPP_CONTAINER="${WEBAPP_CONTAINER:-invoiceshelf-variant-mariadb}"
+
+# Default fallback values
 DB_NAME="${DB_NAME:-invoiceshelf}"
 DB_USER="${DB_USER:-invoiceshelf}"
 DB_PASS="${DB_PASS:-somepass}"
+
+# Auto-detect actual DB configuration from running webapp container if available
+if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -Eq "^${WEBAPP_CONTAINER}$"; then
+    APP_DB=$(docker exec "$WEBAPP_CONTAINER" printenv DB_DATABASE 2>/dev/null || true)
+    APP_USER=$(docker exec "$WEBAPP_CONTAINER" printenv DB_USERNAME 2>/dev/null || true)
+    APP_PASS=$(docker exec "$WEBAPP_CONTAINER" printenv DB_PASSWORD 2>/dev/null || true)
+
+    [ -n "$APP_DB" ] && DB_NAME="$APP_DB"
+    [ -n "$APP_USER" ] && DB_USER="$APP_USER"
+    [ -n "$APP_PASS" ] && DB_PASS="$APP_PASS"
+fi
 
 DATE="$(date +%Y-%m-%d)"
 BACKUP_FILE="${BACKUP_DIR}/${DATE}.sql"
@@ -43,11 +57,25 @@ fi
 mkdir -p "$BACKUP_DIR"
 
 # ------------------------------------------------------------------------------
-# 2. Determine Dump Binary (mariadb-dump or mysqldump)
+# 2. Determine Dump Binary and Verify Database Existence
 # ------------------------------------------------------------------------------
 DUMP_BIN="mariadb-dump"
+CLI_BIN="mariadb"
 if ! docker exec "$CONTAINER_NAME" which mariadb-dump >/dev/null 2>&1; then
     DUMP_BIN="mysqldump"
+    CLI_BIN="mysql"
+fi
+
+# Verify database exists in MySQL/MariaDB container
+DB_EXISTS=$(docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER_NAME" \
+    "$CLI_BIN" -u "$DB_USER" -Nse "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME';" 2>/dev/null || \
+    docker exec "$CONTAINER_NAME" "$CLI_BIN" -u root -Nse "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME';" 2>/dev/null || true)
+
+if [ -z "$DB_EXISTS" ]; then
+    log "ERROR: Database '$DB_NAME' was not found in container '$CONTAINER_NAME'." >&2
+    log "Available databases in this container:" >&2
+    docker exec "$CONTAINER_NAME" "$CLI_BIN" -u root -e "SHOW DATABASES;" 2>/dev/null || true
+    exit 1
 fi
 
 # ------------------------------------------------------------------------------
