@@ -127,10 +127,7 @@ trait GeneratesPdf
         Storage::disk('local')->put($temp_file, $pdf->output());
 
         if ($deleteExistingFile) {
-            // Note: the document id is handed over where a collection name
-            // belongs, so this empties a collection nobody files anything
-            // under, and the superseded archive survives. Left as it stands.
-            $this->clearMediaCollection($this->id);
+            $this->clearMediaCollection($collection_name);
         }
 
         $default_disk = FileDisk::whereSetAsDefault(true)->first();

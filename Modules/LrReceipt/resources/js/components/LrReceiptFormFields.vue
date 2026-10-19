@@ -83,6 +83,52 @@ watch(
   { deep: true },
 )
 
+// Track invoices that had default values initialized to avoid re-triggering on user edits
+const initializedInvoices = new WeakSet<object>()
+
+function isEditMode(): boolean {
+  if (invoiceData.value?.id) return true
+  if (props.store?.isEdit === true) return true
+  if (typeof window !== 'undefined' && window.location.pathname.includes('/edit')) return true
+  return false
+}
+
+function initDefaultCharges(): void {
+  if (!invoiceData.value) return
+  if (initializedInvoices.has(invoiceData.value)) return
+
+  // Don't initialize while settings or existing invoice data are actively loading
+  if (props.store?.isFetchingInitialSettings || props.store?.isFetchingInvoice) return
+
+  if (!isEditMode()) {
+    if (
+      invoiceData.value.tr_docket_charge === undefined ||
+      invoiceData.value.tr_docket_charge === null ||
+      invoiceData.value.tr_docket_charge === ''
+    ) {
+      invoiceData.value.tr_docket_charge = 100
+      recalcNetAmount()
+    }
+  }
+
+  initializedInvoices.add(invoiceData.value)
+}
+
+watch(
+  () => [
+    isVisible.value,
+    invoiceData.value,
+    props.store?.isFetchingInitialSettings,
+    props.store?.isFetchingInvoice,
+  ] as const,
+  ([visible, data, fetchingSettings, fetchingInvoice]) => {
+    if (visible && data && !fetchingSettings && !fetchingInvoice) {
+      initDefaultCharges()
+    }
+  },
+  { immediate: true },
+)
+
 const paymentOptions = ['To Pay', 'To Be Billed', 'Paid']
 const gstOptions = ['Consignor', 'Consignee']
 const podOptions = ['YES', 'NO']

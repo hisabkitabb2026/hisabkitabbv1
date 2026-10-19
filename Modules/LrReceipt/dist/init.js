@@ -60,11 +60,26 @@ var h = {
 			});
 		}
 		p(() => u.map((e) => s.value?.[e]), () => y(), { deep: !0 });
-		let x = [
+		let x = /* @__PURE__ */ new WeakSet();
+		function S() {
+			return !!(s.value?.id || o.store?.isEdit === !0 || typeof window < "u" && window.location.pathname.includes("/edit"));
+		}
+		function C() {
+			s.value && (x.has(s.value) || o.store?.isFetchingInitialSettings || o.store?.isFetchingInvoice || (S() || (s.value.tr_docket_charge === void 0 || s.value.tr_docket_charge === null || s.value.tr_docket_charge === "") && (s.value.tr_docket_charge = 100, y()), x.add(s.value)));
+		}
+		p(() => [
+			l.value,
+			s.value,
+			o.store?.isFetchingInitialSettings,
+			o.store?.isFetchingInvoice
+		], ([e, t, n, r]) => {
+			e && t && !n && !r && C();
+		}, { immediate: !0 });
+		let w = [
 			"To Pay",
 			"To Be Billed",
 			"Paid"
-		], S = ["Consignor", "Consignee"], C = ["YES", "NO"];
+		], T = ["Consignor", "Consignee"], E = ["YES", "NO"];
 		return (e, t) => {
 			let o = d("BaseInput"), u = d("BaseInputGroup"), f = d("BaseSelectInput"), p = d("BaseCard"), y = d("BaseTextarea");
 			return l.value && s.value ? (c(), r("div", h, [
@@ -99,7 +114,7 @@ var h = {
 							default: m(() => [a(f, {
 								modelValue: s.value.tr_mode_of_payment,
 								"onUpdate:modelValue": t[3] ||= (e) => s.value.tr_mode_of_payment = e,
-								options: x.map((e) => ({
+								options: w.map((e) => ({
 									id: e,
 									label: e
 								})),
@@ -113,7 +128,7 @@ var h = {
 							default: m(() => [a(f, {
 								modelValue: s.value.tr_gst_payable_by,
 								"onUpdate:modelValue": t[4] ||= (e) => s.value.tr_gst_payable_by = e,
-								options: S.map((e) => ({
+								options: T.map((e) => ({
 									id: e,
 									label: e
 								})),
@@ -216,7 +231,7 @@ var h = {
 							default: m(() => [a(f, {
 								modelValue: s.value.tr_pod_required,
 								"onUpdate:modelValue": t[16] ||= (e) => s.value.tr_pod_required = e,
-								options: C.map((e) => ({
+								options: E.map((e) => ({
 									id: e,
 									label: e
 								})),
