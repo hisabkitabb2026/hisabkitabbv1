@@ -69,7 +69,9 @@ run_module_commands() {
     docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
 
     log "Applying module migrations..."
-    docker exec "$WEBAPP_CONTAINER" php artisan module:migrate --force
+    for mod in $MODULES; do
+        docker exec "$WEBAPP_CONTAINER" php artisan module:migrate "$mod" --force || true
+    done
 
     log "Clearing application and view cache..."
     docker exec "$WEBAPP_CONTAINER" php artisan view:clear

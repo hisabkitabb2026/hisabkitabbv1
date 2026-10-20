@@ -114,7 +114,9 @@ log "==> Step 6: Enabling all custom modules..."
 docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
 
 log "==> Step 7: Running module migrations..."
-docker exec "$WEBAPP_CONTAINER" php artisan module:migrate --force
+for mod in $MODULES; do
+    docker exec "$WEBAPP_CONTAINER" php artisan module:migrate "$mod" --force || true
+done
 
 log "==> Step 8: Clearing compiled view and application cache..."
 docker exec "$WEBAPP_CONTAINER" php artisan view:clear
