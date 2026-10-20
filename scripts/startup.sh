@@ -30,12 +30,12 @@ RUNNING_COMPOSE=$(docker inspect "$WEBAPP_CONTAINER" --format '{{index .Config.L
 if [ -n "$RUNNING_COMPOSE" ] && [ -f "$RUNNING_COMPOSE" ]; then
     COMPOSE_FILE="$RUNNING_COMPOSE"
     COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
+elif [ -f "$PROJECT_ROOT/docker-compose.ec2.yml" ]; then
+    COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
+    COMPOSE_DIR="$PROJECT_ROOT"
 elif [ -f "$PROJECT_ROOT/docker/production/docker-compose.mysql.yml" ]; then
     COMPOSE_FILE="$PROJECT_ROOT/docker/production/docker-compose.mysql.yml"
     COMPOSE_DIR="$PROJECT_ROOT/docker/production"
-else
-    COMPOSE_FILE="$PROJECT_ROOT/docker-compose.ec2.yml"
-    COMPOSE_DIR="$PROJECT_ROOT"
 fi
 
 is_container_healthy() {
