@@ -110,11 +110,12 @@ done
 log "==> Step 5: Syncing configuration, module templates and code into container volume..."
 # Sync modules and templates
 docker cp "$PROJECT_ROOT/Modules/." "$WEBAPP_CONTAINER:/var/www/html/Modules/"
-docker exec "$WEBAPP_CONTAINER" mkdir -p /var/www/html/storage/app/templates/pdf/invoice /var/www/html/storage/app/templates/pdf/estimate
+docker exec "$WEBAPP_CONTAINER" mkdir -p /var/www/html/storage/app/templates/pdf/invoice /var/www/html/storage/app/templates/pdf/estimate /var/www/html/storage/app/templates/pdf/reports
 docker cp "$PROJECT_ROOT/Modules/LrReceipt/resources/views/pdf/lr_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/lr_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/LorryReceipt/resources/views/pdf/lorry_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/lorry_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/InvoiceReceipt/resources/views/pdf/invoice_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/invoice_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/Quotation/resources/views/pdf/quotation.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/estimate/quotation.blade.php"
+docker cp "$PROJECT_ROOT/resources/views/app/pdf/reports/purchases.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/reports/purchases.blade.php"
 
 # Sync sanctum configuration and inject environment variables
 if [ -f "$PROJECT_ROOT/config/sanctum.php" ]; then
