@@ -26,7 +26,9 @@ use App\Domains\Accounts\Models\User;
 use App\Domains\Purchases\Models\Bill;
 use App\Domains\Sales\Models\Invoice;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Modules\LorryReceipt\Application\LorryReceiptPayablesService;
 
 require __DIR__.'/../vendor/autoload.php';
@@ -36,6 +38,13 @@ $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 $companyId = 1;
+
+// Ensure tr_final_amount_paid column exists on invoices table
+if (! Schema::hasColumn('invoices', 'tr_final_amount_paid')) {
+    Schema::table('invoices', function (Blueprint $table) {
+        $table->text('tr_final_amount_paid')->nullable();
+    });
+}
 
 // Authenticate as company owner/admin for Bouncer and settlement services
 $company = Company::find($companyId);
