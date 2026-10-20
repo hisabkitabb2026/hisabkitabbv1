@@ -16,6 +16,8 @@ return [
     |
     */
 
+    'version' => env('APP_VERSION', '3.0.0-alpha.10'),
+
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
