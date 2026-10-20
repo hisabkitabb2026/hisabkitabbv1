@@ -181,6 +181,55 @@
               :currency="report.currency" /></template
         ></BaseTable>
       </section>
+      <section v-if="report.lorry_receipts?.rows?.length" class="space-y-4">
+        <div class="flex items-center gap-2">
+          <h2 class="font-semibold text-section text-heading">
+            Lorry Receipt Transport Details
+          </h2>
+        </div>
+        <BaseTable :data="report.lorry_receipts.rows" :columns="lrColumns">
+          <template #cell-challan_no="{ row }">
+            <router-link
+              :to="`/admin/invoices/${row.data.id}/view`"
+              class="font-medium text-primary-600 hover:underline"
+            >
+              {{ row.data.challan_no }}
+            </router-link>
+          </template>
+          <template #cell-lorry_hire="{ row }">
+            <BaseFormatMoney
+              :amount="row.data.lorry_hire"
+              :currency="report.currency"
+            />
+          </template>
+          <template #cell-other_charges="{ row }">
+            <BaseFormatMoney
+              :amount="row.data.other_charges"
+              :currency="report.currency"
+            />
+          </template>
+          <template #cell-advance_on="{ row }">
+            <PurchaseDate v-if="row.data.advance_on" :value="row.data.advance_on" />
+            <span v-else>—</span>
+          </template>
+          <template #cell-advance_paid="{ row }">
+            <BaseFormatMoney
+              :amount="row.data.advance_paid"
+              :currency="report.currency"
+            />
+          </template>
+          <template #cell-remaining_paid="{ row }">
+            <BaseFormatMoney
+              :amount="row.data.remaining_paid"
+              :currency="report.currency"
+            />
+          </template>
+          <template #cell-final_balance_date="{ row }">
+            <PurchaseDate v-if="row.data.final_balance_date" :value="row.data.final_balance_date" />
+            <span v-else>—</span>
+          </template>
+        </BaseTable>
+      </section>
     </template>
     <ReportPdfPane ref="pdfPane" :path="null" class="hidden" />
   </div>
@@ -236,6 +285,18 @@ const taxColumns = computed<ColumnDef[]>(() => [
     mobile: 'trailing',
     align: 'end',
   },
+])
+const lrColumns = computed<ColumnDef[]>(() => [
+  { key: 'challan_no', label: 'Challan No', mobile: 'title' },
+  { key: 'lr_no', label: 'LR Number', mobile: 'subtitle' },
+  { key: 'lorry_no', label: 'Lorry No', mobile: 'subtitle' },
+  { key: 'paid_to', label: 'Paid To', mobile: 'subtitle' },
+  { key: 'lorry_hire', label: 'Lorry Hire', align: 'end' },
+  { key: 'other_charges', label: 'Other Charges', align: 'end' },
+  { key: 'advance_on', label: 'Advance On', align: 'center' },
+  { key: 'advance_paid', label: 'Advance Paid', align: 'end' },
+  { key: 'remaining_paid', label: 'Remaining Paid', align: 'end' },
+  { key: 'final_balance_date', label: 'Final Balance Date', align: 'center' },
 ])
 const route = useRoute(),
   company = useCompanyStore(),

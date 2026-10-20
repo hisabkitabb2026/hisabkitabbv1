@@ -143,4 +143,92 @@
             </tbody>
         </table>
     </div>
+
+    @if (! empty($report['lorry_receipts']['rows']))
+        <style>
+            .lr-details-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 6px;
+            }
+            .lr-details-table th {
+                font-size: 7.5px;
+                line-height: 10px;
+                padding: 4px 2px;
+                border-bottom: 0.8px solid #55547A;
+                text-transform: uppercase;
+                color: #55547A;
+                text-align: left;
+                vertical-align: bottom;
+            }
+            .lr-details-table td {
+                font-size: 8px;
+                line-height: 11px;
+                padding: 4px 2px;
+                border-bottom: 0.5px solid #EAEAEA;
+                vertical-align: middle;
+                color: #040405;
+            }
+            .lr-details-table .report-amount {
+                text-align: right;
+                white-space: nowrap;
+            }
+            .lr-details-table .report-col-date {
+                text-align: center;
+                white-space: nowrap;
+            }
+            .lr-details-table tr.report-total-row td {
+                font-size: 8.5px;
+                font-weight: bold;
+                padding: 6px 2px;
+                border-top: 1.2px solid #55547A;
+                border-bottom: 1.2px solid #55547A;
+                color: #040405;
+            }
+        </style>
+        <div class="report-section">
+            <p class="report-section-heading">Lorry Receipt Transport Details</p>
+            <table class="report-table lr-details-table">
+                <thead>
+                    <tr>
+                        <th style="width: 7%;">Challan No</th>
+                        <th style="width: 8%;">LR Number</th>
+                        <th style="width: 10%;">Lorry No</th>
+                        <th style="width: 17%;">Paid To</th>
+                        <th class="report-amount" style="width: 10%;">Lorry Hire</th>
+                        <th class="report-amount" style="width: 9%;">Other Charges</th>
+                        <th class="report-col-date" style="width: 9%;">Advance On</th>
+                        <th class="report-amount" style="width: 10%;">Advance Paid</th>
+                        <th class="report-amount" style="width: 10%;">Remaining Paid</th>
+                        <th class="report-col-date" style="width: 10%;">Final Balance Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($report['lorry_receipts']['rows'] as $lr)
+                        <tr>
+                            <td>{{ $lr['challan_no'] }}</td>
+                            <td>{{ $lr['lr_no'] ?: '—' }}</td>
+                            <td>{{ $lr['lorry_no'] ?: '—' }}</td>
+                            <td>{{ $lr['paid_to'] ?: '—' }}</td>
+                            <td class="report-amount">{!! format_money_pdf($lr['lorry_hire'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($lr['other_charges'], $currency) !!}</td>
+                            <td class="report-col-date">{{ $lr['advance_on'] ? \Carbon\CarbonImmutable::parse($lr['advance_on'])->translatedFormat($date_pattern) : '—' }}</td>
+                            <td class="report-amount">{!! format_money_pdf($lr['advance_paid'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($lr['remaining_paid'], $currency) !!}</td>
+                            <td class="report-col-date">{{ $lr['final_balance_date'] ? \Carbon\CarbonImmutable::parse($lr['final_balance_date'])->translatedFormat($date_pattern) : '—' }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="report-total-row">
+                        <td class="report-total" colspan="4">Total ({{ $report['lorry_receipts']['totals']['count'] }} Challans)</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($report['lorry_receipts']['totals']['total_hire'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($report['lorry_receipts']['totals']['total_other_charges'], $currency) !!}</td>
+                        <td></td>
+                        <td class="report-amount report-total">{!! format_money_pdf($report['lorry_receipts']['totals']['total_advance'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($report['lorry_receipts']['totals']['total_remaining_paid'], $currency) !!}</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    @endif
 @endsection

@@ -11,9 +11,11 @@ use App\Domains\Purchases\Models\Supplier;
 use App\Domains\Purchases\Models\SupplierCredit;
 use App\Domains\Purchases\Models\SupplierPayment;
 use App\Domains\Purchases\Models\SupplierRefund;
+use App\Domains\Sales\Models\Invoice;
 use App\Support\ProportionalAmount;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class PurchasesQuery
 {
@@ -282,6 +284,7 @@ class PurchasesQuery
             ...$this->costs($companyId, $from, $to, $supplierId),
             'payables' => $this->payables($companyId, $supplierId),
             'aging' => $this->aging($companyId, $supplierId),
+            'lorry_receipts' => $this->lorryReceipts($companyId, $from, $to, $supplierId),
         ];
     }
 
@@ -298,5 +301,95 @@ class PurchasesQuery
             ->with(['supplier:id,name', 'currency'])
             ->orderBy('due_date')
             ->get(['id', 'number', 'supplier_id', 'currency_id', 'due_date', 'due_amount', 'base_due_amount']);
+    }
+
+    /**
+     * Detailed lorry receipt transport records for the period, ordered sequentially by Challan number.
+     *
+     * @return array{rows: array<int, array<string, mixed>>, totals: array<string, int>}
+     */
+    public function lorryReceipts(int $companyId, string $from, string $to, ?int $supplierId = null): array
+    {
+        $query = Invoice::query()
+            ->where('company_id', $companyId)
+            ->where('template_name', 'lorry_receipt')
+            ->whereDate('invoice_date', '>=', $from)
+            ->whereDate('invoice_date', '<=', $to);
+
+        if ($supplierId !== null) {
+            $supplier = Supplier::query()->forCompany($companyId)->find($supplierId);
+            $supplierName = $supplier?->name;
+
+            $query->where(function ($q) use ($supplierId, $supplierName) {
+                $q->whereIn('tr_bill_id', function ($sq) use ($supplierId) {
+                    $sq->select('id')->from('bills')->where('supplier_id', $supplierId);
+                });
+                if ($supplierName) {
+                    $q->orWhere('tr_paid_to', $supplierName)
+                        ->orWhere('tr_owner_name', $supplierName)
+                        ->orWhere('tr_final_paid_to', $supplierName);
+                }
+            });
+        }
+
+        $invoices = $query->orderBy(DB::raw('CAST(invoice_number AS UNSIGNED)'), 'asc')->get();
+
+        $rows = [];
+        $totalHire = 0;
+        $totalOtherCharges = 0;
+        $totalAdvance = 0;
+        $totalRemainingPaid = 0;
+
+        foreach ($invoices as $inv) {
+            $baseHire = (float) ($inv->tr_lorry_hire_amount ?: 0);
+            $otherCharges = (float) ($inv->tr_other_charges_amount ?: 0);
+            $grossHire = ($baseHire + $otherCharges) > 0 ? ($baseHire + $otherCharges) : (float) ($inv->total / 100);
+            $advance = (float) ($inv->tr_advance_amount ?: 0);
+
+            // Remaining / final balance paid
+            if ($inv->tr_final_amount_paid !== null && $inv->tr_final_amount_paid !== '') {
+                $remainingPaid = (float) $inv->tr_final_amount_paid;
+            } else {
+                $remainingPaid = max(0, $grossHire - $advance);
+            }
+
+            $paidTo = $inv->tr_final_paid_to ?: ($inv->tr_paid_to ?: ($inv->tr_owner_name ?: '—'));
+
+            $hirePaise = (int) round($baseHire * 100);
+            $otherPaise = (int) round($otherCharges * 100);
+            $advPaise = (int) round($advance * 100);
+            $remainingPaise = (int) round($remainingPaid * 100);
+
+            $totalHire += $hirePaise;
+            $totalOtherCharges += $otherPaise;
+            $totalAdvance += $advPaise;
+            $totalRemainingPaid += $remainingPaise;
+
+            $rows[] = [
+                'id' => $inv->id,
+                'challan_no' => $inv->invoice_number,
+                'lr_no' => $inv->tr_received_no_bilties ?: '—',
+                'lorry_no' => $inv->tr_lorry_no ?: '—',
+                'paid_to' => $paidTo,
+                'lorry_hire' => $hirePaise,
+                'other_charges' => $otherPaise,
+                'advance_on' => $inv->tr_advance_on ? substr((string) $inv->tr_advance_on, 0, 10) : null,
+                'advance_paid' => $advPaise,
+                'remaining_paid' => $remainingPaise,
+                'final_balance_date' => $inv->tr_final_balance_on ? substr((string) $inv->tr_final_balance_on, 0, 10) : null,
+                'bill_id' => $inv->tr_bill_id,
+            ];
+        }
+
+        return [
+            'rows' => $rows,
+            'totals' => [
+                'count' => count($rows),
+                'total_hire' => $totalHire,
+                'total_other_charges' => $totalOtherCharges,
+                'total_advance' => $totalAdvance,
+                'total_remaining_paid' => $totalRemainingPaid,
+            ],
+        ];
     }
 }

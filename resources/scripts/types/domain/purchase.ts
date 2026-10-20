@@ -184,6 +184,31 @@ export interface PurchaseReport {
   taxes: Array<{ tax_type_id: number; name: string; amount: number }>
   payables: PurchasePayables
   aging: PurchaseRecord[]
+  lorry_receipts?: {
+    rows: LorryReceiptDetail[]
+    totals: {
+      count: number
+      total_hire: number
+      total_other_charges: number
+      total_advance: number
+      total_remaining_paid: number
+    }
+  }
+}
+
+export interface LorryReceiptDetail {
+  id: number
+  challan_no: string
+  lr_no: string
+  lorry_no: string
+  paid_to: string
+  lorry_hire: number
+  other_charges: number
+  advance_on: string | null
+  advance_paid: number
+  remaining_paid: number
+  final_balance_date: string | null
+  bill_id: number | null
 }
 
 export interface SupplierAddress {
