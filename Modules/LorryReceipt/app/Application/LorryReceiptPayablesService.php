@@ -250,22 +250,30 @@ class LorryReceiptPayablesService
             ->addDays($supplier->payment_terms ?: self::PAYMENT_TERMS)
             ->toDateString();
 
-        $bill = $this->documents->saveBill($existing, $companyId, $invoice->creator_id, [
-            'supplier_id' => $supplier->id,
-            'currency_id' => $currencyId,
-            'exchange_rate' => 1,
-            'reference' => 'Lorry receipt '.$invoice->invoice_number,
-            'document_date' => $documentDate,
-            'due_date' => $dueDate,
-            'status' => 'OPEN',
-            'notes' => trim('Lorry '.(string) $invoice->tr_lorry_no.' — hire from lorry receipt '.$invoice->invoice_number),
-            'items' => [[
-                'description' => 'Lorry hire'.($invoice->tr_lorry_no ? ' — '.(string) $invoice->tr_lorry_no : ''),
-                'expense_category_id' => $this->expenseCategoryId($companyId),
-                'quantity' => 1,
-                'price' => $hire,
-            ]],
-        ]);
+        try {
+            $bill = $this->documents->saveBill($existing, $companyId, $invoice->creator_id, [
+                'supplier_id' => $supplier->id,
+                'currency_id' => $currencyId,
+                'exchange_rate' => 1,
+                'reference' => 'Lorry receipt '.$invoice->invoice_number,
+                'document_date' => $documentDate,
+                'due_date' => $dueDate,
+                'status' => 'OPEN',
+                'notes' => trim('Lorry '.(string) $invoice->tr_lorry_no.' — hire from lorry receipt '.$invoice->invoice_number),
+                'items' => [[
+                    'description' => 'Lorry hire'.($invoice->tr_lorry_no ? ' — '.(string) $invoice->tr_lorry_no : ''),
+                    'expense_category_id' => $this->expenseCategoryId($companyId),
+                    'quantity' => 1,
+                    'price' => $hire,
+                ]],
+            ]);
+        } catch (\Throwable $e) {
+            if ($existing && $existing->financial_locked_at) {
+                return $existing;
+            }
+
+            throw $e;
+        }
 
         if ($invoice->tr_bill_id !== $bill->id) {
             $invoice->forceFill(['tr_bill_id' => $bill->id])->saveQuietly();

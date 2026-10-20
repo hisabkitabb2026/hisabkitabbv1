@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 use App\Domains\Accounts\Models\Company;
 use App\Domains\Accounts\Models\User;
+use App\Domains\Purchases\Application\SupplierSettlementService;
 use App\Domains\Purchases\Models\Bill;
 use App\Domains\Sales\Models\Invoice;
 use Illuminate\Contracts\Console\Kernel;
@@ -131,7 +132,31 @@ foreach ($invoices as $invoice) {
         $invoice->saveQuietly();
 
         // 4. Sync purchasing payables to record final settlement payment against the Bill
-        $payables->syncForInvoice($invoice);
+        try {
+            $payables->syncForInvoice($invoice);
+        } catch (Throwable $syncError) {
+            // If the bill was financially locked by previous edits, directly settle its remaining due amount!
+            if ($invoice->tr_bill_id && ! $invoice->tr_final_payment_id) {
+                $bill = Bill::find($invoice->tr_bill_id);
+                if ($bill && $bill->due_amount > 0) {
+                    $duePaise = (int) $bill->due_amount;
+                    $settlements = app(SupplierSettlementService::class);
+                    $payment = $settlements->recordPayment((int) $invoice->company_id, $invoice->creator_id, [
+                        'supplier_id' => $bill->supplier_id,
+                        'currency_id' => $bill->currency_id,
+                        'exchange_rate' => 1,
+                        'amount' => $duePaise,
+                        'payment_date' => $balanceDate,
+                        'reference' => 'Final balance on lorry receipt '.$invoice->invoice_number,
+                        'notes' => 'Final balance on lorry receipt '.$invoice->invoice_number,
+                        'allocations' => [['bill_id' => $bill->id, 'amount' => $duePaise]],
+                    ]);
+                    $invoice->forceFill(['tr_final_payment_id' => $payment->id])->saveQuietly();
+                }
+            } else {
+                throw $syncError;
+            }
+        }
 
         DB::commit();
 
