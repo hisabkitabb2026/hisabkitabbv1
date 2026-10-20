@@ -174,6 +174,9 @@ export const useInvoiceStore = defineStore('invoice', {
       },
 
     getSubTotal(state): number {
+      if ((!state.newInvoice.items || state.newInvoice.items.length === 0) && state.newInvoice.sub_total) {
+        return state.newInvoice.sub_total
+      }
       return state.newInvoice.items.reduce(
         (sum: number, item: DocumentItem) => sum + (item.total ?? 0),
         0,
@@ -233,6 +236,9 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     getTotal(): number {
+      if ((!this.newInvoice.items || this.newInvoice.items.length === 0) && this.newInvoice.total) {
+        return this.newInvoice.total
+      }
       if (this.newInvoice.tax_included) {
         return this.getSubtotalWithDiscount + this.getTotalCompoundTax
       }

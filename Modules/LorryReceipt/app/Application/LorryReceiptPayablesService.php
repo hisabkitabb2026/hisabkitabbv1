@@ -325,16 +325,24 @@ class LorryReceiptPayablesService
             return;
         }
 
+        $amountToPay = ! empty($invoice->tr_final_amount_paid)
+            ? min($this->amount($invoice->tr_final_amount_paid), $due)
+            : $due;
+
+        if ($amountToPay <= 0) {
+            return;
+        }
+
         $payment = $this->settlements->recordPayment((int) $invoice->company_id, $invoice->creator_id, [
             'supplier_id' => $supplier->id,
             'currency_id' => $currencyId,
             'exchange_rate' => 1,
-            'amount' => $due,
+            'amount' => $amountToPay,
             'payment_date' => $this->dateOr($invoice->tr_final_balance_on, $this->date($invoice->invoice_date)),
             'payment_method_id' => $invoice->tr_final_payment_method_id,
             'reference' => $invoice->tr_final_cash_cheque_no,
             'notes' => 'Final balance on lorry receipt '.$invoice->invoice_number,
-            'allocations' => [['bill_id' => $bill->id, 'amount' => $due]],
+            'allocations' => [['bill_id' => $bill->id, 'amount' => $amountToPay]],
         ]);
 
         $invoice->forceFill(['tr_final_payment_id' => $payment->id])->saveQuietly();

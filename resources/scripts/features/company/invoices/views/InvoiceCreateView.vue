@@ -476,10 +476,11 @@ async function submitForm(): Promise<void> {
       // HisabKitab feature — hide line items for receipt types that don't use them.
       // Uses registered document meta to determine if this template has items.
       if (isTransportReceipt.value && !currentDocMeta.value?.label?.includes('Invoice')) {
-        // LR Receipt uses tr_net_amount (sum of freight charges), Lorry Receipt uses tr_net_amount_payable
+        // LR Receipt uses tr_net_amount (sum of freight charges), Lorry Receipt uses gross hire (hire + other charges)
         const netAmount = Number(data.tr_net_amount) || 0
+        const hireAmount = (Number(data.tr_lorry_hire_amount) || 0) + (Number(data.tr_other_charges_amount) || 0)
         const netPayable = Number(data.tr_net_amount_payable) || 0
-        const amount = netAmount || netPayable
+        const amount = netAmount || hireAmount || netPayable
         const cents = Math.round(amount * 100)
         data.sub_total = cents
         data.total = cents

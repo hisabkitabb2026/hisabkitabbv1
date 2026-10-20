@@ -59,12 +59,44 @@ async function fetchPaymentMethods(): Promise<void> {
   }
 }
 
-// --- Banks (server-side storage via /api/v1/lorry-receipts/banks) ---
+// --- Banks (standard Indian banks default list + server-side storage) ---
 interface Bank {
   id: number
   name: string
 }
 const banks = ref<Bank[]>([])
+
+const defaultBanks = [
+  'State Bank of India (SBI)',
+  'HDFC Bank',
+  'ICICI Bank',
+  'Punjab National Bank (PNB)',
+  'Bank of Baroda (BOB)',
+  'Axis Bank',
+  'Kotak Mahindra Bank',
+  'Canara Bank',
+  'Union Bank of India',
+  'Bank of India',
+  'Central Bank of India',
+  'Indian Bank',
+  'IndusInd Bank',
+  'Yes Bank',
+  'IDBI Bank',
+  'Federal Bank',
+  'Cash / Self',
+]
+
+const bankOptions = computed<string[]>(() => {
+  const serverBankNames = banks.value.map((b) => b.name)
+  const combined = [...defaultBanks, ...serverBankNames]
+  if (invoiceData.value?.tr_advance_bank) {
+    combined.push(String(invoiceData.value.tr_advance_bank))
+  }
+  if (invoiceData.value?.tr_final_bank) {
+    combined.push(String(invoiceData.value.tr_final_bank))
+  }
+  return Array.from(new Set(combined.map((b) => b.trim()).filter(Boolean)))
+})
 
 async function fetchBanks(): Promise<void> {
   try {
@@ -189,10 +221,42 @@ function onBrokerClear(): void {
   fillFields(brokerMapping, null)
 }
 
-// --- Net Amount Payable + Sub Total auto-calculation ---
-// Sub Total = Lorry Hire + Other Charges - Advance Paid + Detention + Extra Hire + Other - Less Adv other branch - Less Deduction
-// This value is synced to invoiceData.sub_total and invoiceData.total so the
-// host's DocumentTotals section reflects the correct amount.
+// --- Auto-calculation: Gross Hire, Remaining Balance, Net Amount Payable, Sub Total & Total ---
+function syncAmountToItems(amount: number): void {
+  const items = invoiceData.value?.items
+  if (!items || !Array.isArray(items)) return
+
+  // Host store expects prices in cents; amount is in rupees
+  const cents = Math.round(amount * 100)
+
+  // Update the first existing item
+  if (items.length > 0) {
+    const firstItem = items[0]
+    firstItem.name = firstItem.name || 'Lorry Hire'
+    firstItem.quantity = 1
+    firstItem.price = cents
+    firstItem.total = cents
+    return
+  }
+
+  // No items at all — add one
+  items.push({
+    id: `tr-lorry-hire-${Date.now()}`,
+    invoice_id: null,
+    item_id: null,
+    name: 'Lorry Hire',
+    description: 'Lorry Hire Charges',
+    quantity: 1,
+    price: cents,
+    discount_type: 'fixed',
+    discount_val: 0,
+    discount: 0,
+    total: cents,
+    totalTax: 0,
+    taxes: [],
+  })
+}
+
 function recalcAmounts(): void {
   if (!invoiceData.value) return
   const hire = Number(invoiceData.value.tr_lorry_hire_amount) || 0
@@ -204,13 +268,23 @@ function recalcAmounts(): void {
   const lessAdv = Number(invoiceData.value.tr_less_advance_other_branch_amount) || 0
   const lessDed = Number(invoiceData.value.tr_less_deduction_claims_amount) || 0
 
-  const netPayable = hire + other + detention + extraHire + finalOther - advance - lessAdv - lessDed
+  // 1. Gross Hire and Remaining Balance after Advance
+  const grossHire = hire + other
+  const balance = Math.max(0, grossHire - advance)
+  invoiceData.value.tr_balance_amount = String(balance)
+
+  // 2. Net Amount Payable after extra charges and deductions
+  const netPayable = grossHire + detention + extraHire + finalOther - advance - lessAdv - lessDed
   invoiceData.value.tr_net_amount_payable = String(netPayable)
 
-  // Sync to invoice sub_total and total (in cents) so the host's
-  // DocumentTotals section shows the correct amount live.
-  invoiceData.value.sub_total = Math.round(netPayable * 100)
-  invoiceData.value.total = Math.round(netPayable * 100)
+  // 3. Sub Total and Total (in cents) for the host invoice
+  const totalCents = Math.round(grossHire * 100)
+  invoiceData.value.sub_total = totalCents
+  invoiceData.value.total = totalCents
+
+  // 4. Sync into items[0] so the host's Pinia getters (store.getSubTotal & store.getTotal)
+  // calculate and display the live totals in DocumentTotals and DocumentFormActionBar
+  syncAmountToItems(grossHire)
 }
 
 watch(
@@ -223,6 +297,7 @@ watch(
     invoiceData.value?.tr_final_other_amount,
     invoiceData.value?.tr_less_advance_other_branch_amount,
     invoiceData.value?.tr_less_deduction_claims_amount,
+    invoiceData.value?.tr_final_amount_paid,
   ],
   () => recalcAmounts(),
 )
@@ -358,16 +433,24 @@ onMounted(() => {
           <BaseInput v-model="invoiceData.tr_advance_on" type="date" />
         </BaseInputGroup>
         <BaseInputGroup label="Bank">
-          <BaseSelectInput
+          <BaseInput
             v-model="invoiceData.tr_advance_bank"
-            :options="banks.map(b => ({ id: b.name, label: b.name }))"
-            value-prop="id"
-            label-key="label"
-            placeholder="Select Bank"
+            list="lorry-advance-bank-list"
+            placeholder="Type or select Bank"
           />
+          <datalist id="lorry-advance-bank-list">
+            <option v-for="b in bankOptions" :key="b" :value="b" />
+          </datalist>
         </BaseInputGroup>
         <BaseInputGroup label="Advance Paid Rs">
           <BaseInput v-model="invoiceData.tr_advance_amount" type="number" />
+        </BaseInputGroup>
+        <BaseInputGroup label="Balance / Remaining Amount Rs">
+          <BaseInput
+            :model-value="invoiceData.tr_balance_amount"
+            readonly
+            placeholder="Auto-calculated (Gross Hire - Advance)"
+          />
         </BaseInputGroup>
         <BaseInputGroup label="Balance Payable at">
           <BaseSelectInput
@@ -431,16 +514,35 @@ onMounted(() => {
           />
         </BaseInputGroup>
         <BaseInputGroup label="Final Bank">
-          <BaseSelectInput
+          <BaseInput
             v-model="invoiceData.tr_final_bank"
-            :options="banks.map(b => ({ id: b.name, label: b.name }))"
-            value-prop="id"
-            label-key="label"
-            placeholder="Select Bank"
+            list="lorry-final-bank-list"
+            placeholder="Type or select Bank"
           />
+          <datalist id="lorry-final-bank-list">
+            <option v-for="b in bankOptions" :key="b" :value="b" />
+          </datalist>
         </BaseInputGroup>
-        <BaseInputGroup label="Net Amount Payable">
+        <BaseInputGroup label="Net Amount Payable Rs">
           <BaseInput v-model="invoiceData.tr_net_amount_payable" type="number" readonly />
+        </BaseInputGroup>
+        <BaseInputGroup label="Final / Remaining Amount Paid Rs">
+          <div class="relative flex items-center">
+            <BaseInput
+              v-model="invoiceData.tr_final_amount_paid"
+              type="number"
+              placeholder="Enter amount paid"
+            />
+            <button
+              v-if="invoiceData.tr_net_amount_payable"
+              type="button"
+              class="absolute end-2 text-xs text-primary-600 hover:text-primary-800 font-medium px-2 py-1 bg-surface rounded border border-line-light cursor-pointer shadow-xs"
+              title="Copy Net Amount Payable"
+              @click="invoiceData.tr_final_amount_paid = invoiceData.tr_net_amount_payable"
+            >
+              Fill Net
+            </button>
+          </div>
         </BaseInputGroup>
 
       </div>

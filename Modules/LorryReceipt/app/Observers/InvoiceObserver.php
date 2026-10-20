@@ -112,14 +112,29 @@ class InvoiceObserver
 
         $total = $hire + $otherCharges;
 
-        // If Final Payment Particulars are filled (net_amount_payable > 0),
-        // the balance is settled — Amount Due = 0.
-        $netPayable = $this->toPaise($invoice->tr_net_amount_payable);
+        // Balance remaining after advance
+        $balance = max(0, $total - $advance);
+        $invoice->tr_balance_amount = (string) round($balance / 100, 2);
 
-        if ($netPayable > 0) {
+        // Additional charges and deductions in final payment section
+        $detention = $this->toPaise($invoice->tr_detention_amount);
+        $extraHire = $this->toPaise($invoice->tr_extra_hire_amount);
+        $finalOther = $this->toPaise($invoice->tr_final_other_amount);
+        $lessAdv = $this->toPaise($invoice->tr_less_advance_other_branch_amount);
+        $lessDed = $this->toPaise($invoice->tr_less_deduction_claims_amount);
+
+        $netPayableTotal = max(0, $total + $detention + $extraHire + $finalOther - $advance - $lessAdv - $lessDed);
+
+        $finalPaid = $this->toPaise($invoice->tr_final_amount_paid);
+        $hasFinalSettlement = ! empty($invoice->tr_final_balance_on) || ! empty($invoice->tr_final_payment_id) || $finalPaid > 0;
+
+        // Due amount stays pending until final settlement details are recorded
+        if ($finalPaid > 0) {
+            $dueAmount = max(0, $netPayableTotal - $finalPaid);
+        } elseif ($hasFinalSettlement) {
             $dueAmount = 0;
         } else {
-            $dueAmount = max(0, $total - $advance);
+            $dueAmount = $balance;
         }
 
         $rate = (float) ($invoice->exchange_rate ?? 1);
@@ -131,16 +146,16 @@ class InvoiceObserver
         $invoice->base_total = (int) round($total / $rate);
         $invoice->base_due_amount = (int) round($dueAmount / $rate);
 
-        // Set status/paid_status to match the due amount:
-        // - dueAmount = 0 → COMPLETED / PAID
-        // - advance paid but balance remains → SENT / PARTIALLY_PAID
+        // Set status/paid_status to match the due amount and payment progress:
+        // - dueAmount = 0 and at least one payment made → COMPLETED / PAID
+        // - advance or partial final payment made but balance remains → SENT / PARTIALLY_PAID
         // - nothing paid → SENT / UNPAID
-        if ($dueAmount === 0) {
+        if ($dueAmount === 0 && ($advance > 0 || $hasFinalSettlement)) {
             $invoice->status = Invoice::STATUS_COMPLETED;
             $invoice->paid_status = Invoice::STATUS_PAID;
         } else {
             $invoice->status = Invoice::STATUS_SENT;
-            $invoice->paid_status = $advance > 0
+            $invoice->paid_status = ($advance > 0 || $finalPaid > 0)
                 ? Invoice::STATUS_PARTIALLY_PAID
                 : Invoice::STATUS_UNPAID;
         }
