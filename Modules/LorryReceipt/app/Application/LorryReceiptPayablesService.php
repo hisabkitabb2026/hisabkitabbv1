@@ -211,7 +211,7 @@ class LorryReceiptPayablesService
             }
         }
 
-        $name = trim((string) $invoice->tr_owner_name);
+        $name = trim((string) ($invoice->tr_paid_to ?: $invoice->tr_owner_name));
 
         if ($name === '') {
             return null;
