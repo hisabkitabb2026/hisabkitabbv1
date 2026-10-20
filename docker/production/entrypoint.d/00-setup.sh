@@ -71,10 +71,12 @@ fi
 
 if [ "$DOTENV" = "false" ]; then
     echo "**** INVOICESHELF_DOTENV=false: configuration comes from the environment only ****"
-elif [ ! -e /var/www/html/.env ]; then
-    cp .env.example .env
-    echo "**** Setup initial .env values ****" && \
-    	/inject.sh
+else
+    if [ ! -e /var/www/html/.env ]; then
+        cp .env.example .env
+    fi
+    echo "**** Updating .env values from container environment ****"
+    /inject.sh
 fi
 
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
