@@ -179,11 +179,6 @@ function onOwnerSelect(profile: LorryPartyProfile): void {
     invoiceData.value.tr_owner_profile_id = profile.id
   }
   fillFields(ownerMapping, profile)
-  // Also set Paid To / Final Paid To to owner name
-  if (invoiceData.value) {
-    invoiceData.value.tr_paid_to = profile.name
-    invoiceData.value.tr_final_paid_to = profile.name
-  }
 }
 
 function onOwnerClear(): void {
@@ -302,6 +297,24 @@ watch(
   () => recalcAmounts(),
 )
 
+let lastSyncedCustomerId: number | null = null
+
+// Auto-fill Paid To (Section C) and Final Paid To (Section E) from selected Customer (Owner / Broker)
+watch(
+  () => invoiceData.value?.customer,
+  (customer) => {
+    if (!customer?.name || !invoiceData.value) return
+    const currentId = (customer as { id?: number }).id ?? null
+    // If it's a new customer selection or Paid To is empty, auto-fill from Customer
+    if (!invoiceData.value.tr_paid_to || (lastSyncedCustomerId !== null && currentId !== lastSyncedCustomerId)) {
+      invoiceData.value.tr_paid_to = customer.name
+      invoiceData.value.tr_final_paid_to = customer.name
+    }
+    lastSyncedCustomerId = currentId
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   fetchPaymentMethods()
   fetchBanks()
@@ -412,7 +425,7 @@ onMounted(() => {
       </template>
       <div class="grid gap-x-4 gap-y-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <BaseInputGroup label="Paid To">
-          <BaseInput v-model="invoiceData.tr_paid_to" placeholder="Auto-filled from Owner selection" />
+          <BaseInput v-model="invoiceData.tr_paid_to" placeholder="Auto-filled from Customer selection" />
         </BaseInputGroup>
         <BaseInputGroup label="Lorry Hire">
           <BaseInput v-model="invoiceData.tr_lorry_hire_amount" type="number" />
@@ -475,7 +488,7 @@ onMounted(() => {
       </template>
       <div class="grid gap-x-4 gap-y-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <BaseInputGroup label="Final Paid To">
-          <BaseInput v-model="invoiceData.tr_final_paid_to" />
+          <BaseInput v-model="invoiceData.tr_final_paid_to" placeholder="Auto-filled from Customer selection" />
         </BaseInputGroup>
         <BaseInputGroup label="Add Detention Rs.">
           <BaseInput v-model="invoiceData.tr_detention_amount" type="number" />

@@ -23,9 +23,10 @@ class CustomerLorryReceiptsController extends Controller
         $query = Invoice::where('template_name', 'lorry_receipt')
             ->where('status', '<>', 'DRAFT')
             ->where(function ($q) use ($customerId) {
-                $q->where('owner_customer_id', $customerId)
-                    ->orWhere('driver_customer_id', $customerId)
-                    ->orWhere('broker_customer_id', $customerId);
+                $q->where('customer_id', $customerId)
+                    ->orWhere('tr_owner_customer_id', $customerId)
+                    ->orWhere('tr_driver_customer_id', $customerId)
+                    ->orWhere('tr_broker_customer_id', $customerId);
             })
             ->with(['customer', 'currency'])
             ->latest();
@@ -37,9 +38,10 @@ class CustomerLorryReceiptsController extends Controller
                 'lorryReceiptTotalCount' => Invoice::where('template_name', 'lorry_receipt')
                     ->where('status', '<>', 'DRAFT')
                     ->where(function ($q) use ($customerId) {
-                        $q->where('owner_customer_id', $customerId)
-                            ->orWhere('driver_customer_id', $customerId)
-                            ->orWhere('broker_customer_id', $customerId);
+                        $q->where('customer_id', $customerId)
+                            ->orWhere('tr_owner_customer_id', $customerId)
+                            ->orWhere('tr_driver_customer_id', $customerId)
+                            ->orWhere('tr_broker_customer_id', $customerId);
                     })
                     ->count(),
             ]]);
@@ -52,9 +54,10 @@ class CustomerLorryReceiptsController extends Controller
         $invoice = Invoice::where('template_name', 'lorry_receipt')
             ->where('status', '<>', 'DRAFT')
             ->where(function ($q) use ($customerId) {
-                $q->where('owner_customer_id', $customerId)
-                    ->orWhere('driver_customer_id', $customerId)
-                    ->orWhere('broker_customer_id', $customerId);
+                $q->where('customer_id', $customerId)
+                    ->orWhere('tr_owner_customer_id', $customerId)
+                    ->orWhere('tr_driver_customer_id', $customerId)
+                    ->orWhere('tr_broker_customer_id', $customerId);
             })
             ->with(['customer', 'currency'])
             ->findOrFail($id);
