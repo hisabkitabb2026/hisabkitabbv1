@@ -65,6 +65,13 @@ run_module_commands() {
     docker cp "$PROJECT_ROOT/Modules/InvoiceReceipt/resources/views/pdf/invoice_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/invoice_receipt.blade.php"
     docker cp "$PROJECT_ROOT/Modules/Quotation/resources/views/pdf/quotation.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/estimate/quotation.blade.php"
 
+    if [ -f "$PROJECT_ROOT/config/sanctum.php" ]; then
+        docker cp "$PROJECT_ROOT/config/sanctum.php" "$WEBAPP_CONTAINER:/var/www/html/config/sanctum.php"
+    fi
+    docker cp "$PROJECT_ROOT/docker/production/inject.sh" "$WEBAPP_CONTAINER:/inject.sh"
+    docker exec "$WEBAPP_CONTAINER" /inject.sh || true
+    docker exec "$WEBAPP_CONTAINER" php artisan tinker --execute="App\Platform\Operations\Models\Setting::setSetting('version', '3.0.0-alpha.10');" >/dev/null 2>&1 || true
+
     log "Enabling all custom modules..."
     docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
 

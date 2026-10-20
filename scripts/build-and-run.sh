@@ -57,10 +57,12 @@ fi
 
 if [ -n "${GITHUB_TOKEN:-}" ]; then
     log "Pulling latest code using GITHUB_TOKEN..."
-    git pull "https://${GITHUB_TOKEN}@github.com/hisabkitabb2026/hisabkitabbv1.git" main
+    git fetch "https://${GITHUB_TOKEN}@github.com/hisabkitabb2026/hisabkitabbv1.git" main || true
+    git reset --hard origin/main || git pull "https://${GITHUB_TOKEN}@github.com/hisabkitabb2026/hisabkitabbv1.git" main
 else
     log "Pulling latest code using server's git credentials..."
-    git pull origin main
+    git fetch origin main || true
+    git reset --hard origin/main || git pull origin main
 fi
 
 log "==> Step 1: Building Docker image with latest application code..."
@@ -77,6 +79,9 @@ fi
 
 # Recreate webapp container with the newly built image without conflicting with database
 (cd "$COMPOSE_DIR" && docker compose -f "$COMPOSE_FILE" up -d --no-deps webapp)
+
+# Ensure database container has the network alias 'database' on the webapp network
+docker network connect --alias database production_invoiceshelf "$DB_CONTAINER" 2>/dev/null || true
 
 log "==> Step 3: Waiting for database container '$DB_CONTAINER' to be healthy..."
 max_wait=60
@@ -102,13 +107,24 @@ while [ $count -lt $max_wait ]; do
     count=$((count + 2))
 done
 
-log "==> Step 5: Syncing latest module templates and code into container volume..."
+log "==> Step 5: Syncing configuration, module templates and code into container volume..."
+# Sync modules and templates
 docker cp "$PROJECT_ROOT/Modules/." "$WEBAPP_CONTAINER:/var/www/html/Modules/"
 docker exec "$WEBAPP_CONTAINER" mkdir -p /var/www/html/storage/app/templates/pdf/invoice /var/www/html/storage/app/templates/pdf/estimate
 docker cp "$PROJECT_ROOT/Modules/LrReceipt/resources/views/pdf/lr_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/lr_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/LorryReceipt/resources/views/pdf/lorry_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/lorry_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/InvoiceReceipt/resources/views/pdf/invoice_receipt.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/invoice/invoice_receipt.blade.php"
 docker cp "$PROJECT_ROOT/Modules/Quotation/resources/views/pdf/quotation.blade.php" "$WEBAPP_CONTAINER:/var/www/html/storage/app/templates/pdf/estimate/quotation.blade.php"
+
+# Sync sanctum configuration and inject environment variables
+if [ -f "$PROJECT_ROOT/config/sanctum.php" ]; then
+    docker cp "$PROJECT_ROOT/config/sanctum.php" "$WEBAPP_CONTAINER:/var/www/html/config/sanctum.php"
+fi
+docker cp "$PROJECT_ROOT/docker/production/inject.sh" "$WEBAPP_CONTAINER:/inject.sh"
+docker exec "$WEBAPP_CONTAINER" /inject.sh || true
+
+# Ensure database version record matches current release for module compatibility
+docker exec "$WEBAPP_CONTAINER" php artisan tinker --execute="App\Platform\Operations\Models\Setting::setSetting('version', '3.0.0-alpha.10');" >/dev/null 2>&1 || true
 
 log "==> Step 6: Enabling all custom modules..."
 docker exec "$WEBAPP_CONTAINER" php artisan module:enable $MODULES
