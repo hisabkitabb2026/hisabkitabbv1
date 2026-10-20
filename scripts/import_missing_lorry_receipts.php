@@ -195,17 +195,24 @@ foreach ($records as $index => $row) {
         ]);
 
         // 6. Sequence Number
-        $serial = (new SerialNumberService)
-            ->setCompany($companyId)
-            ->setCustomer($customer->id)
-            ->setSequenceScope('lorry_receipt')
-            ->setModel($invoice)
-            ->setNextNumbers();
+        try {
+            $serial = (new SerialNumberService)
+                ->setCompany($companyId)
+                ->setCustomer($customer->id)
+                ->setSequenceScope(['template_name' => 'lorry_receipt'])
+                ->setModel($invoice)
+                ->setNextNumbers();
 
-        $invoice->forceFill([
-            'sequence_number' => $serial->nextSequenceNumber,
-            'customer_sequence_number' => $serial->nextCustomerSequenceNumber,
-        ])->saveQuietly();
+            $invoice->forceFill([
+                'sequence_number' => $serial->nextSequenceNumber ?: (int) $challanNo,
+                'customer_sequence_number' => $serial->nextCustomerSequenceNumber ?: (int) $challanNo,
+            ])->saveQuietly();
+        } catch (Throwable $e) {
+            $invoice->forceFill([
+                'sequence_number' => (int) $challanNo,
+                'customer_sequence_number' => (int) $challanNo,
+            ])->saveQuietly();
+        }
 
         // 7. Sync Payables (Supplier Bill + Advance Payment allocation)
         $payables->syncForInvoice($invoice);
