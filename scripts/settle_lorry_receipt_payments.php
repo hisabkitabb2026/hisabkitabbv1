@@ -178,6 +178,33 @@ foreach ($invoices as $invoice) {
     }
 }
 
+// Settle any remaining open lorry receipt bills in Company 1 (e.g. discrepancy on Bill 83)
+$openBills = Bill::query()
+    ->where('company_id', $companyId)
+    ->where('due_amount', '>', 0)
+    ->where('reference', 'LIKE', 'Lorry receipt%')
+    ->get();
+
+if ($openBills->isNotEmpty()) {
+    echo "\nSettling remaining open Lorry Receipt bills...\n";
+    $settlements = app(SupplierSettlementService::class);
+    foreach ($openBills as $openBill) {
+        $billDue = (int) $openBill->due_amount;
+        $settlements->recordPayment($companyId, $user?->id ?? 1, [
+            'supplier_id' => $openBill->supplier_id,
+            'currency_id' => $openBill->currency_id,
+            'exchange_rate' => 1,
+            'amount' => $billDue,
+            'payment_date' => $openBill->due_date ?: now()->toDateString(),
+            'reference' => 'Settlement of '.$openBill->reference,
+            'notes' => 'Settling remaining balance on '.$openBill->reference,
+            'allocations' => [['bill_id' => $openBill->id, 'amount' => $billDue]],
+        ]);
+        echo '[✓] Cleared remaining Rs. '.($billDue / 100)." on Bill #{$openBill->id} ({$openBill->reference})\n";
+        $totalSettledAmount += ($billDue / 100);
+    }
+}
+
 echo "\n=========================================\n";
 echo "Settlement Complete!\n";
 echo "Total Lorry Receipts Settled: {$settledCount}\n";
