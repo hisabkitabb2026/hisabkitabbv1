@@ -96,13 +96,22 @@ $totalSettledAmount = 0;
 foreach ($invoices as $invoice) {
     $challanNo = $invoice->invoice_number;
 
-    // Determine hire, advance, and remaining balance
-    $hire = (float) ($invoice->tr_lorry_hire_amount ?: ($invoice->total / 100));
+    // Determine gross hire (Lorry Hire + Other Charges), advance, and true remaining balance
+    $baseHire = (float) ($invoice->tr_lorry_hire_amount ?: 0);
+    $otherCharges = (float) ($invoice->tr_other_charges_amount ?: 0);
+    $grossHire = ($baseHire + $otherCharges) > 0 ? ($baseHire + $otherCharges) : (float) ($invoice->total / 100);
     $advance = (float) ($invoice->tr_advance_amount ?: 0);
-    $calculatedBalance = max(0, $hire - $advance);
+    $calculatedBalance = max(0, $grossHire - $advance);
 
-    // If due_amount is already set, use it; otherwise use calculated balance
-    $dueRs = $invoice->due_amount > 0 ? ($invoice->due_amount / 100) : $calculatedBalance;
+    // Any detention, extra hire, or claims deductions in Section E
+    $detention = (float) ($invoice->tr_detention_amount ?: 0);
+    $extraHire = (float) ($invoice->tr_extra_hire_amount ?: 0);
+    $finalOther = (float) ($invoice->tr_final_other_amount ?: 0);
+    $lessAdv = (float) ($invoice->tr_less_advance_other_branch_amount ?: 0);
+    $lessDed = (float) ($invoice->tr_less_deduction_claims_amount ?: 0);
+
+    $netPayable = max(0, $calculatedBalance + $detention + $extraHire + $finalOther - $lessAdv - $lessDed);
+    $dueRs = $netPayable;
 
     // Payment date: use advance date or invoice date
     $balanceDate = ! empty($invoice->tr_advance_on)
@@ -168,7 +177,7 @@ foreach ($invoices as $invoice) {
             $billStatus = $bill ? "Bill ID: {$bill->id} (Status: {$bill->status}, Due: Rs. ".($bill->due_amount / 100).')' : 'N/A';
         }
 
-        echo "[✓] Challan [{$challanNo}] (Invoice ID: {$invoice->id}) | Paid To: {$payee} | Hire: Rs.{$hire} | Advance: Rs.{$advance} | Balance Paid: Rs.{$dueRs} | {$billStatus} | Final Payment ID: ".($invoice->tr_final_payment_id ?? 'None')."\n";
+        echo "[✓] Challan [{$challanNo}] (Invoice ID: {$invoice->id}) | Paid To: {$payee} | Gross Hire: Rs.{$grossHire} | Advance: Rs.{$advance} | Balance Paid: Rs.{$dueRs} | {$billStatus} | Final Payment ID: ".($invoice->tr_final_payment_id ?? 'None')."\n";
 
         $settledCount++;
         $totalSettledAmount += $dueRs;
