@@ -77,6 +77,9 @@ fi
 if [ "$TRUSTED_PROXIES" != '' ]; then
    replace_or_insert "TRUSTED_PROXIES" "$TRUSTED_PROXIES"
 fi
+if [ "$FORCE_HTTPS" != '' ]; then
+   replace_or_insert "FORCE_HTTPS" "$FORCE_HTTPS"
+fi
 if [ "$SANCTUM_STATEFUL_DOMAINS" != '' ]; then
    replace_or_insert "SANCTUM_STATEFUL_DOMAINS" "$SANCTUM_STATEFUL_DOMAINS"
 fi

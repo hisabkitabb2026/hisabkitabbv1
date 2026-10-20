@@ -32,7 +32,9 @@ services:
       - APP_ENV=production
       - APP_DEBUG=false
       - APP_KEY=base64:tu+xcVsAeEeciPFf2KnmBnzLQ9RQkvR9DB1qNjL2TS4=
-      - APP_URL=http://100.53.240.111:8090
+      - APP_URL=https://hisabkitabb.in
+      - FORCE_HTTPS=true
+      - TRUSTED_PROXIES=*
       - DB_CONNECTION=mariadb
       - DB_HOST=database
       - DB_PORT=3306
@@ -44,7 +46,7 @@ services:
       - SESSION_DRIVER=file
       - SESSION_LIFETIME=240
       - SESSION_DOMAIN=
-      - SANCTUM_STATEFUL_DOMAINS=100.53.240.111:8090,100.53.240.111,ec2-100-53-240-111.compute-1.amazonaws.com:8090,ec2-100-53-240-111.compute-1.amazonaws.com,localhost:8090,localhost:80,127.0.0.1:8090,127.0.0.1
+      - SANCTUM_STATEFUL_DOMAINS=hisabkitabb.in,www.hisabkitabb.in,100.53.240.111:8090,100.53.240.111,localhost:8090,localhost:80,127.0.0.1:8090,127.0.0.1
     volumes:
       - invoiceshelf_storage:/var/www/html/storage/
       - invoiceshelf_modules:/var/www/html/Modules
