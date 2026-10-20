@@ -330,10 +330,41 @@ final class TripService
     }
 
     /**
+     * Find and link Lorry Receipts whose received bilty numbers match this
+     * trip's LR numbers.
+     */
+    public function fetchLorryReceipts(int $companyId, int $userId, Trip $trip): Trip
+    {
+        $lrNumbers = $trip->receipts
+            ->where('type', TripReceipt::TYPE_LR)
+            ->map(fn ($receipt): string => (string) $receipt->invoice_number)
+            ->filter()
+            ->all();
+
+        if ($lrNumbers === []) {
+            throw ValidationException::withMessages(['lr' => 'Link at least one LR receipt first.']);
+        }
+
+        $lorryMatches = $this->matchLorryReceipts($companyId, $lrNumbers);
+
+        if ($lorryMatches->isEmpty()) {
+            throw ValidationException::withMessages(['lorry' => 'No lorry receipt found with matching bilty numbers for these LR receipts.']);
+        }
+
+        return DB::transaction(function () use ($userId, $trip, $lorryMatches): Trip {
+            foreach ($lorryMatches as $lorry) {
+                $this->linkReceiptRow($trip, $lorry, TripReceipt::TYPE_LORRY);
+                $this->log($trip, $userId, 'receipt_linked', "Lorry Receipt {$lorry->invoice_number} linked.");
+            }
+
+            return $trip->refresh()->load(['receipts', 'events', 'expenses', 'status']);
+        });
+    }
+
+    /**
      * Find and link the Invoice Receipt (office invoice) whose consignment
      * line items reference one of this trip's LR numbers. The LR number is
-     * stored on the invoice item's `name` field (e.g. "LR-000001") when the
-     * office creates the invoice receipt from the LR receipts.
+     * stored on the invoice item's `name` or `tr_consignment_number` field.
      */
     public function fetchInvoiceReceipts(int $companyId, int $userId, Trip $trip): Trip
     {
@@ -351,13 +382,17 @@ final class TripService
             ->where('company_id', $companyId)
             ->pluck('invoice_id');
 
-        // The invoice receipt stores each LR as a line item whose `name` is
-        // the LR number. Match any invoice whose items name one of our LRs.
+        // The invoice receipt stores each LR as a line item whose `name` or
+        // `tr_consignment_number` is the LR number. Match any invoice whose
+        // items reference one of our LRs.
         $candidates = Invoice::query()
             ->where('company_id', $companyId)
             ->where('template_name', 'invoice_receipt')
             ->when($linked->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $linked))
-            ->whereHas('items', fn ($q) => $q->whereIn('name', $lrNumbers))
+            ->whereHas('items', function ($q) use ($lrNumbers) {
+                $q->whereIn('name', $lrNumbers)
+                    ->orWhereIn('tr_consignment_number', $lrNumbers);
+            })
             ->with('customer')
             ->latest()
             ->get();
@@ -468,21 +503,40 @@ final class TripService
             : (int) $trip->receipts->where('type', TripReceipt::TYPE_LR)->sum('amount');
         $expenses = (int) $trip->expenses->sum('amount');
 
-        $bills = $this->lorryBills($trip);
+        $lorryReceipts = $trip->receipts->where('type', TripReceipt::TYPE_LORRY);
+        $bills = $this->lorryBills($trip)->keyBy('id');
 
-        if ($bills->isNotEmpty()) {
-            $lorryCost = (int) $bills->sum('total');
-            $ownerPaid = $lorryCost - (int) $bills->sum('due_amount');
-            $ownerBalance = (int) $bills->sum('due_amount');
-            $bill = $bills->first();
-        } else {
-            $lorryCost = (int) $trip->receipts->where('type', TripReceipt::TYPE_LORRY)->sum('amount');
-            $ownerPaid = 0;
-            $ownerBalance = $lorryCost;
-            $bill = null;
+        $lorryInvoices = $lorryReceipts->isNotEmpty()
+            ? Invoice::query()
+                ->where('company_id', (int) $trip->company_id)
+                ->whereIn('id', $lorryReceipts->pluck('invoice_id'))
+                ->get(['id', 'tr_bill_id'])
+                ->keyBy('id')
+            : collect();
+
+        $lorryCost = 0;
+        $ownerPaid = 0;
+        $ownerBalance = 0;
+
+        foreach ($lorryReceipts as $receipt) {
+            $inv = $lorryInvoices->get($receipt->invoice_id);
+            $bill = ($inv && $inv->tr_bill_id) ? $bills->get($inv->tr_bill_id) : null;
+
+            if ($bill !== null) {
+                $bTotal = (int) $bill->total;
+                $bDue = (int) $bill->due_amount;
+                $lorryCost += $bTotal;
+                $ownerPaid += ($bTotal - $bDue);
+                $ownerBalance += $bDue;
+            } else {
+                $rAmount = (int) $receipt->amount;
+                $lorryCost += $rAmount;
+                $ownerBalance += $rAmount;
+            }
         }
 
         $cost = $lorryCost + $expenses;
+        $bill = $bills->first();
 
         return [
             'revenue' => $revenue,
@@ -686,6 +740,36 @@ final class TripService
             ->where('company_id', $companyId)
             ->where('template_name', 'lr_receipt')
             ->when($customerId !== null, fn ($q) => $q->where('customer_id', $customerId))
+            ->when($linked->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $linked))
+            ->with('customer')
+            ->latest()
+            ->limit(100)
+            ->get();
+    }
+
+    /**
+     * LR receipts of the company that are not on any trip, scoped to a set
+     * of customer IDs (e.g. all customers already carrying cargo on this trip).
+     *
+     * @param  array<int, int>  $customerIds
+     * @return Collection<int, Invoice>
+     */
+    public function unlinkedLrInvoicesForCustomers(int $companyId, array $customerIds): Collection
+    {
+        $customerIds = array_values(array_filter(array_map('intval', $customerIds)));
+
+        if ($customerIds === []) {
+            return $this->unlinkedLrInvoices($companyId);
+        }
+
+        $linked = TripReceipt::query()
+            ->where('company_id', $companyId)
+            ->pluck('invoice_id');
+
+        return Invoice::query()
+            ->where('company_id', $companyId)
+            ->where('template_name', 'lr_receipt')
+            ->whereIn('customer_id', $customerIds)
             ->when($linked->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $linked))
             ->with('customer')
             ->latest()

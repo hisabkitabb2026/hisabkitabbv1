@@ -36,6 +36,7 @@ Route::prefix('api/v1/trips')->middleware(['api', 'auth:sanctum', 'company', 'bo
     Route::delete('/{id}/receipts/{receiptId}', [TripReceiptsController::class, 'destroy'])->name('trips.receipts.destroy');
 
     Route::post('/{id}/fetch-invoice-receipt', [TripReceiptsController::class, 'fetchInvoiceReceipts'])->name('trips.fetch-invoice-receipt');
+    Route::post('/{id}/fetch-lorry-receipt', [TripReceiptsController::class, 'fetchLorryReceipts'])->name('trips.fetch-lorry-receipt');
     Route::post('/{id}/pod', [TripReceiptsController::class, 'uploadPod'])->name('trips.pod.store');
     Route::get('/{id}/pod/{mediaId}', [TripReceiptsController::class, 'showDocument'])->name('trips.pod.show');
     Route::delete('/{id}/pod/{mediaId}', [TripReceiptsController::class, 'destroyPod'])->name('trips.pod.destroy');

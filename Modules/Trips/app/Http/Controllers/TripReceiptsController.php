@@ -78,11 +78,44 @@ final class TripReceiptsController extends Controller
         $this->authorize($context, Abilities::VIEW_TRIP);
 
         $customerId = $request->input('customer_id') ? (int) $request->input('customer_id') : null;
+        $tripId = $request->input('trip_id') ? (int) $request->input('trip_id') : null;
+        $showAll = filter_var($request->input('all', false), FILTER_VALIDATE_BOOLEAN);
 
         if ($request->input('type') === 'lorry') {
-            $invoices = $this->trips->unlinkedLorryInvoices($context->companyId);
+            if ($tripId !== null && ! $showAll) {
+                $trip = $this->trips->findForCompany($context->companyId, $tripId);
+                $lrNumbers = $trip->receipts
+                    ->where('type', TripReceipt::TYPE_LR)
+                    ->map(fn ($receipt): string => (string) $receipt->invoice_number)
+                    ->filter()
+                    ->all();
+
+                $invoices = $this->trips->matchLorryReceipts($context->companyId, $lrNumbers);
+            } else {
+                $invoices = $this->trips->unlinkedLorryInvoices($context->companyId);
+            }
         } else {
-            $invoices = $this->trips->unlinkedLrInvoices($context->companyId, $customerId);
+            if ($tripId !== null && ! $showAll && $customerId === null) {
+                $trip = $this->trips->findForCompany($context->companyId, $tripId);
+                $customerIds = $trip->receipts
+                    ->where('type', TripReceipt::TYPE_LR)
+                    ->pluck('customer_id')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (! empty($customerIds)) {
+                    $invoices = $this->trips->unlinkedLrInvoicesForCustomers($context->companyId, $customerIds);
+                } else {
+                    $invoices = $this->trips->unlinkedLrInvoices($context->companyId, $customerId);
+                }
+            } elseif ($request->filled('customer_ids')) {
+                $customerIds = (array) $request->input('customer_ids');
+                $invoices = $this->trips->unlinkedLrInvoicesForCustomers($context->companyId, $customerIds);
+            } else {
+                $invoices = $this->trips->unlinkedLrInvoices($context->companyId, $customerId);
+            }
         }
 
         return response()->json([
@@ -94,7 +127,7 @@ final class TripReceiptsController extends Controller
                 'from_city' => $invoice->tr_from_name,
                 'to_city' => $invoice->tr_to_name,
                 'goods' => $invoice->tr_description_goods,
-                'amount' => (int) $invoice->total,
+                'amount' => $this->trips->receiptAmount($invoice, (string) $request->input('type', 'lr')),
                 'invoice_date' => $invoice->invoice_date instanceof DateTimeInterface
                     ? $invoice->invoice_date->format('Y-m-d')
                     : (string) $invoice->invoice_date,
@@ -132,8 +165,23 @@ final class TripReceiptsController extends Controller
     }
 
     /**
-     * Fetch and link the Invoice Receipt (office invoice) whose "received
-     * bilties" field references one of this trip's LR numbers.
+     * Fetch and link Lorry Receipts whose received bilty numbers match this
+     * trip's LR numbers.
+     */
+    public function fetchLorryReceipts(Request $request, int $id): JsonResponse
+    {
+        $context = $this->context($request);
+        $this->authorize($context, Abilities::EDIT_TRIP);
+
+        $trip = $this->trips->findForCompany($context->companyId, $id);
+        $trip = $this->trips->fetchLorryReceipts($context->companyId, $context->userId, $trip);
+
+        return response()->json(['data' => new TripResource($trip)]);
+    }
+
+    /**
+     * Fetch and link the Invoice Receipt (office invoice) whose consignment
+     * line items reference one of this trip's LR numbers.
      */
     public function fetchInvoiceReceipts(Request $request, int $id): JsonResponse
     {

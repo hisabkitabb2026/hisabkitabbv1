@@ -105,9 +105,16 @@ export async function fetchUnlinkedReceipts(
   client: AxiosInstance,
   type: 'lr' | 'lorry' = 'lr',
   customerId: number | null = null,
+  tripId: number | null = null,
+  all: boolean = false,
 ): Promise<UnlinkedReceipt[]> {
   const { data } = await client.get(`${BASE}/unlinked-lrs`, {
-    params: { type, customer_id: customerId },
+    params: {
+      type,
+      customer_id: customerId,
+      trip_id: tripId,
+      all: all ? 1 : undefined,
+    },
   })
 
   return data.data
@@ -140,6 +147,12 @@ export async function linkReceipt(
     invoice_id: invoiceId,
     type,
   })
+
+  return data.data
+}
+
+export async function fetchLorryReceipts(client: AxiosInstance, tripId: number): Promise<Trip> {
+  const { data } = await client.post(`${BASE}/${tripId}/fetch-lorry-receipt`)
 
   return data.data
 }

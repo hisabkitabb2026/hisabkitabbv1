@@ -6,6 +6,7 @@ import {
   changeTripStatus,
   fetchDocumentBlob,
   fetchInvoiceReceipts,
+  fetchLorryReceipts,
   fetchStatuses,
   fetchTrip,
   linkReceipt,
@@ -42,6 +43,7 @@ const lrPickerOpen = ref(false)
 const lorryPickerOpen = ref(false)
 
 const fetchingInvoice = ref(false)
+const fetchingLorry = ref(false)
 const podUploadingCategory = ref<string | null>(null)
 const podFileInput = ref<HTMLInputElement | null>(null)
 const podPendingCategory = ref<string>('')
@@ -58,7 +60,7 @@ const statusSelectValue = computed<number | null>({
 })
 
 const lrReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 'lr') ?? [])
-const lorryReceipt = computed(() => trip.value?.receipts.find((r) => r.type === 'lorry') ?? null)
+const lorryReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 'lorry') ?? [])
 const invoiceReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 'invoice') ?? [])
 
 /** Document slots grouped by role. */
@@ -238,10 +240,29 @@ async function onLinkLorry(invoiceIds: number[]): Promise<void> {
   lorryPickerOpen.value = false
 
   try {
-    trip.value = await linkReceipt(props.client, trip.value.id, invoiceIds[0], 'lorry')
+    for (const invoiceId of invoiceIds) {
+      trip.value = await linkReceipt(props.client, trip.value.id, invoiceId, 'lorry')
+    }
     props.notify('success', 'Lorry receipt linked.')
   } catch (error) {
     props.notify('error', errorMessage(error, 'Unable to link the receipt.'))
+  }
+}
+
+async function onFetchLorryReceipt(): Promise<void> {
+  if (!trip.value) {
+    return
+  }
+
+  fetchingLorry.value = true
+
+  try {
+    trip.value = await fetchLorryReceipts(props.client, trip.value.id)
+    props.notify('success', 'Lorry receipt(s) fetched and linked.')
+  } catch (error) {
+    props.notify('error', errorMessage(error, 'No lorry receipt found with matching bilty numbers for these LRs.'))
+  } finally {
+    fetchingLorry.value = false
   }
 }
 
@@ -428,45 +449,75 @@ function backToBoard(): void {
 
             <!-- Lorry Receipt -->
             <div class="mt-4 border-t border-line-light pt-3">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Lorry Receipt</p>
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted">Lorry Receipt</p>
+                <div class="flex items-center gap-2">
+                  <BaseButton
+                    size="sm"
+                    variant="primary-outline"
+                    :disabled="fetchingLorry || lrReceipts.length === 0"
+                    @click="onFetchLorryReceipt"
+                  >
+                    {{ fetchingLorry ? 'Fetching…' : 'Fetch Lorry Receipt' }}
+                  </BaseButton>
+                  <BaseButton size="sm" variant="primary-outline" @click="lorryPickerOpen = true">
+                    + Link Lorry Receipt
+                  </BaseButton>
+                </div>
+              </div>
+
               <div
-                v-if="lorryReceipt"
-                class="flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
+                v-for="receipt in lorryReceipts"
+                :key="receipt.id"
+                class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
               >
                 <div class="min-w-0">
-                  <p class="font-medium text-heading">🚛 {{ lorryReceipt.invoice_number }}</p>
+                  <p class="font-medium text-heading">🚛 {{ receipt.invoice_number }}</p>
                   <p class="truncate text-xs text-muted">
-                    {{ lorryReceipt.customer_name ?? 'No customer' }} · {{ formatMoney(lorryReceipt.amount) }}
+                    {{ receipt.customer_name ?? 'No customer' }} · {{ formatMoney(receipt.amount) }}
                   </p>
                 </div>
                 <div class="flex shrink-0 gap-1">
-                  <BaseButton size="sm" variant="primary-outline" @click="openInvoice(lorryReceipt.invoice_id)">
+                  <BaseButton size="sm" variant="primary-outline" @click="openInvoice(receipt.invoice_id)">
                     View
                   </BaseButton>
                   <BaseButton
-                    v-if="!lorryReceipt.billed_invoice_id"
+                    v-if="!receipt.billed_invoice_id"
                     size="sm"
                     variant="danger-outline"
-                    @click="onUnlink(lorryReceipt.id)"
+                    @click="onUnlink(receipt.id)"
                   >
                     Unlink
                   </BaseButton>
                 </div>
               </div>
-              <div v-else class="flex items-center gap-2">
-                <BaseButton size="sm" variant="primary-outline" @click="lorryPickerOpen = true">
-                  + Link Lorry Receipt
-                </BaseButton>
-              </div>
+
+              <p v-if="lorryReceipts.length === 0" class="text-sm text-muted">
+                No lorry receipt linked yet.
+                <span v-if="lrReceipts.length === 0" class="text-xs text-muted"> (Link an LR first)</span>
+              </p>
             </div>
 
             <!-- Invoice Receipt (fetched from bilty numbers) -->
             <div class="mt-4 border-t border-line-light pt-3">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Invoice Receipt</p>
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted">Invoice Receipt</p>
+                <div class="flex items-center gap-2">
+                  <BaseButton
+                    size="sm"
+                    variant="primary-outline"
+                    :disabled="fetchingInvoice || lrReceipts.length === 0"
+                    @click="onFetchInvoiceReceipt"
+                  >
+                    {{ fetchingInvoice ? 'Fetching…' : 'Fetch Invoice Receipt' }}
+                  </BaseButton>
+                </div>
+              </div>
+
               <div
                 v-for="receipt in invoiceReceipts"
                 :key="receipt.id"
-                class="flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
+                class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
               >
                 <div class="min-w-0">
                   <p class="font-medium text-heading">🧾 {{ receipt.invoice_number }}</p>
@@ -488,17 +539,11 @@ function backToBoard(): void {
                   </BaseButton>
                 </div>
               </div>
-              <div v-if="invoiceReceipts.length === 0" class="flex items-center gap-2">
-                <BaseButton
-                  size="sm"
-                  variant="primary-outline"
-                  :disabled="fetchingInvoice || lrReceipts.length === 0"
-                  @click="onFetchInvoiceReceipt"
-                >
-                  {{ fetchingInvoice ? 'Fetching…' : 'Fetch Invoice Receipt' }}
-                </BaseButton>
-                <span v-if="lrReceipts.length === 0" class="text-xs text-muted">Link an LR first.</span>
-              </div>
+
+              <p v-if="invoiceReceipts.length === 0" class="text-sm text-muted">
+                No invoice receipt linked yet.
+                <span v-if="lrReceipts.length === 0" class="text-xs text-muted"> (Link an LR first)</span>
+              </p>
             </div>
 
             <!-- Trip Documents -->
@@ -747,7 +792,9 @@ function backToBoard(): void {
       :show="lrPickerOpen"
       :client="client"
       :notify="notify"
+      type="lr"
       multiple
+      :trip-id="trip?.id"
       @close="lrPickerOpen = false"
       @select="onLinkLrs"
     />
@@ -757,7 +804,8 @@ function backToBoard(): void {
       :client="client"
       :notify="notify"
       type="lorry"
-      :multiple="false"
+      multiple
+      :trip-id="trip?.id"
       @close="lorryPickerOpen = false"
       @select="onLinkLorry"
     />

@@ -565,6 +565,7 @@ const isFocused = ref(false)
 const search = ref(props.initialSearch ?? '')
 const resolvedOptions = ref<unknown[]>([])
 const appendedOptions = ref<OptionRecord[]>([])
+const cachedSelection = ref<OptionRecord | null>(null)
 const isResolving = ref(false)
 const highlightedKey = ref<string | null>(null)
 let searchTimeout: ReturnType<typeof window.setTimeout> | null = null
@@ -727,11 +728,18 @@ const normalizedGroups = computed<NormalizedGroup[]>(() => {
 })
 
 const allSelectableOptions = computed<NormalizedOption[]>(() => {
-  if (props.groups) {
-    return normalizedGroups.value.flatMap((group) => group.options)
+  const base = props.groups
+    ? normalizedGroups.value.flatMap((group) => group.options)
+    : normalizedOptions.value
+
+  if (
+    cachedSelection.value &&
+    !base.some((option) => matchesExternal(option.raw, cachedSelection.value))
+  ) {
+    return [normalizeOption(cachedSelection.value, 'cached-selection'), ...base]
   }
 
-  return normalizedOptions.value
+  return base
 })
 
 const selectedOptions = computed<NormalizedOption[]>(() => {
@@ -1067,6 +1075,10 @@ function resolveSelectedOption(
     return matched
   }
 
+  if (cachedSelection.value && matchesExternal(cachedSelection.value, value)) {
+    return normalizeOption(cachedSelection.value, fallbackKey)
+  }
+
   return normalizeOption(value, fallbackKey)
 }
 
@@ -1240,6 +1252,8 @@ function toggleDropdown(): void {
 }
 
 function selectOption(option: OptionRecord): void {
+  cachedSelection.value = option
+
   if (props.mode === 'single') {
     emitModel(option)
     emit('select', publicValue(option), option)
@@ -1271,6 +1285,7 @@ function selectOption(option: OptionRecord): void {
 
 function deselectOption(option: OptionRecord): void {
   if (props.mode === 'single') {
+    cachedSelection.value = null
     emitModel(null)
     emit('deselect', publicValue(option), option)
     emit('remove', publicValue(option), option)
@@ -1287,6 +1302,7 @@ function deselectOption(option: OptionRecord): void {
 }
 
 function clearSelection(): void {
+  cachedSelection.value = null
   emit('clear')
   emitModel(props.mode === 'single' ? null : [])
 }

@@ -187,10 +187,35 @@ function isObject(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null
 }
 
+const effectiveValueProp = computed<string | null>(() => {
+  if (props.valueProp) return props.valueProp
+  if (
+    props.modelValue !== null &&
+    props.modelValue !== undefined &&
+    props.modelValue !== '' &&
+    !isObject(props.modelValue) &&
+    props.options.some((o) => isObject(o) && 'id' in o)
+  ) {
+    return 'id'
+  }
+  return null
+})
+
 function getValue(val: ModelValue | AcceptableValue): string | number | boolean | unknown {
   if (isObject(val) && !Array.isArray(val)) {
     return val[props.labelKey]
   }
+
+  const prop = effectiveValueProp.value
+  if (prop && props.options.length) {
+    const found = props.options.find(
+      (opt) => isObject(opt) && opt[prop] !== undefined && String(opt[prop]) === String(val),
+    )
+    if (found && isObject(found)) {
+      return found[props.labelKey]
+    }
+  }
+
   return val
 }
 
@@ -199,10 +224,11 @@ function getValue(val: ModelValue | AcceptableValue): string | number | boolean 
 watch(
   [() => props.modelValue, () => props.options],
   () => {
-    if (props.valueProp && props.options.length) {
+    const prop = effectiveValueProp.value
+    if (prop && props.options.length) {
       const found = props.options.find((val) => {
-        if (val[props.valueProp!]) {
-          return val[props.valueProp!] === props.modelValue
+        if (isObject(val) && val[prop] !== undefined) {
+          return String(val[prop]) === String(props.modelValue)
         }
         return false
       })
@@ -215,8 +241,9 @@ watch(
 )
 
 watch(selectedValue, (val) => {
-  if (props.valueProp && isObject(val) && !Array.isArray(val)) {
-    emit('update:modelValue', val[props.valueProp] as ModelValue)
+  const prop = effectiveValueProp.value
+  if (prop && isObject(val) && !Array.isArray(val)) {
+    emit('update:modelValue', val[prop] as ModelValue)
   } else {
     emit('update:modelValue', val as ModelValue)
   }

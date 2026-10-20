@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { AxiosInstance } from 'axios'
-import { createTripFromLrs, fetchLorryMatch, fetchUnlinkedReceipts } from '@/api/trips'
+import { createTripFromLrs, fetchUnlinkedReceipts } from '@/api/trips'
 import type { UnlinkedReceipt } from '@/types/trip'
 import { errorMessage } from '@/support/http'
 import { formatMoney, today } from '@/support/format'
@@ -25,15 +25,12 @@ interface AllocationRow {
 }
 
 const receipts = ref<UnlinkedReceipt[]>([])
+const knownReceipts = ref<Map<number, UnlinkedReceipt>>(new Map())
 const customerFilter = ref<number | null>(null)
 const pickupDate = ref(today())
 const rows = ref<AllocationRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
-
-/** The lorry receipt the backend would auto-match for the current selection. */
-const lorryMatch = ref<UnlinkedReceipt | null>(null)
-const lorryMatchLoading = ref(false)
 
 async function load(): Promise<void> {
   loading.value = true
@@ -42,7 +39,11 @@ async function load(): Promise<void> {
     const receiptList = await fetchUnlinkedReceipts(props.client, 'lr', customerFilter.value)
     receipts.value = receiptList
 
-    // Start with one row ready, like the payments form feels ready.
+    for (const r of receiptList) {
+      knownReceipts.value.set(r.id, r)
+    }
+
+    // Start with one row ready only if rows are completely empty
     if (rows.value.length === 0 && receiptList.length > 0) {
       rows.value = [{ receipt_id: receiptList[0].id }]
     }
@@ -53,25 +54,42 @@ async function load(): Promise<void> {
   }
 }
 
-watch(customerFilter, (value) => {
-  if (value === null) {
-    receipts.value = []
-    rows.value = []
-    lorryMatch.value = null
-
-    return
-  }
-
+watch(customerFilter, () => {
+  // Preserve existing rows when changing or clearing customer filter!
   void load()
 })
 
+function getReceiptById(id: number | null | unknown): UnlinkedReceipt | undefined {
+  if (!id) return undefined
+  const rawId = typeof id === 'object' && id !== null ? (id as any).id : id
+  const num = Number(rawId)
+  if (!num || isNaN(num)) return undefined
+  return knownReceipts.value.get(num) ?? receipts.value.find((r) => r.id === num)
+}
+
 /** Options for one row's select: everything unchosen by the other rows. */
 function rowOptions(index: number): Array<{ id: number; label: string }> {
+  const currentRowId = rows.value[index]?.receipt_id
+  const currentId = typeof currentRowId === 'object' && currentRowId !== null ? (currentRowId as any).id : currentRowId
+  const currentNum = currentId ? Number(currentId) : null
+
   const taken = rows.value
-    .map((row, i) => (i !== index ? row.receipt_id : null))
+    .map((row, i) => {
+      if (i === index) return null
+      const id = typeof row.receipt_id === 'object' && row.receipt_id !== null ? (row.receipt_id as any).id : row.receipt_id
+      return id ? Number(id) : null
+    })
     .filter((id): id is number => id !== null)
 
-  return receipts.value
+  const pool = [...receipts.value]
+  if (currentNum && !pool.some((r) => r.id === currentNum)) {
+    const cached = knownReceipts.value.get(currentNum)
+    if (cached) {
+      pool.unshift(cached)
+    }
+  }
+
+  return pool
     .filter((receipt) => !taken.includes(receipt.id))
     .map((receipt) => ({
       id: receipt.id,
@@ -88,7 +106,10 @@ const hasSpareReceipt = computed<boolean>(() => {
 
 const chosenIds = computed<number[]>(() =>
   rows.value
-    .map((row) => row.receipt_id)
+    .map((row) => {
+      const id = typeof row.receipt_id === 'object' && row.receipt_id !== null ? (row.receipt_id as any).id : row.receipt_id
+      return id ? Number(id) : null
+    })
     .filter((id): id is number => id !== null),
 )
 
@@ -115,23 +136,27 @@ function addOldestFirst(): void {
     .map((receipt) => ({ receipt_id: receipt.id }))
 }
 
-function amountFor(receiptId: number | null): number {
-  return receipts.value.find((receipt) => receipt.id === receiptId)?.amount ?? 0
+function amountFor(receiptId: number | null | unknown): number {
+  return getReceiptById(receiptId)?.amount ?? 0
 }
 
 const chosenReceipts = computed<UnlinkedReceipt[]>(() =>
   rows.value
-    .map((row) => receipts.value.find((receipt) => receipt.id === row.receipt_id))
+    .map((row) => getReceiptById(row.receipt_id))
     .filter((receipt): receipt is UnlinkedReceipt => receipt !== undefined),
 )
+
+const customerNamesOnTrip = computed<string[]>(() => {
+  const names = chosenReceipts.value
+    .map((r) => r.customer_name)
+    .filter((name): name is string => Boolean(name && name.trim()))
+
+  return [...new Set(names)]
+})
 
 const revenue = computed<number>(() =>
   chosenReceipts.value.reduce((sum, receipt) => sum + receipt.amount, 0),
 )
-
-const cost = computed<number>(() => lorryMatch.value?.amount ?? 0)
-
-const profit = computed<number>(() => revenue.value - cost.value)
 
 const mixedRoutes = computed<boolean>(() => {
   const routes = new Set(chosenReceipts.value.map((r) => `${r.from_city}→${r.to_city}`))
@@ -139,38 +164,9 @@ const mixedRoutes = computed<boolean>(() => {
   return routes.size > 1
 })
 
-/** Ask the backend which lorry receipt the bilty numbers point at. */
-async function refreshLorryMatch(): Promise<void> {
-  if (chosenIds.value.length === 0) {
-    lorryMatch.value = null
-
-    return
-  }
-
-  lorryMatchLoading.value = true
-
-  try {
-    const matches = await fetchLorryMatch(props.client, chosenIds.value)
-    lorryMatch.value = matches[0] ?? null
-  } catch {
-    lorryMatch.value = null
-  } finally {
-    lorryMatchLoading.value = false
-  }
-}
-
-let matchTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(chosenIds, () => {
-  if (matchTimer) {
-    clearTimeout(matchTimer)
-  }
-
-  // Debounce: the user may add several rows quickly.
-  matchTimer = setTimeout(() => {
-    void refreshLorryMatch()
-  }, 400)
-}, { deep: true })
+onMounted(() => {
+  void load()
+})
 
 async function submit(): Promise<void> {
   if (chosenIds.value.length === 0) {
@@ -219,6 +215,9 @@ async function submit(): Promise<void> {
               can-deselect
               placeholder="All customers"
             />
+            <p class="mt-1 text-xs text-muted">
+              Optional: Select a customer to narrow the LR list, or leave empty to choose from all customers.
+            </p>
           </BaseInputGroup>
 
           <BaseInputGroup label="Pickup date">
@@ -232,7 +231,7 @@ async function submit(): Promise<void> {
             <div>
               <h2 class="text-section font-semibold text-heading">LR Receipts</h2>
               <p class="mt-1 text-sm text-muted">
-                Choose the LR receipts this trip carries. Pick several for a shared load.
+                Choose the LR receipts this trip carries. Pick several for a shared load across customers.
               </p>
             </div>
             <div class="flex gap-2">
@@ -249,7 +248,7 @@ async function submit(): Promise<void> {
                 type="button"
                 size="sm"
                 variant="primary-outline"
-                :disabled="loading || !hasSpareReceipt"
+                :disabled="loading"
                 @click="addRow"
               >
                 <template #left="slotProps"><BaseIcon name="PlusIcon" :class="slotProps.class" /></template>
@@ -258,24 +257,23 @@ async function submit(): Promise<void> {
             </div>
           </div>
 
+          <!-- Multi-Customer badge if more than 1 customer -->
           <div
-            v-if="customerFilter === null"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
+            v-if="customerNamesOnTrip.length > 1"
+            class="mb-3 flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 p-2.5 text-xs text-primary-800"
           >
-            Select a customer first — the LR receipts for that customer will appear here.
+            <span class="font-semibold">📦 Consolidated Part-Load ({{ customerNamesOnTrip.length }} Customers):</span>
+            <span>{{ customerNamesOnTrip.join(', ') }}</span>
+          </div>
+          <div
+            v-else-if="customerNamesOnTrip.length === 1"
+            class="mb-3 flex items-center gap-2 rounded-lg border border-line-light bg-surface-secondary p-2 text-xs text-muted"
+          >
+            <span>👤 Customer: <strong class="text-heading">{{ customerNamesOnTrip[0] }}</strong></span>
           </div>
 
-          <div v-else-if="loading" class="rounded-lg bg-surface-secondary p-4 text-sm text-muted" role="status">
+          <div v-if="loading && receipts.length === 0" class="rounded-lg bg-surface-secondary p-4 text-sm text-muted" role="status">
             Loading the receipts…
-          </div>
-
-          <div
-            v-else-if="receipts.length === 0"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
-          >
-            No unlinked LR receipts. Create one first, then start the trip.
           </div>
 
           <div
@@ -283,7 +281,7 @@ async function submit(): Promise<void> {
             class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
             role="status"
           >
-            Add the LR receipts this trip carries.
+            Click "+ Add LR Receipt" or "Add Oldest First" to add consignments to this trip.
           </div>
 
           <div v-else class="space-y-3">
@@ -296,6 +294,7 @@ async function submit(): Promise<void> {
                 <BaseSelectInput
                   v-model="row.receipt_id"
                   :options="rowOptions(index)"
+                  value-prop="id"
                   label-key="label"
                   placeholder="Select an LR receipt"
                 />
@@ -337,91 +336,23 @@ async function submit(): Promise<void> {
           </div>
         </section>
 
-        <!-- ── Lorry Receipt: auto-matched, never picked by hand ────────── -->
+        <!-- ── Summary ───────────────────────────────────────────────── -->
         <section class="mt-5 border-t border-line-light pt-5">
-          <div class="mb-4">
-            <h2 class="text-section font-semibold text-heading">Lorry Receipt</h2>
-            <p class="mt-1 text-sm text-muted">
-              Auto-matched from the bilty numbers on the selected LR receipts — no need to pick it.
-            </p>
-          </div>
+          <h2 class="mb-4 text-section font-semibold text-heading">Summary</h2>
 
-          <div
-            v-if="customerFilter === null"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
-          >
-            Select a customer first — the lorry receipt follows from the LR receipts.
-          </div>
-
-          <div
-            v-else-if="lorryMatchLoading"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
-          >
-            Finding the lorry receipt…
-          </div>
-
-          <div
-            v-else-if="chosenIds.length === 0"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
-          >
-            Select an LR receipt first — the lorry receipt follows from its bilty numbers.
-          </div>
-
-          <div
-            v-else-if="!lorryMatch"
-            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-            role="status"
-          >
-            No lorry receipt lists these bilty numbers yet. The trip starts without one; link it
-            later from the trip page.
-          </div>
-
-          <div
-            v-else
-            class="flex items-center justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 p-3"
-          >
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-heading">
-                🚛 {{ lorryMatch.invoice_number }}
-                <span class="ms-2 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
-                  Auto-matched
-                </span>
-              </p>
-              <p class="mt-0.5 truncate text-xs text-muted">
-                {{ lorryMatch.from_city ?? '—' }} → {{ lorryMatch.to_city ?? '—' }}
-                <span v-if="lorryMatch.customer_name"> · {{ lorryMatch.customer_name }}</span>
-              </p>
-            </div>
-            <p class="shrink-0 text-sm font-semibold text-heading">{{ formatMoney(lorryMatch.amount) }}</p>
-          </div>
-        </section>
-
-        <!-- ── The money ───────────────────────────────────────────────── -->
-        <section class="mt-5 border-t border-line-light pt-5">
-          <h2 class="mb-4 text-section font-semibold text-heading">The Money</h2>
-
-          <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="grid grid-cols-2 gap-3 text-center">
             <div class="rounded-lg bg-surface-secondary p-3">
-              <p class="text-xs text-muted">Revenue</p>
+              <p class="text-xs text-muted">Selected LR Receipts</p>
+              <p class="text-lg font-semibold text-heading">{{ chosenReceipts.length }}</p>
+            </div>
+            <div class="rounded-lg bg-surface-secondary p-3">
+              <p class="text-xs text-muted">Total Freight Revenue</p>
               <p class="text-lg font-semibold text-heading">{{ formatMoney(revenue) }}</p>
             </div>
-            <div class="rounded-lg bg-surface-secondary p-3">
-              <p class="text-xs text-muted">Cost</p>
-              <p class="text-lg font-semibold text-heading">{{ formatMoney(cost) }}</p>
-            </div>
-            <div class="rounded-lg bg-surface-secondary p-3">
-              <p class="text-xs text-muted">Profit</p>
-              <p
-                class="text-lg font-semibold"
-                :class="profit >= 0 ? 'text-status-green' : 'text-status-red'"
-              >
-                {{ formatMoney(profit) }}
-              </p>
-            </div>
           </div>
+          <p class="mt-3 text-center text-xs text-muted">
+            Lorry Receipt and expenses are fetched & linked on the trip details page to calculate vehicle cost and net profit.
+          </p>
         </section>
       </BaseCard>
     </form>
