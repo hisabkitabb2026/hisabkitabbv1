@@ -21,6 +21,7 @@ declare(strict_types=1);
  *    - Leaves the remaining balance as due amount.
  */
 
+use App\Domains\Accounts\Models\Company;
 use App\Domains\Accounts\Models\User;
 use App\Domains\Purchases\Application\PurchaseInputs;
 use App\Domains\Sales\Application\SerialNumberService;
@@ -41,8 +42,9 @@ $kernel->bootstrap();
 
 $companyId = 1;
 
-// Authenticate as company admin/user for any Bouncer or session checks
-$user = User::query()->where('company_id', $companyId)->first() ?? User::query()->first();
+// Authenticate as company owner/user for any Bouncer or session checks
+$company = Company::find($companyId);
+$user = $company?->owner ?? $company?->users()->first() ?? User::query()->first();
 if ($user) {
     auth()->login($user);
 }
