@@ -294,19 +294,14 @@
     ])->contains(fn ($value) => $value !== null);
     $finalTotalExtraNumber = $number(['Final Total Extra Amount'])
         ?? $sumAmounts([$detentionNumber, $extraHireNumber, $finalOtherNumber]);
-    $grandTotalNumber = $number(['Grand Total']);
-    if ($grandTotalNumber === null && $hasFinalPaymentOperation && $balanceNumber !== null) {
-        $grandTotalNumber = $balanceNumber + ($finalTotalExtraNumber ?? 0);
-    }
+    $grandTotalNumber = ($balanceNumber !== null)
+        ? ($balanceNumber + ($finalTotalExtraNumber ?? 0))
+        : ($number(['Grand Total']) ?? 0);
     $deductionTotalNumber = $number(['Total Less Amount'])
-        ?? $sumAmounts([$lessAdvanceOtherBranchNumber, $lessDeductionClaimsNumber]);
-    if ($deductionTotalNumber === null && $hasFinalPaymentOperation) {
-        $deductionTotalNumber = 0;
-    }
-    $netAmountPayableNumber = $number(['Net Amount Payable']);
-    if ($netAmountPayableNumber === null && $grandTotalNumber !== null) {
-        $netAmountPayableNumber = $grandTotalNumber - ($deductionTotalNumber ?? 0);
-    }
+        ?? $sumAmounts([$lessAdvanceOtherBranchNumber, $lessDeductionClaimsNumber])
+        ?? 0;
+    // Mathematically enforce: Net Amount Payable = Grand Total - Total Deductions
+    $netAmountPayableNumber = max(0, $grandTotalNumber - $deductionTotalNumber);
     $finalTotalExtraAmount = $formatAmount($finalTotalExtraNumber);
     $grandTotalAmount = $formatAmount($grandTotalNumber);
     $totalLessAmount = $formatAmount($deductionTotalNumber);

@@ -58,9 +58,13 @@ $payables = app(LorryReceiptPayablesService::class);
 
 // Parse optional filter
 $challanFilter = null;
+$syncAll = false;
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--challans=')) {
         $challanFilter = array_filter(array_map('trim', explode(',', substr($arg, 11))));
+    }
+    if ($arg === '--all') {
+        $syncAll = true;
     }
 }
 
@@ -72,7 +76,7 @@ if ($challanFilter !== null && count($challanFilter) > 0) {
     $padded = array_map(fn ($c) => str_pad($c, 3, '0', STR_PAD_LEFT), $challanFilter);
     $allMatches = array_unique(array_merge($challanFilter, $padded));
     $query->whereIn('invoice_number', $allMatches);
-} else {
+} elseif (! $syncAll) {
     // By default, target any receipt that is not yet fully paid or has due_amount > 0
     $query->where(function ($q) {
         $q->where('paid_status', '!=', Invoice::STATUS_PAID)
