@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { AxiosInstance } from 'axios'
 import { createTripFromLrs, fetchUnlinkedReceipts } from '@/api/trips'
 import type { UnlinkedReceipt } from '@/types/trip'
@@ -19,89 +19,88 @@ const props = defineProps<{
   router?: RouterLike
 }>()
 
-/** One allocation row, exactly like a payment allocation. */
+/** One allocation row, exactly like a payment allocation in PaymentCreateView. */
 interface AllocationRow {
   receipt_id: number | null
 }
 
+const customerId = ref<number | null>(null)
+const allowAllCustomers = ref(false)
 const receipts = ref<UnlinkedReceipt[]>([])
-const knownReceipts = ref<Map<number, UnlinkedReceipt>>(new Map())
-const customerFilter = ref<number | null>(null)
-const rows = ref<AllocationRow[]>([{ receipt_id: null }])
+const rows = ref<AllocationRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 
-async function load(): Promise<void> {
+async function loadReceipts(): Promise<void> {
+  if (!customerId.value && !allowAllCustomers.value) {
+    receipts.value = []
+    rows.value = []
+    return
+  }
+
   loading.value = true
 
   try {
-    const receiptList = await fetchUnlinkedReceipts(props.client, 'lr', customerFilter.value)
-    receipts.value = receiptList
-
-    for (const r of receiptList) {
-      knownReceipts.value.set(r.id, r)
-    }
-
-    // Start with one empty row ready only if rows are completely empty
-    if (rows.value.length === 0) {
-      rows.value = [{ receipt_id: null }]
-    }
+    receipts.value = await fetchUnlinkedReceipts(props.client, 'lr', customerId.value)
   } catch (error) {
     props.notify('error', errorMessage(error, 'Unable to load the receipts.'))
+    receipts.value = []
   } finally {
     loading.value = false
   }
 }
 
-watch(customerFilter, () => {
-  // Preserve existing rows when changing or clearing customer filter!
-  void load()
+watch(customerId, (newId, oldId) => {
+  if (oldId !== undefined && newId !== oldId) {
+    rows.value = []
+  }
+  if (newId) {
+    allowAllCustomers.value = false
+  }
+  void loadReceipts()
 })
+
+function toggleAllCustomers(): void {
+  allowAllCustomers.value = !allowAllCustomers.value
+  if (allowAllCustomers.value) {
+    customerId.value = null
+  }
+  rows.value = []
+  void loadReceipts()
+}
 
 function getReceiptById(id: number | null | unknown): UnlinkedReceipt | undefined {
   if (!id) return undefined
   const rawId = typeof id === 'object' && id !== null ? (id as any).id : id
   const num = Number(rawId)
   if (!num || isNaN(num)) return undefined
-  return knownReceipts.value.get(num) ?? receipts.value.find((r) => r.id === num)
+  return receipts.value.find((r) => r.id === num)
+}
+
+function amountFor(receiptId: number | null | unknown): number {
+  return getReceiptById(receiptId)?.amount ?? 0
 }
 
 /** Options for one row's select: everything unchosen by the other rows. */
-function rowOptions(index: number): Array<{ id: number; label: string }> {
-  const currentRowId = rows.value[index]?.receipt_id
-  const currentId = typeof currentRowId === 'object' && currentRowId !== null ? (currentRowId as any).id : currentRowId
-  const currentNum = currentId ? Number(currentId) : null
+function availableReceipts(currentReceiptId: number | null | unknown): Array<{ id: number; label: string }> {
+  const currentNum = currentReceiptId
+    ? Number(typeof currentReceiptId === 'object' ? (currentReceiptId as any).id : currentReceiptId)
+    : null
 
   const taken = rows.value
-    .map((row, i) => {
-      if (i === index) return null
+    .map((row) => {
       const id = typeof row.receipt_id === 'object' && row.receipt_id !== null ? (row.receipt_id as any).id : row.receipt_id
       return id ? Number(id) : null
     })
-    .filter((id): id is number => id !== null)
+    .filter((id): id is number => id !== null && id !== currentNum)
 
-  const pool = [...receipts.value]
-  if (currentNum && !pool.some((r) => r.id === currentNum)) {
-    const cached = knownReceipts.value.get(currentNum)
-    if (cached) {
-      pool.unshift(cached)
-    }
-  }
-
-  return pool
+  return receipts.value
     .filter((receipt) => !taken.includes(receipt.id))
     .map((receipt) => ({
       id: receipt.id,
-      label: `${receipt.invoice_number} · ${receipt.from_city ?? '—'} → ${receipt.to_city ?? '—'} · ${receipt.customer_name ?? 'No customer'}`,
+      label: `${receipt.invoice_number} · ${receipt.from_city ?? '—'} → ${receipt.to_city ?? '—'} · ${receipt.customer_name ?? 'No customer'} (${formatMoney(receipt.amount)})`,
     }))
 }
-
-/** Is there a receipt left to start a new row with? */
-const hasSpareReceipt = computed<boolean>(() => {
-  const taken = chosenIds.value
-
-  return receipts.value.some((receipt) => !taken.includes(receipt.id))
-})
 
 const chosenIds = computed<number[]>(() =>
   rows.value
@@ -111,31 +110,6 @@ const chosenIds = computed<number[]>(() =>
     })
     .filter((id): id is number => id !== null),
 )
-
-function addRow(): void {
-  rows.value.push({ receipt_id: null })
-}
-
-function removeRow(index: number): void {
-  rows.value.splice(index, 1)
-}
-
-/**
- * The payments page's "Allocate Oldest First", our way: a lorry carries every
- * unlinked LR on it, so take them all — oldest receipt date first.
- */
-function addOldestFirst(): void {
-  rows.value = [...receipts.value]
-    .sort(
-      (a, b) =>
-        (a.invoice_date ?? '9999-12-31').localeCompare(b.invoice_date ?? '9999-12-31') || a.id - b.id,
-    )
-    .map((receipt) => ({ receipt_id: receipt.id }))
-}
-
-function amountFor(receiptId: number | null | unknown): number {
-  return getReceiptById(receiptId)?.amount ?? 0
-}
 
 const chosenReceipts = computed<UnlinkedReceipt[]>(() =>
   rows.value
@@ -157,18 +131,29 @@ const revenue = computed<number>(() =>
 
 const mixedRoutes = computed<boolean>(() => {
   const routes = new Set(chosenReceipts.value.map((r) => `${r.from_city}→${r.to_city}`))
-
   return routes.size > 1
 })
 
-onMounted(() => {
-  void load()
-})
+function addRow(): void {
+  rows.value.push({ receipt_id: null })
+}
+
+function removeRow(index: number): void {
+  rows.value.splice(index, 1)
+}
+
+function addOldestFirst(): void {
+  rows.value = [...receipts.value]
+    .sort(
+      (a, b) =>
+        (a.invoice_date ?? '9999-12-31').localeCompare(b.invoice_date ?? '9999-12-31') || a.id - b.id,
+    )
+    .map((receipt) => ({ receipt_id: receipt.id }))
+}
 
 async function submit(): Promise<void> {
   if (chosenIds.value.length === 0) {
-    props.notify('warning', 'Add at least one LR receipt.')
-
+    props.notify('warning', 'Please select at least one LR receipt.')
     return
   }
 
@@ -176,7 +161,6 @@ async function submit(): Promise<void> {
 
   try {
     const trip = await createTripFromLrs(props.client, chosenIds.value)
-
     props.notify('success', `Trip #${trip.trip_no} created.`)
     props.router?.push(PATHS.trip(trip.id))
   } catch (error) {
@@ -205,26 +189,35 @@ async function submit(): Promise<void> {
       </BasePageHeader>
 
       <BaseCard container-class="p-4 md:p-5">
+        <!-- Customer Selection: mirrors PaymentCreateView.vue -->
         <div class="max-w-md">
-          <BaseInputGroup label="Customer (filter)">
+          <BaseInputGroup label="Customer" required>
             <BaseCustomerSelectInput
-              v-model="customerFilter"
-              can-deselect
-              placeholder="All customers"
+              v-model="customerId"
+              :disabled="allowAllCustomers"
+              placeholder="Select a customer"
+              show-action
             />
-            <p class="mt-1 text-xs text-muted">
-              Optional: Select a customer to narrow the LR list, or leave empty to choose from all customers.
-            </p>
+            <div class="mt-2 flex items-center justify-between text-xs text-muted">
+              <span>Select a customer to view their unlinked LR receipts.</span>
+              <button
+                type="button"
+                class="font-medium text-primary-600 hover:text-primary-700 underline"
+                @click="toggleAllCustomers"
+              >
+                {{ allowAllCustomers ? '← Select specific customer' : 'Or load all customers (part-load)' }}
+              </button>
+            </div>
           </BaseInputGroup>
         </div>
 
-        <!-- ── LR Receipts: the allocation section ─────────────────────── -->
+        <!-- ── LR Receipts: the allocation section (matching PaymentCreateView) ─────────────────────── -->
         <section class="mt-5 border-t border-line-light pt-5">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 class="text-section font-semibold text-heading">LR Receipts</h2>
               <p class="mt-1 text-sm text-muted">
-                Choose the LR receipts this trip carries. Pick several for a shared load across customers.
+                Choose the LR receipts this trip carries.
               </p>
             </div>
             <div class="flex gap-2">
@@ -241,7 +234,7 @@ async function submit(): Promise<void> {
                 type="button"
                 size="sm"
                 variant="primary-outline"
-                :disabled="loading"
+                :disabled="loading || (!customerId && !allowAllCustomers) || availableReceipts(null).length === 0"
                 @click="addRow"
               >
                 <template #left="slotProps"><BaseIcon name="PlusIcon" :class="slotProps.class" /></template>
@@ -250,7 +243,7 @@ async function submit(): Promise<void> {
             </div>
           </div>
 
-          <!-- Multi-Customer badge if more than 1 customer -->
+          <!-- Multi-Customer badge if part-load -->
           <div
             v-if="customerNamesOnTrip.length > 1"
             class="mb-3 flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 p-2.5 text-xs text-primary-800"
@@ -265,31 +258,58 @@ async function submit(): Promise<void> {
             <span>👤 Customer: <strong class="text-heading">{{ customerNamesOnTrip[0] }}</strong></span>
           </div>
 
-          <div v-if="loading && receipts.length === 0" class="rounded-lg bg-surface-secondary p-4 text-sm text-muted" role="status">
-            Loading the receipts…
+          <!-- State 1: No customer selected yet -->
+          <div
+            v-if="!customerId && !allowAllCustomers"
+            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
+          >
+            Please select a customer above to view and add LR receipts.
           </div>
 
+          <!-- State 2: Loading receipts -->
+          <div
+            v-else-if="loading && receipts.length === 0"
+            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
+            role="status"
+          >
+            Loading LR receipts…
+          </div>
+
+          <!-- State 3: Customer selected, but has NO unlinked receipts -->
+          <div
+            v-else-if="receipts.length === 0"
+            class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
+            role="status"
+          >
+            No unlinked LR receipts found for this customer.
+          </div>
+
+          <!-- State 4: Receipts available, but no rows added yet -->
           <div
             v-else-if="rows.length === 0"
             class="rounded-lg bg-surface-secondary p-4 text-sm text-muted"
             role="status"
           >
-            Click "+ Add LR Receipt" or "Add Oldest First" to add consignments to this trip.
+            Click "+ Add LR Receipt" or "Add Oldest First" to add LR receipts to this trip.
           </div>
 
+          <!-- State 5: Rows added (BaseMultiselect like PaymentCreateView) -->
           <div v-else class="space-y-3">
             <div
               v-for="(row, index) in rows"
               :key="index"
-              class="grid items-end gap-3 rounded-lg bg-surface-secondary p-3 md:grid-cols-[minmax(0,1fr)_10rem_auto]"
+              class="grid items-end gap-3 rounded-lg bg-surface-secondary p-3 md:grid-cols-[minmax(0,1fr)_12rem_auto]"
             >
               <BaseInputGroup label="LR Receipt">
-                <BaseSelectInput
+                <BaseMultiselect
                   v-model="row.receipt_id"
-                  :options="rowOptions(index)"
                   value-prop="id"
-                  label-key="label"
+                  track-by="id"
+                  label="label"
+                  :options="availableReceipts(row.receipt_id)"
+                  :loading="loading"
                   placeholder="Select an LR"
+                  searchable
                 />
               </BaseInputGroup>
 
