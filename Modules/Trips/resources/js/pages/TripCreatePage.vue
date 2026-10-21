@@ -4,7 +4,7 @@ import type { AxiosInstance } from 'axios'
 import { createTripFromLrs, fetchUnlinkedReceipts } from '@/api/trips'
 import type { UnlinkedReceipt } from '@/types/trip'
 import { errorMessage } from '@/support/http'
-import { formatMoney, today } from '@/support/format'
+import { formatMoney } from '@/support/format'
 import { PATHS } from '@/support/page'
 import type { Notify } from '@/support/page'
 
@@ -27,8 +27,7 @@ interface AllocationRow {
 const receipts = ref<UnlinkedReceipt[]>([])
 const knownReceipts = ref<Map<number, UnlinkedReceipt>>(new Map())
 const customerFilter = ref<number | null>(null)
-const pickupDate = ref(today())
-const rows = ref<AllocationRow[]>([])
+const rows = ref<AllocationRow[]>([{ receipt_id: null }])
 const loading = ref(false)
 const saving = ref(false)
 
@@ -43,9 +42,9 @@ async function load(): Promise<void> {
       knownReceipts.value.set(r.id, r)
     }
 
-    // Start with one row ready only if rows are completely empty
-    if (rows.value.length === 0 && receiptList.length > 0) {
-      rows.value = [{ receipt_id: receiptList[0].id }]
+    // Start with one empty row ready only if rows are completely empty
+    if (rows.value.length === 0) {
+      rows.value = [{ receipt_id: null }]
     }
   } catch (error) {
     props.notify('error', errorMessage(error, 'Unable to load the receipts.'))
@@ -114,9 +113,7 @@ const chosenIds = computed<number[]>(() =>
 )
 
 function addRow(): void {
-  const next = receipts.value.find((receipt) => !chosenIds.value.includes(receipt.id))
-
-  rows.value.push({ receipt_id: next?.id ?? null })
+  rows.value.push({ receipt_id: null })
 }
 
 function removeRow(index: number): void {
@@ -208,7 +205,7 @@ async function submit(): Promise<void> {
       </BasePageHeader>
 
       <BaseCard container-class="p-4 md:p-5">
-        <BaseInputGrid>
+        <div class="max-w-md">
           <BaseInputGroup label="Customer (filter)">
             <BaseCustomerSelectInput
               v-model="customerFilter"
@@ -219,11 +216,7 @@ async function submit(): Promise<void> {
               Optional: Select a customer to narrow the LR list, or leave empty to choose from all customers.
             </p>
           </BaseInputGroup>
-
-          <BaseInputGroup label="Pickup date">
-            <BaseInput v-model="pickupDate" type="date" />
-          </BaseInputGroup>
-        </BaseInputGrid>
+        </div>
 
         <!-- ── LR Receipts: the allocation section ─────────────────────── -->
         <section class="mt-5 border-t border-line-light pt-5">
@@ -296,7 +289,7 @@ async function submit(): Promise<void> {
                   :options="rowOptions(index)"
                   value-prop="id"
                   label-key="label"
-                  placeholder="Select an LR receipt"
+                  placeholder="Select an LR"
                 />
               </BaseInputGroup>
 
@@ -304,7 +297,7 @@ async function submit(): Promise<void> {
                 <div
                   class="flex h-[38px] items-center rounded-lg bg-surface-tertiary px-3 text-sm font-medium text-heading"
                 >
-                  {{ formatMoney(amountFor(row.receipt_id)) }}
+                  {{ row.receipt_id ? formatMoney(amountFor(row.receipt_id)) : '—' }}
                 </div>
               </BaseInputGroup>
 
