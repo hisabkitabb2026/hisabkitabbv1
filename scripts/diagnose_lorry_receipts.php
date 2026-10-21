@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
+use Illuminate\Contracts\Console\Kernel;
+
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
-
-use App\Domains\Sales\Models\Invoice;
-use App\Domains\Sales\Models\InvoiceItem;
-use Illuminate\Contracts\Console\Kernel;
 
 $companyId = 1;
 
