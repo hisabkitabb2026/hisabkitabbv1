@@ -367,11 +367,17 @@ function backToBoard(): void {
           </div>
 
           <div class="flex items-center gap-2">
+            <span
+              v-if="trip.cancelled_at"
+              class="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white"
+            >
+              Cancelled
+            </span>
             <select
-              v-if="statuses.length > 0 && !trip.cancelled_at"
+              v-else-if="statuses.length > 0"
               v-model="statusSelectValue"
               :disabled="changingStatus"
-              class="rounded-full border-0 px-3 py-1 text-xs font-semibold text-white outline-none"
+              class="cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-semibold text-white outline-none"
               :style="{ backgroundColor: trip.status.colour ?? '#94a3b8' }"
             >
               <option

@@ -7,11 +7,12 @@ namespace Modules\Trips\Application;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Trips\Models\Trip;
 use Modules\Trips\Models\TripStatus;
 
 /**
- * The board's columns. The seven defaults are created lazily per company, the
- * first time any list is asked for, so enabling the module is enough.
+ * The board's columns. The four defaults (Booked, Assigned, In Transit, Delivered)
+ * are created lazily per company, the first time any list is asked for.
  */
 final class TripStatusService
 {
@@ -26,24 +27,61 @@ final class TripStatusService
         ['code' => 'booked', 'name' => 'Booked', 'colour' => '#6366f1', 'is_default' => true, 'is_closed' => false],
         ['code' => 'assigned', 'name' => 'Assigned', 'colour' => '#f59e0b', 'is_default' => false, 'is_closed' => false],
         ['code' => 'in_transit', 'name' => 'In Transit', 'colour' => '#3b82f6', 'is_default' => false, 'is_closed' => false],
-        ['code' => 'delivered', 'name' => 'Delivered', 'colour' => '#10b981', 'is_default' => false, 'is_closed' => false],
-        ['code' => 'billed', 'name' => 'Billed', 'colour' => '#8b5cf6', 'is_default' => false, 'is_closed' => false],
-        ['code' => 'settled', 'name' => 'Settled', 'colour' => '#64748b', 'is_default' => false, 'is_closed' => true],
-        ['code' => 'cancelled', 'name' => 'Cancelled', 'colour' => '#ef4444', 'is_default' => false, 'is_closed' => true],
+        ['code' => 'delivered', 'name' => 'Delivered', 'colour' => '#10b981', 'is_default' => false, 'is_closed' => true],
     ];
 
     public function ensureDefaults(int $companyId): void
     {
         DB::transaction(function () use ($companyId): void {
-            if (TripStatus::query()->forCompany($companyId)->exists()) {
-                return;
+            // Reassign any trips in obsolete statuses (billed, settled, cancelled) to delivered
+            $obsolete = TripStatus::query()
+                ->forCompany($companyId)
+                ->whereIn('code', ['billed', 'settled', 'cancelled'])
+                ->get();
+
+            if ($obsolete->isNotEmpty()) {
+                $delivered = TripStatus::query()
+                    ->forCompany($companyId)
+                    ->where('code', 'delivered')
+                    ->first();
+
+                if (! $delivered) {
+                    $delivered = TripStatus::query()->create([
+                        'company_id' => $companyId,
+                        'code' => 'delivered',
+                        'name' => 'Delivered',
+                        'colour' => '#10b981',
+                        'position' => 4,
+                        'is_default' => false,
+                        'is_closed' => true,
+                    ]);
+                }
+
+                foreach ($obsolete as $oldStatus) {
+                    Trip::query()
+                        ->where('company_id', $companyId)
+                        ->where('status_id', $oldStatus->id)
+                        ->update(['status_id' => $delivered->id]);
+
+                    $oldStatus->delete();
+                }
             }
 
-            foreach (self::DEFAULTS as $position => $status) {
-                TripStatus::query()->create($status + [
-                    'company_id' => $companyId,
-                    'position' => $position + 1,
-                ]);
+            if (! TripStatus::query()->forCompany($companyId)->exists()) {
+                foreach (self::DEFAULTS as $position => $status) {
+                    TripStatus::query()->create($status + [
+                        'company_id' => $companyId,
+                        'position' => $position + 1,
+                    ]);
+                }
+            } else {
+                // Ensure the 4 canonical statuses exist and have the correct positions and properties
+                foreach (self::DEFAULTS as $position => $status) {
+                    TripStatus::query()->updateOrCreate(
+                        ['company_id' => $companyId, 'code' => $status['code']],
+                        $status + ['position' => $position + 1]
+                    );
+                }
             }
         });
     }
