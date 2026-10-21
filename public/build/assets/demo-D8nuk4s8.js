@@ -1,0 +1,1 @@
+function e(){return window.demo_mode?window.demo??null:null}function t(e,t=new Date){if(!e?.next_reset_at)return null;let n=Date.parse(e.next_reset_at)-t.getTime();if(Number.isNaN(n)||n<=0)return null;let r=Math.ceil(n/6e4);return{hours:Math.floor(r/60),minutes:r%60}}export{t as n,e as t};

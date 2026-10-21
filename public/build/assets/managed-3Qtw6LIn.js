@@ -1,0 +1,1 @@
+function e(){return window.managed_mode===!0}function t(){return e()?window.managed??{support_url:null}:null}function n(){return e()&&t()?.modules_installable!==!0}export{n,e as t};

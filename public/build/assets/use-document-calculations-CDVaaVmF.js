@@ -1,0 +1,1 @@
+import"./vue.runtime.esm-bundler-plHifQ86.js";function e(e,t){return Math.round(e*t)}function t(e,t,n,r,i,a=!1,o=0){return r===`fixed`&&n!=null?n:!e||!t?0:Math.round(a?i?e*t/100:(e+o)*t/100:i?e-e/(1+t/100):e*t/100)}export{t as n,e as t};

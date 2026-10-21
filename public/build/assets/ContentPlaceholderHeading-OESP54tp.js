@@ -1,0 +1,1 @@
+import{t as e}from"./ContentPlaceholderHeading-FhK87-98.js";export{e as default};

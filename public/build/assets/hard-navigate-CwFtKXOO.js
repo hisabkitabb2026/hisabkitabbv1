@@ -1,0 +1,1 @@
+import{t as e}from"./router-sBIOu8tr.js";function t(t){let n=e.resolve({path:t}).href;window.location.assign(n),n.startsWith(`#`)&&window.location.reload()}export{t};

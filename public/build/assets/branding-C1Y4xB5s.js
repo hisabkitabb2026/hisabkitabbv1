@@ -1,0 +1,1 @@
+var e={name:`InvoiceShelf`,url:`https://invoiceshelf.com`};function t(){return window.powered_by===void 0?e:window.powered_by}function n(){return null}export{n,t};

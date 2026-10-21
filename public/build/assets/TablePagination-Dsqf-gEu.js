@@ -1,0 +1,1 @@
+import{t as e}from"./TablePagination-7705BSha.js";export{e as default};

@@ -1,0 +1,1 @@
+import{J as e,S as t,U as n}from"./vue.runtime.esm-bundler-plHifQ86.js";import{t as r}from"./_plugin-vue_export-helper-DxbPtQ1R.js";var i={},a={class:`flex flex-col flex-1 w-full gap-4 px-4 pt-4 pb-10 md:gap-5 md:px-6 md:pt-6 lg:px-8`};function o(r,i){return n(),t(`div`,a,[e(r.$slots,`default`)])}var s=r(i,[[`render`,o]]);export{s as t};

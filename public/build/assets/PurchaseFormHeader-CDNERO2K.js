@@ -1,0 +1,3 @@
+import{E as e,J as t,O as n,U as r,Y as i,at as a,b as o,v as s}from"./vue.runtime.esm-bundler-plHifQ86.js";import{n as c}from"./vue-i18n-XmToWGGN.js";import{a as l,n as u}from"./navigation-DDYoDabu.js";import{t as d}from"./PurchaseBreadcrumb-DoXgCHMJ.js";var f=n({__name:`PurchaseFormHeader`,props:{title:{},kind:{},mode:{}},setup(n){let f=n,{t:p}=c(),m=s(()=>f.kind===`recurring-costs`?[p(l(f.mode,`help`)),p(`purchases.schedule_help`),p(`purchases.saved_rate_help`)].join(`
+
+`):p(u[f.kind]));return(s,c)=>{let l=i(`BasePageHeader`);return r(),o(l,{title:n.title,help:m.value,"phone-actions":`bar`},{actions:a(()=>[t(s.$slots,`actions`)]),default:a(()=>[e(d,{kind:n.kind,mode:n.mode,title:n.title},null,8,[`kind`,`mode`,`title`])]),_:3},8,[`title`,`help`])}}});export{f as t};

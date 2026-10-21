@@ -1,0 +1,1 @@
+import{v as e,vt as t}from"./vue.runtime.esm-bundler-plHifQ86.js";import{i as n}from"./dist-C70jYr5f.js";function r(){let r=t();return{primitiveElement:r,currentElement:e(()=>[`#text`,`#comment`].includes(r.value?.$el.nodeName)?r.value?.$el.nextElementSibling:n(r))}}export{r as t};

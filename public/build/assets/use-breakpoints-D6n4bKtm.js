@@ -1,0 +1,1 @@
+import{f as e,o as t}from"./dist-C70jYr5f.js";var n=e(()=>({isPhone:t(`(max-width: 767.98px)`),isDesktop:t(`(min-width: 1024px)`)}));export{n as t};
