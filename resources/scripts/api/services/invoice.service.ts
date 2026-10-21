@@ -20,6 +20,9 @@ export interface InvoiceListParams extends ListParams, DateRangeParams {
   status?: string
   customer_id?: number
   template_name?: string
+  invoice_number?: string
+  consignment_number?: string
+  lr_number?: string
 }
 
 export interface InvoiceListMeta {

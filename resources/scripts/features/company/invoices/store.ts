@@ -260,7 +260,7 @@ export const useInvoiceStore = defineStore('invoice', {
     },
 
     async fetchInvoices(
-      params: InvoiceListParams & { invoice_number?: string },
+      params: InvoiceListParams,
     ): Promise<{ data: InvoiceListResponse }> {
       const response = await invoiceService.list(params)
       this.invoices = response.data

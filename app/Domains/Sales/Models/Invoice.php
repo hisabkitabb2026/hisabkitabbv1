@@ -496,6 +496,30 @@ class Invoice extends Model implements HasMedia
     }
 
     /**
+     * Filter invoices by Consignment / LR Number in invoice items or Challan bilties.
+     */
+    public function scopeWhereLrNumber($query, $lrNumber)
+    {
+        $term = trim((string) $lrNumber);
+
+        return $query->where(function ($q) use ($term) {
+            $q->where($this->qualifyColumn('tr_received_no_bilties'), 'LIKE', '%'.$term.'%')
+                ->orWhereHas('items', function ($itemQuery) use ($term) {
+                    $itemQuery->where('tr_consignment_number', 'LIKE', '%'.$term.'%')
+                        ->orWhere('name', 'LIKE', '%'.$term.'%');
+                });
+        });
+    }
+
+    /**
+     * Filter invoices by Consignment Number in invoice items or Challan bilties.
+     */
+    public function scopeWhereConsignmentNumber($query, $consignmentNumber)
+    {
+        return $this->scopeWhereLrNumber($query, $consignmentNumber);
+    }
+
+    /**
      * Restrict to documents issued inside the inclusive range.
      */
     public function scopeInvoicesBetween($query, $start, $end)
@@ -557,6 +581,8 @@ class Invoice extends Model implements HasMedia
             'paid_status' => fn ($value) => $query->wherePaidStatus($value),
             'invoice_id' => fn ($value) => $query->whereInvoice($value),
             'invoice_number' => fn ($value) => $query->whereInvoiceNumber($value),
+            'consignment_number' => fn ($value) => $query->whereConsignmentNumber($value),
+            'lr_number' => fn ($value) => $query->whereLrNumber($value),
             // HisabKitab feature — template_name filter delegates to module-registered handlers
             'template_name' => function ($value) use ($query) {
                 if ($value === 'one-time') {

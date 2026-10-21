@@ -107,6 +107,36 @@
           </template>
         </BaseInput>
       </BaseInputGroup>
+
+      <!-- Consignment No filter for Invoice Receipt -->
+      <BaseInputGroup
+        v-if="viewMode === 'invoice_receipt'"
+        label="Consignment No"
+      >
+        <BaseInput
+          v-model="filters.consignment_number"
+          placeholder="Consignment No"
+        >
+          <template #left="slotProps">
+            <BaseIcon name="HashtagIcon" :class="slotProps.class" />
+          </template>
+        </BaseInput>
+      </BaseInputGroup>
+
+      <!-- LR Number filter for Lorry Receipt -->
+      <BaseInputGroup
+        v-if="viewMode === 'lorry_receipt'"
+        label="LR Number"
+      >
+        <BaseInput
+          v-model="filters.lr_number"
+          placeholder="LR Number"
+        >
+          <template #left="slotProps">
+            <BaseIcon name="HashtagIcon" :class="slotProps.class" />
+          </template>
+        </BaseInput>
+      </BaseInputGroup>
     </BaseFilterWrapper>
 
     <!-- Filters (recurring) -->
@@ -742,6 +772,8 @@ watch(
       filters.from_date = ''
       filters.to_date = ''
       filters.invoice_number = ''
+      filters.consignment_number = ''
+      filters.lr_number = ''
       invoiceStore.selectedInvoices = []
       invoiceStore.selectAllField = false
       tableKey.value += 1
@@ -773,6 +805,8 @@ function setViewMode(mode: string): void {
     filters.from_date = ''
     filters.to_date = ''
     filters.invoice_number = ''
+    filters.consignment_number = ''
+    filters.lr_number = ''
     invoiceStore.selectedInvoices = []
     invoiceStore.selectAllField = false
     tableKey.value += 1
@@ -827,6 +861,8 @@ interface InvoiceFilters {
   from_date: string
   to_date: string
   invoice_number: string
+  consignment_number?: string
+  lr_number?: string
 }
 
 const filters = reactive<InvoiceFilters>({
@@ -835,6 +871,8 @@ const filters = reactive<InvoiceFilters>({
   from_date: '',
   to_date: '',
   invoice_number: '',
+  consignment_number: '',
+  lr_number: '',
 })
 
 const showEmptyScreen = computed<boolean>(
@@ -993,6 +1031,8 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
     from_date: filters.from_date || undefined,
     to_date: filters.to_date || undefined,
     invoice_number: filters.invoice_number || undefined,
+    consignment_number: filters.consignment_number || undefined,
+    lr_number: filters.lr_number || undefined,
     // HisabKitab feature — template_name from registered view mode, or 'one-time'
     template_name: registeredViewModeValues.value.has(viewMode.value)
       ? viewMode.value
@@ -1052,6 +1092,8 @@ function clearFilter(): void {
   filters.from_date = ''
   filters.to_date = ''
   filters.invoice_number = ''
+  filters.consignment_number = ''
+  filters.lr_number = ''
   activeTab.value = t('general.all')
 }
 
@@ -1080,7 +1122,7 @@ function removeMultipleInvoices(): void {
 
 function toggleFilter(): void {
   if (showFilters.value) {
-    if (viewMode.value === 'one-time') {
+    if (viewMode.value !== 'recurring') {
       clearFilter()
     } else {
       clearRecurringFilter()

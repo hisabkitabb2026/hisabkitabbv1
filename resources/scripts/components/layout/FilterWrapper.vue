@@ -31,7 +31,7 @@
       </button>
 
       <div
-        class="flex flex-col gap-4"
+        class="flex flex-col gap-4 flex-wrap"
         :class="rowOnXl ? 'xl:flex-row xl:items-end' : 'lg:flex-row lg:items-end'"
       >
         <slot />
