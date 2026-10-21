@@ -488,11 +488,20 @@ class Invoice extends Model implements HasMedia
     }
 
     /**
-     * Partial match on the document number.
+     * Partial match on the document number, LR / bilty number, or consignment number.
      */
     public function scopeWhereInvoiceNumber($query, $invoiceNumber)
     {
-        return $query->where($this->qualifyColumn('invoice_number'), 'LIKE', '%'.$invoiceNumber.'%');
+        $term = trim((string) $invoiceNumber);
+
+        return $query->where(function ($q) use ($term) {
+            $q->where($this->qualifyColumn('invoice_number'), 'LIKE', '%'.$term.'%')
+                ->orWhere($this->qualifyColumn('tr_received_no_bilties'), 'LIKE', '%'.$term.'%')
+                ->orWhereHas('items', function ($itemQuery) use ($term) {
+                    $itemQuery->where('tr_consignment_number', 'LIKE', '%'.$term.'%')
+                        ->orWhere('name', 'LIKE', '%'.$term.'%');
+                });
+        });
     }
 
     /**

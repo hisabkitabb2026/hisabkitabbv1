@@ -110,7 +110,7 @@
 
       <!-- Consignment No filter for Invoice Receipt -->
       <BaseInputGroup
-        v-if="viewMode === 'invoice_receipt'"
+        v-if="activeView === 'invoice_receipt'"
         label="Consignment No"
       >
         <BaseInput
@@ -125,7 +125,7 @@
 
       <!-- LR Number filter for Lorry Receipt -->
       <BaseInputGroup
-        v-if="viewMode === 'lorry_receipt'"
+        v-if="activeView === 'lorry_receipt'"
         label="LR Number"
       >
         <BaseInput
@@ -307,7 +307,7 @@
           <template #cell-total="{ row }">
             <!-- HisabKitab feature — Lorry Receipt: Total = Advance (+ Net Amount Payable if final settlement done) -->
             <BaseFormatMoney
-              v-if="viewMode === 'lorry_receipt'"
+              v-if="activeView === 'lorry_receipt'"
               :amount="lorryReceiptTotal(row.data)"
               :currency="row.data.customer.currency"
             />
@@ -326,7 +326,7 @@
 
           <template #cell-due_amount="{ row }">
             <!-- HisabKitab feature — Lorry Receipt: Amount Due = Net Amount Payable (0 after final settlement) -->
-            <div v-if="viewMode === 'lorry_receipt'" class="flex items-center justify-between gap-3">
+            <div v-if="activeView === 'lorry_receipt'" class="flex items-center justify-between gap-3">
               <BaseFormatMoney
                 :amount="lorryReceiptDueAmount(row.data)"
                 :currency="row.data.customer.currency"
@@ -652,44 +652,46 @@ const receiptPermissionMissing = computed<boolean>(() => {
 // viewMode has to be correct here or the first fetch uses the wrong
 // template_name filter and the list comes up empty until a manual refresh.
 function initialViewMode(): InvoiceViewMode {
+  if (route.query.view === 'recurring') {
+    return canViewRecurring.value ? 'recurring' : 'one-time'
+  }
+  if (typeof route.query.view === 'string' && route.query.view.length > 0) {
+    return route.query.view as InvoiceViewMode
+  }
+
   // HisabKitab feature — check registered view modes dynamically
   const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
   if (vm) return vm.value
 
-  switch (route.query.view) {
-    case 'recurring':
-      return canViewRecurring.value ? 'recurring' : 'one-time'
-    default: {
-      // HisabKitab feature — when the core Invoices menu is hidden, default to
-      // the first registered receipt view instead of 'one-time'
-      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
-        return registeredViewModes.value[0].value as InvoiceViewMode
-      }
-      const storedViewMode = localStorage.getItem('invoiceViewMode') as InvoiceViewMode | null
-      return storedViewMode === 'recurring' && !canViewRecurring.value
-        ? 'one-time'
-        : (storedViewMode ?? 'one-time')
-    }
+  // HisabKitab feature — when the core Invoices menu is hidden, default to
+  // the first registered receipt view instead of 'one-time'
+  if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
+    return registeredViewModes.value[0].value as InvoiceViewMode
   }
+  const storedViewMode = localStorage.getItem('invoiceViewMode') as InvoiceViewMode | null
+  return storedViewMode === 'recurring' && !canViewRecurring.value
+    ? 'one-time'
+    : (storedViewMode ?? 'one-time')
 }
 
 const viewMode = ref<InvoiceViewMode>(initialViewMode())
 
+const activeView = computed<string>(() => viewMode.value || (route.query.view as string) || '')
+
 // HisabKitab feature — label from registered view mode, or i18n for built-in modes
 const viewModeLabel = computed(() => {
-  if (viewMode.value === 'recurring') return t('recurring_invoices.recurring')
-  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (activeView.value === 'recurring') return t('recurring_invoices.recurring')
+  const vm = registeredViewModes.value.find((v) => v.value === activeView.value)
   if (vm) return vm.label
   return t('invoices.one_time')
 })
 
 // HisabKitab feature — dynamic number label in the filter panel based on active view mode
 const numberFilterLabel = computed<string>(() => {
-  const currentView = viewMode.value || (route.query.view as string)
-  if (currentView === 'lr_receipt') {
+  if (activeView.value === 'lr_receipt') {
     return 'LR Number'
   }
-  if (currentView === 'lorry_receipt') {
+  if (activeView.value === 'lorry_receipt') {
     return 'Challan Number'
   }
   return t('invoices.invoice_number')
@@ -697,8 +699,8 @@ const numberFilterLabel = computed<string>(() => {
 
 // HisabKitab feature — create link from registered view mode
 const newInvoiceLink = computed(() => {
-  if (viewMode.value === 'recurring') return 'invoices/create?recurring=1'
-  const vm = registeredViewModes.value.find((v) => v.value === viewMode.value)
+  if (activeView.value === 'recurring') return 'invoices/create?recurring=1'
+  const vm = registeredViewModes.value.find((v) => v.value === activeView.value)
   if (vm) return vm.createLink
   return 'invoices/create'
 })
@@ -707,22 +709,18 @@ function updateViewModeFromRoute(): void {
   if (route.query.view === 'recurring' && canViewRecurring.value) {
     viewMode.value = 'recurring'
     localStorage.setItem('invoiceViewMode', 'recurring')
-  } else {
-    // HisabKitab feature — check registered view modes dynamically
-    const vm = registeredViewModes.value.find((v) => v.value === route.query.view)
-    if (vm) {
-      viewMode.value = vm.value
-      localStorage.setItem('invoiceViewMode', vm.value)
-    } else if (!route.query.view) {
-      // HisabKitab feature — when the core Invoices menu is hidden, default to
-      // the first registered receipt view instead of 'one-time'
-      if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
-        viewMode.value = registeredViewModes.value[0].value as InvoiceViewMode
-        localStorage.setItem('invoiceViewMode', viewMode.value)
-      } else {
-        viewMode.value = 'one-time'
-        localStorage.setItem('invoiceViewMode', 'one-time')
-      }
+  } else if (route.query.view && typeof route.query.view === 'string') {
+    viewMode.value = route.query.view as InvoiceViewMode
+    localStorage.setItem('invoiceViewMode', route.query.view)
+  } else if (!route.query.view) {
+    // HisabKitab feature — when the core Invoices menu is hidden, default to
+    // the first registered receipt view instead of 'one-time'
+    if (!invoiceMenuVisible.value && registeredViewModes.value.length > 0) {
+      viewMode.value = registeredViewModes.value[0].value as InvoiceViewMode
+      localStorage.setItem('invoiceViewMode', viewMode.value)
+    } else {
+      viewMode.value = 'one-time'
+      localStorage.setItem('invoiceViewMode', 'one-time')
     }
   }
 }
@@ -1034,9 +1032,9 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
     consignment_number: filters.consignment_number || undefined,
     lr_number: filters.lr_number || undefined,
     // HisabKitab feature — template_name from registered view mode, or 'one-time'
-    template_name: registeredViewModeValues.value.has(viewMode.value)
-      ? viewMode.value
-      : 'one-time',
+    template_name: (activeView.value && activeView.value !== 'recurring' && activeView.value !== 'one-time')
+      ? activeView.value
+      : (registeredViewModeValues.value.has(viewMode.value) ? viewMode.value : 'one-time'),
     orderByField: sort.fieldName || 'created_at',
     orderBy: (sort.order || 'desc') as 'asc' | 'desc',
     page,
