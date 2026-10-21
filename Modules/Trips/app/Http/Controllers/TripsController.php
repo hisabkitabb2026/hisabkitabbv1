@@ -62,7 +62,12 @@ final class TripsController extends Controller
         $context = $this->context($request);
         $this->authorize($context, Abilities::CREATE_TRIP);
 
-        $trip = $this->trips->createFromLrInvoices($context->companyId, $context->userId, $request->validated()['invoice_ids']);
+        $trip = $this->trips->createFromLrInvoices(
+            $context->companyId,
+            $context->userId,
+            $request->validated()['invoice_ids'],
+            $request->validated()
+        );
 
         return response()->json(['data' => new TripResource($trip)], 201);
     }

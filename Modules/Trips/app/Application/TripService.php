@@ -125,7 +125,7 @@ final class TripService
      *
      * @param  list<int>  $invoiceIds
      */
-    public function createFromLrInvoices(int $companyId, int $userId, array $invoiceIds): Trip
+    public function createFromLrInvoices(int $companyId, int $userId, array $invoiceIds, array $attributes = []): Trip
     {
         $invoiceIds = array_values(array_unique(array_map(intval(...), $invoiceIds)));
 
@@ -133,7 +133,7 @@ final class TripService
             throw ValidationException::withMessages(['invoice_ids' => 'Select at least one LR receipt.']);
         }
 
-        return DB::transaction(function () use ($companyId, $userId, $invoiceIds): Trip {
+        return DB::transaction(function () use ($companyId, $userId, $invoiceIds, $attributes): Trip {
             $invoices = Invoice::query()
                 ->where('company_id', $companyId)
                 ->where('template_name', 'lr_receipt')
@@ -156,13 +156,19 @@ final class TripService
 
             $first = $invoices->first();
 
+            $pickupDate = $attributes['pickup_date'] ?? null;
+            if (! $pickupDate) {
+                $pickupDate = $first->invoice_date instanceof DateTimeInterface
+                    ? $first->invoice_date->format('Y-m-d')
+                    : ($first->invoice_date !== null ? (string) $first->invoice_date : null);
+            }
+
             $trip = $this->create($companyId, $userId, [
                 'from_city' => $first->tr_from_name,
                 'to_city' => $first->tr_to_name,
                 'goods' => $first->tr_description_goods,
-                'pickup_date' => $first->invoice_date instanceof DateTimeInterface
-                ? $first->invoice_date->format('Y-m-d')
-                : ($first->invoice_date !== null ? (string) $first->invoice_date : null),
+                'pickup_date' => $pickupDate,
+                'notes' => $attributes['notes'] ?? null,
             ]);
 
             foreach ($invoices as $invoice) {

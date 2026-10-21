@@ -18,6 +18,8 @@ class CreateFromLrsRequest extends FormRequest
             'invoice_ids' => ['required', 'array', 'min:1'],
             'invoice_ids.*' => ['required', 'integer', 'distinct'],
             'lorry_invoice_id' => ['nullable', 'integer'],
+            'pickup_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

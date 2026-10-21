@@ -538,9 +538,12 @@ async function Me(e, t) {
 	let { data: n } = await e.get(`${F}/${t}`);
 	return n.data;
 }
-async function Ne(e, t) {
-	let { data: n } = await e.post(`${F}/from-lrs`, { invoice_ids: t });
-	return n.data;
+async function Ne(e, t, n) {
+	let { data: r } = await e.post(`${F}/from-lrs`, {
+		invoice_ids: t,
+		...n
+	});
+	return r.data;
 }
 async function Pe(e, t, n, r) {
 	let { data: i } = await e.post(`${F}/${t}/move`, {
@@ -624,36 +627,23 @@ function L(e) {
 		maximumFractionDigits: 2
 	});
 }
+function Ge() {
+	let e = /* @__PURE__ */ new Date();
+	return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}-${String(e.getDate()).padStart(2, "0")}`;
+}
 //#endregion
 //#region resources/js/pages/TripCreatePage.vue?vue&type=script&setup=true&lang.ts
-var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-between text-xs text-muted" }, qe = { class: "mt-5 border-t border-line-light pt-5" }, Je = { class: "mb-4 flex flex-wrap items-center justify-between gap-3" }, Ye = { class: "flex gap-2" }, Xe = {
+var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex flex-wrap items-center justify-between gap-3 mb-4" }, Je = { class: "flex gap-2" }, Ye = {
 	key: 0,
-	class: "mb-3 flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 p-2.5 text-xs text-primary-800"
-}, Ze = { class: "font-semibold" }, Qe = {
+	class: "p-4 text-sm rounded-lg bg-surface-secondary text-muted"
+}, Xe = {
 	key: 1,
-	class: "mb-3 flex items-center gap-2 rounded-lg border border-line-light bg-surface-secondary p-2 text-xs text-muted"
-}, $e = { class: "text-heading" }, et = {
+	class: "p-4 text-sm rounded-lg bg-surface-secondary text-muted",
+	role: "status"
+}, Ze = {
 	key: 2,
-	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-}, tt = {
-	key: 3,
-	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted",
-	role: "status"
-}, nt = {
-	key: 4,
-	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted",
-	role: "status"
-}, rt = {
-	key: 5,
-	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted",
-	role: "status"
-}, it = {
-	key: 6,
 	class: "space-y-3"
-}, at = { class: "flex h-[38px] items-center rounded-lg bg-surface-tertiary px-3 text-sm font-medium text-heading" }, ot = { class: "justify-self-end" }, st = {
-	key: 7,
-	class: "mt-3 text-sm text-alert-warning-text"
-}, ct = { class: "mt-4 flex flex-wrap justify-end gap-x-8 gap-y-2 border-t border-line-light pt-4 text-sm" }, lt = { class: "text-muted" }, ut = { class: "font-semibold text-heading" }, dt = { class: "text-muted" }, ft = { class: "font-semibold text-heading" }, pt = { class: "mt-5 border-t border-line-light pt-5" }, mt = { class: "grid grid-cols-2 gap-3 text-center" }, ht = { class: "rounded-lg bg-surface-secondary p-3" }, gt = { class: "text-lg font-semibold text-heading" }, _t = { class: "rounded-lg bg-surface-secondary p-3" }, vt = { class: "text-lg font-semibold text-heading" }, yt = /* @__PURE__ */ c({
+}, Qe = { class: "flex h-[38px] items-center rounded-lg bg-surface-tertiary px-3 text-sm font-medium text-heading" }, $e = { class: "justify-self-end" }, et = { class: "flex flex-wrap justify-end gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light" }, tt = { class: "text-muted" }, nt = { class: "font-semibold text-heading" }, rt = { class: "text-heading font-semibold" }, it = /* @__PURE__ */ c({
 	__name: "TripCreatePage",
 	props: {
 		client: { type: [Function, Object] },
@@ -661,93 +651,102 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 		router: {}
 	},
 	setup(c) {
-		let l = c, u = _(null), f = _(!1), p = _([]), m = _([]), h = _(!1), S = _(!1);
-		async function T() {
-			if (!u.value && !f.value) {
-				p.value = [], m.value = [];
+		let l = c, u = _(Ge()), f = _(""), p = _(null), m = _(""), h = _([]), S = _([]), T = _(!1), D = _(!1), O = t(() => h.value);
+		async function k(e) {
+			if (S.value = [], !e) {
+				h.value = [];
 				return;
 			}
-			h.value = !0;
+			T.value = !0;
 			try {
-				p.value = await Le(l.client, "lr", u.value);
+				h.value = await Le(l.client, "lr", e);
 			} catch (e) {
-				l.notify("error", I(e, "Unable to load the receipts.")), p.value = [];
+				l.notify("error", I(e, "Unable to load LR receipts.")), h.value = [];
 			} finally {
-				h.value = !1;
+				T.value = !1;
 			}
 		}
-		C(u, (e, t) => {
-			t !== void 0 && e !== t && (m.value = []), e && (f.value = !1), T();
+		C(p, (e, t) => {
+			t !== void 0 && e !== t && k(e);
 		});
-		function D() {
-			f.value = !f.value, f.value && (u.value = null), m.value = [], T();
-		}
-		function O(e) {
+		function j(e) {
 			if (!e) return;
 			let t = typeof e == "object" && e ? e.id : e, n = Number(t);
-			if (!(!n || isNaN(n))) return p.value.find((e) => e.id === n);
+			if (!(!n || isNaN(n))) return h.value.find((e) => e.id === n);
 		}
-		function k(e) {
-			return O(e)?.amount ?? 0;
+		function M(e) {
+			return j(e)?.amount ?? 0;
 		}
-		function j(e) {
-			let t = e ? Number(typeof e == "object" ? e.id : e) : null, n = m.value.map((e) => {
+		function N(e) {
+			let t = e ? Number(typeof e == "object" ? e.id : e) : null, n = S.value.map((e) => {
 				let t = typeof e.receipt_id == "object" && e.receipt_id !== null ? e.receipt_id.id : e.receipt_id;
 				return t ? Number(t) : null;
 			}).filter((e) => e !== null && e !== t);
-			return p.value.filter((e) => !n.includes(e.id)).map((e) => ({
+			return h.value.filter((e) => !n.includes(e.id)).map((e) => ({
 				id: e.id,
-				label: `${e.invoice_number} · ${e.from_city ?? "—"} → ${e.to_city ?? "—"} · ${e.customer_name ?? "No customer"} (${L(e.amount)})`
+				label: `${e.invoice_number} · ${e.from_city ?? "—"} → ${e.to_city ?? "—"} (${L(e.amount)})`
 			}));
 		}
-		let M = t(() => m.value.map((e) => {
+		let ee = t(() => S.value.map((e) => {
 			let t = typeof e.receipt_id == "object" && e.receipt_id !== null ? e.receipt_id.id : e.receipt_id;
 			return t ? Number(t) : null;
-		}).filter((e) => e !== null)), N = t(() => m.value.map((e) => O(e.receipt_id)).filter((e) => e !== void 0)), ee = t(() => {
-			let e = N.value.map((e) => e.customer_name).filter((e) => !!(e && e.trim()));
-			return [...new Set(e)];
-		}), P = t(() => N.value.reduce((e, t) => e + t.amount, 0)), te = t(() => new Set(N.value.map((e) => `${e.from_city}→${e.to_city}`)).size > 1);
+		}).filter((e) => e !== null)), P = t(() => S.value.map((e) => j(e.receipt_id)).filter((e) => e !== void 0)), te = t(() => P.value.reduce((e, t) => e + t.amount, 0));
 		function ne() {
-			m.value.push({ receipt_id: null });
+			S.value.push({ receipt_id: null });
 		}
 		function re(e) {
-			m.value.splice(e, 1);
+			S.value.splice(e, 1);
 		}
 		function ie() {
-			m.value = [...p.value].sort((e, t) => (e.invoice_date ?? "9999-12-31").localeCompare(t.invoice_date ?? "9999-12-31") || e.id - t.id).map((e) => ({ receipt_id: e.id }));
+			S.value = [...h.value].sort((e, t) => (e.invoice_date ?? "9999-12-31").localeCompare(t.invoice_date ?? "9999-12-31") || e.id - t.id).map((e) => ({ receipt_id: e.id }));
 		}
 		async function ae() {
-			if (M.value.length === 0) {
-				l.notify("warning", "Please select at least one LR receipt.");
+			if (!p.value) {
+				l.notify("warning", "Please select a customer first.");
 				return;
 			}
-			S.value = !0;
+			if (ee.value.length === 0) {
+				l.notify("warning", "Please allocate at least one LR receipt to this trip.");
+				return;
+			}
+			D.value = !0;
 			try {
-				let e = await Ne(l.client, M.value);
-				l.notify("success", `Trip #${e.trip_no} created.`), l.router?.push(A.trip(e.id));
+				let e = await Ne(l.client, ee.value, {
+					pickup_date: u.value,
+					notes: m.value
+				});
+				l.notify("success", `Trip #${e.trip_no} created successfully.`), l.router?.push(A.trip(e.id));
 			} catch (e) {
 				l.notify("error", I(e, "Unable to create the trip."));
 			} finally {
-				S.value = !1;
+				D.value = !1;
 			}
 		}
 		return (t, c) => {
-			let l = y("BaseBreadcrumbItem"), _ = y("BaseBreadcrumb"), C = y("BaseButton"), T = y("BasePageHeader"), O = y("BaseCustomerSelectInput"), M = y("BaseInputGroup"), oe = y("BaseIcon"), se = y("BaseMultiselect"), ce = y("BaseCard"), le = y("BasePage");
-			return g(), n(le, { class: "relative" }, {
+			let l = y("BaseBreadcrumbItem"), h = y("BaseBreadcrumb"), _ = y("BaseIcon"), C = y("BaseButton"), j = y("BasePageHeader"), ee = y("BaseDatePicker"), oe = y("BaseInputGroup"), se = y("BaseInput"), ce = y("BaseCustomerSelectInput"), le = y("BaseInputGrid"), ue = y("BaseMultiselect"), de = y("BaseTextarea"), fe = y("BaseCard"), pe = y("BasePage");
+			return g(), n(pe, { class: "relative trip-create" }, {
 				default: w(() => [a("form", {
 					class: "flex flex-col gap-4 md:gap-5",
 					onSubmit: E(ae, ["prevent"])
-				}, [s(T, { title: "New Trip" }, {
+				}, [s(j, {
+					title: "New Trip",
+					"phone-actions": "bar"
+				}, {
 					actions: w(() => [s(C, {
-						loading: S.value,
-						disabled: S.value,
+						loading: D.value,
+						disabled: D.value,
 						variant: "primary",
 						type: "submit"
 					}, {
-						default: w(() => [...c[1] ||= [o(" Create Trip ", -1)]]),
+						left: w((e) => [D.value ? r("", !0) : (g(), n(_, {
+							key: 0,
+							name: "ArrowDownOnSquareIcon",
+							class: d(e.class)
+						}, null, 8, ["class"]))]),
+						default: w(() => [c[4] ||= o(" Save Trip ", -1)]),
 						_: 1
 					}, 8, ["loading", "disabled"])]),
-					default: w(() => [s(_, null, {
+					default: w(() => [s(h, null, {
 						default: w(() => [
 							s(l, {
 								title: "Home",
@@ -766,63 +765,85 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 						_: 1
 					})]),
 					_: 1
-				}), s(ce, { "container-class": "p-4 md:p-5" }, {
+				}), s(fe, { "container-class": "p-4 md:p-5" }, {
 					default: w(() => [
-						a("div", Ge, [s(M, {
-							label: "Customer",
-							required: ""
-						}, {
-							default: w(() => [s(O, {
-								modelValue: u.value,
-								"onUpdate:modelValue": c[0] ||= (e) => u.value = e,
-								disabled: f.value,
-								placeholder: "Select a customer",
-								"show-action": ""
-							}, null, 8, ["modelValue", "disabled"]), a("div", Ke, [c[2] ||= a("span", null, "Select a customer to view their unlinked LR receipts.", -1), a("button", {
-								type: "button",
-								class: "font-medium text-primary-600 hover:text-primary-700 underline",
-								onClick: D
-							}, b(f.value ? "← Select specific customer" : "Or load all customers (part-load)"), 1)])]),
+						s(le, null, {
+							default: w(() => [
+								s(oe, {
+									label: "Date",
+									required: ""
+								}, {
+									default: w(() => [s(ee, {
+										modelValue: u.value,
+										"onUpdate:modelValue": c[0] ||= (e) => u.value = e,
+										"calendar-button": !0,
+										"calendar-button-icon": "calendar"
+									}, null, 8, ["modelValue"])]),
+									_: 1
+								}),
+								s(oe, {
+									label: "Trip Number",
+									required: ""
+								}, {
+									default: w(() => [s(se, {
+										modelValue: f.value,
+										"onUpdate:modelValue": c[1] ||= (e) => f.value = e,
+										placeholder: "Auto-generated"
+									}, null, 8, ["modelValue"])]),
+									_: 1
+								}),
+								s(oe, {
+									label: "Customer",
+									required: ""
+								}, {
+									default: w(() => [s(ce, {
+										modelValue: p.value,
+										"onUpdate:modelValue": [c[2] ||= (e) => p.value = e, k],
+										placeholder: "Type or click to select",
+										"show-action": ""
+									}, null, 8, ["modelValue"])]),
+									_: 1
+								})
+							]),
 							_: 1
-						})]),
-						a("section", qe, [
-							a("div", Je, [c[5] ||= a("div", null, [a("h2", { class: "text-section font-semibold text-heading" }, "LR Receipts"), a("p", { class: "mt-1 text-sm text-muted" }, " Choose the LR receipts this trip carries. ")], -1), a("div", Ye, [s(C, {
+						}),
+						a("section", Ke, [
+							a("div", qe, [c[7] ||= a("div", null, [a("h2", { class: "font-semibold text-section text-heading" }, "LR Allocations"), a("p", { class: "mt-1 text-sm text-muted" }, "Allocate one or more open LR receipts to this trip.")], -1), a("div", Je, [s(C, {
 								type: "button",
 								size: "sm",
 								variant: "primary-outline",
-								disabled: h.value || p.value.length === 0,
+								disabled: !O.value.length,
 								onClick: ie
 							}, {
-								default: w(() => [...c[3] ||= [o(" Add Oldest First ", -1)]]),
+								default: w(() => [...c[5] ||= [o(" Allocate Oldest First ", -1)]]),
 								_: 1
 							}, 8, ["disabled"]), s(C, {
 								type: "button",
 								size: "sm",
 								variant: "primary-outline",
-								disabled: h.value || !u.value && !f.value || j(null).length === 0,
+								disabled: !p.value || !N(null).length,
 								onClick: ne
 							}, {
-								left: w((e) => [s(oe, {
+								left: w((e) => [s(_, {
 									name: "PlusIcon",
 									class: d(e.class)
 								}, null, 8, ["class"])]),
-								default: w(() => [c[4] ||= o(" Add LR Receipt ", -1)]),
+								default: w(() => [c[6] ||= o(" Add Allocation ", -1)]),
 								_: 1
 							}, 8, ["disabled"])])]),
-							ee.value.length > 1 ? (g(), i("div", Xe, [a("span", Ze, "📦 Consolidated Part-Load (" + b(ee.value.length) + " Customers):", 1), a("span", null, b(ee.value.join(", ")), 1)])) : ee.value.length === 1 ? (g(), i("div", Qe, [a("span", null, [c[6] ||= o("👤 Customer: ", -1), a("strong", $e, b(ee.value[0]), 1)])])) : r("", !0),
-							!u.value && !f.value ? (g(), i("div", et, " Please select a customer above to view and add LR receipts. ")) : h.value && p.value.length === 0 ? (g(), i("div", tt, " Loading LR receipts… ")) : p.value.length === 0 ? (g(), i("div", nt, " No unlinked LR receipts found for this customer. ")) : m.value.length === 0 ? (g(), i("div", rt, " Click \"+ Add LR Receipt\" or \"Add Oldest First\" to add LR receipts to this trip. ")) : (g(), i("div", it, [(g(!0), i(e, null, v(m.value, (e, t) => (g(), i("div", {
-								key: t,
-								class: "grid items-end gap-3 rounded-lg bg-surface-secondary p-3 md:grid-cols-[minmax(0,1fr)_12rem_auto]"
+							p.value ? S.value.length ? (g(), i("div", Ze, [(g(!0), i(e, null, v(S.value, (e, t) => (g(), i("div", {
+								key: `${e.receipt_id}-${t}`,
+								class: "grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1fr)_12rem_auto]"
 							}, [
-								s(M, { label: "LR Receipt" }, {
-									default: w(() => [s(se, {
+								s(oe, { label: "LR Receipt" }, {
+									default: w(() => [s(ue, {
 										modelValue: e.receipt_id,
 										"onUpdate:modelValue": (t) => e.receipt_id = t,
 										"value-prop": "id",
 										"track-by": "id",
 										label: "label",
-										options: j(e.receipt_id),
-										loading: h.value,
+										options: N(e.receipt_id),
+										loading: T.value,
 										placeholder: "Select an LR",
 										searchable: ""
 									}, null, 8, [
@@ -833,29 +854,35 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 									])]),
 									_: 2
 								}, 1024),
-								s(M, { label: "Amount" }, {
-									default: w(() => [a("div", at, b(e.receipt_id ? x(L)(k(e.receipt_id)) : "—"), 1)]),
+								s(oe, { label: "Amount" }, {
+									default: w(() => [a("div", Qe, b(e.receipt_id ? x(L)(M(e.receipt_id)) : "—"), 1)]),
 									_: 2
 								}, 1024),
-								a("div", ot, [s(C, {
+								a("div", $e, [s(C, {
 									type: "button",
 									size: "sm",
 									variant: "gray",
-									"aria-label": "Remove LR receipt",
+									"aria-label": "Remove allocation",
 									onClick: (e) => re(t)
 								}, {
-									default: w(() => [s(oe, { name: "TrashIcon" })]),
+									default: w(() => [s(_, { name: "TrashIcon" })]),
 									_: 1
 								}, 8, ["onClick"])])
-							]))), 128))])),
-							te.value ? (g(), i("p", st, " ⚠ Different routes selected — same vehicle? ")) : r("", !0),
-							a("div", ct, [a("span", lt, [c[7] ||= o(" Receipts: ", -1), a("span", ut, b(N.value.length), 1)]), a("span", dt, [c[8] ||= o(" Revenue: ", -1), a("span", ft, b(x(L)(P.value)), 1)])])
+							]))), 128))])) : (g(), i("div", Xe, b(!T.value && !O.value.length ? "No open LR receipts for this customer." : "No allocations added yet. Click \"+ Add Allocation\" or \"Allocate Oldest First\"."), 1)) : (g(), i("div", Ye, " Select a customer before allocating this trip. ")),
+							a("div", et, [a("span", tt, [c[8] ||= o("Total LRs: ", -1), a("span", nt, b(P.value.length), 1)]), a("span", rt, "Allocated: " + b(x(L)(te.value)), 1)])
 						]),
-						a("section", pt, [
-							c[11] ||= a("h2", { class: "mb-4 text-section font-semibold text-heading" }, "Summary", -1),
-							a("div", mt, [a("div", ht, [c[9] ||= a("p", { class: "text-xs text-muted" }, "Selected LR Receipts", -1), a("p", gt, b(N.value.length), 1)]), a("div", _t, [c[10] ||= a("p", { class: "text-xs text-muted" }, "Total Freight Revenue", -1), a("p", vt, b(x(L)(P.value)), 1)])]),
-							c[12] ||= a("p", { class: "mt-3 text-center text-xs text-muted" }, " Lorry Receipt and expenses are fetched & linked on the trip details page to calculate vehicle cost and net profit. ", -1)
-						])
+						s(oe, {
+							label: "Notes",
+							class: "mt-5"
+						}, {
+							default: w(() => [s(de, {
+								modelValue: m.value,
+								"onUpdate:modelValue": c[3] ||= (e) => m.value = e,
+								rows: 4,
+								placeholder: "Add any notes about this trip..."
+							}, null, 8, ["modelValue"])]),
+							_: 1
+						})
 					]),
 					_: 1
 				})], 32)]),
@@ -863,28 +890,28 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 			});
 		};
 	}
-}), bt = { class: "space-y-3" }, xt = {
+}), at = { class: "space-y-3" }, ot = {
 	key: 1,
 	class: "flex items-center justify-between text-xs text-muted"
-}, St = {
+}, st = {
 	key: 2,
 	class: "flex items-center justify-between text-xs text-muted"
-}, Ct = {
+}, ct = {
 	key: 3,
 	class: "py-8 text-center text-sm text-muted"
-}, wt = {
+}, lt = {
 	key: 4,
 	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-}, Tt = { key: 0 }, Et = { key: 1 }, Dt = { key: 2 }, Ot = {
+}, ut = { key: 0 }, dt = { key: 1 }, ft = { key: 2 }, pt = {
 	key: 5,
 	class: "max-h-72 space-y-1 overflow-y-auto"
-}, kt = ["onClick"], At = ["checked", "onChange"], jt = { class: "min-w-0 flex-1" }, Mt = { class: "block font-medium text-heading" }, Nt = { class: "block truncate text-xs text-muted" }, Pt = { class: "text-sm font-semibold text-heading" }, Ft = {
+}, mt = ["onClick"], ht = ["checked", "onChange"], gt = { class: "min-w-0 flex-1" }, _t = { class: "block font-medium text-heading" }, vt = { class: "block truncate text-xs text-muted" }, yt = { class: "text-sm font-semibold text-heading" }, bt = {
 	key: 6,
 	class: "text-sm text-muted"
-}, It = {
+}, xt = {
 	key: 7,
 	class: "text-sm text-alert-warning-text"
-}, Lt = { class: "flex justify-end gap-2" }, Rt = /* @__PURE__ */ c({
+}, St = { class: "flex justify-end gap-2" }, Ct = /* @__PURE__ */ c({
 	__name: "LrPickerModal",
 	props: {
 		show: { type: Boolean },
@@ -936,7 +963,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 				onClose: l[6] ||= (e) => f("close")
 			}, {
 				header: w(() => [a("span", null, b(c.type === "lorry" ? "Map Lorry Receipt" : "Map LR Receipts"), 1)]),
-				default: w(() => [a("div", bt, [
+				default: w(() => [a("div", at, [
 					c.customers && c.customers.length > 0 ? (g(), n(m, {
 						key: 0,
 						label: "Customer"
@@ -956,24 +983,24 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 						}, null, 8, ["modelValue", "options"])]),
 						_: 1
 					})) : r("", !0),
-					c.type === "lorry" && c.tripId ? (g(), i("div", xt, [a("span", null, b(T.value ? "Showing all unlinked lorry receipts" : "Showing lorry receipts matching this trip’s LR numbers"), 1), a("button", {
+					c.type === "lorry" && c.tripId ? (g(), i("div", ot, [a("span", null, b(T.value ? "Showing all unlinked lorry receipts" : "Showing lorry receipts matching this trip’s LR numbers"), 1), a("button", {
 						type: "button",
 						class: "font-medium text-primary-600 hover:underline",
 						onClick: l[1] ||= (e) => T.value = !T.value
-					}, b(T.value ? "Show matching only" : "Show all unlinked"), 1)])) : c.type === "lr" && c.tripId ? (g(), i("div", St, [a("span", null, b(T.value ? "Showing all unlinked LR receipts" : "Showing unlinked LR receipts for customers on this trip"), 1), a("button", {
+					}, b(T.value ? "Show matching only" : "Show all unlinked"), 1)])) : c.type === "lr" && c.tripId ? (g(), i("div", st, [a("span", null, b(T.value ? "Showing all unlinked LR receipts" : "Showing unlinked LR receipts for customers on this trip"), 1), a("button", {
 						type: "button",
 						class: "font-medium text-primary-600 hover:underline",
 						onClick: l[2] ||= (e) => T.value = !T.value
 					}, b(T.value ? "Show trip customers only" : "Browse all customers"), 1)])) : r("", !0),
-					D.value ? (g(), i("div", Ct, "Loading…")) : p.value.length === 0 ? (g(), i("div", wt, [c.type === "lorry" && c.tripId && !T.value ? (g(), i("p", Tt, [l[7] ||= o(" No lorry receipt found with matching bilty numbers for this trip's LRs. ", -1), a("button", {
+					D.value ? (g(), i("div", ct, "Loading…")) : p.value.length === 0 ? (g(), i("div", lt, [c.type === "lorry" && c.tripId && !T.value ? (g(), i("p", ut, [l[7] ||= o(" No lorry receipt found with matching bilty numbers for this trip's LRs. ", -1), a("button", {
 						type: "button",
 						class: "mt-1 block font-medium text-primary-600 hover:underline",
 						onClick: l[3] ||= (e) => T.value = !0
-					}, " Browse all unlinked lorry receipts instead → ")])) : c.type === "lr" && c.tripId && !T.value ? (g(), i("p", Et, [l[8] ||= o(" No more unassigned LR receipts found for the customers on this trip. ", -1), a("button", {
+					}, " Browse all unlinked lorry receipts instead → ")])) : c.type === "lr" && c.tripId && !T.value ? (g(), i("p", dt, [l[8] ||= o(" No more unassigned LR receipts found for the customers on this trip. ", -1), a("button", {
 						type: "button",
 						class: "mt-1 block font-medium text-primary-600 hover:underline",
 						onClick: l[4] ||= (e) => T.value = !0
-					}, " Browse all unlinked LR receipts instead → ")])) : (g(), i("p", Dt, " No unlinked receipts. Create one first. "))])) : (g(), i("ul", Ot, [(g(!0), i(e, null, v(p.value, (e) => (g(), i("li", { key: e.id }, [a("label", {
+					}, " Browse all unlinked LR receipts instead → ")])) : (g(), i("p", ft, " No unlinked receipts. Create one first. "))])) : (g(), i("ul", pt, [(g(!0), i(e, null, v(p.value, (e) => (g(), i("li", { key: e.id }, [a("label", {
 						class: d(["flex cursor-pointer items-center gap-3 rounded-lg border border-line-default bg-surface p-2.5 text-sm hover:bg-hover", { "border-primary-500": h.value.includes(e.id) }]),
 						onClick: E((t) => A(e.id), ["prevent"])
 					}, [
@@ -982,14 +1009,14 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 							class: "accent-primary-600",
 							checked: h.value.includes(e.id),
 							onChange: (t) => A(e.id)
-						}, null, 40, At),
-						a("span", jt, [a("span", Mt, b(e.invoice_number) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("span", Nt, b(e.customer_name ?? "No customer") + " · " + b(e.goods ?? ""), 1)]),
-						a("span", Pt, b(x(L)(e.amount)), 1)
-					], 10, kt)]))), 128))])),
-					h.value.length > 0 ? (g(), i("p", Ft, " Selected: " + b(h.value.length) + " · " + b(x(L)(j.value)), 1)) : r("", !0),
-					M.value ? (g(), i("p", It, " ⚠ Different routes selected — same vehicle? ")) : r("", !0)
+						}, null, 40, ht),
+						a("span", gt, [a("span", _t, b(e.invoice_number) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("span", vt, b(e.customer_name ?? "No customer") + " · " + b(e.goods ?? ""), 1)]),
+						a("span", yt, b(x(L)(e.amount)), 1)
+					], 10, mt)]))), 128))])),
+					h.value.length > 0 ? (g(), i("p", bt, " Selected: " + b(h.value.length) + " · " + b(x(L)(j.value)), 1)) : r("", !0),
+					M.value ? (g(), i("p", xt, " ⚠ Different routes selected — same vehicle? ")) : r("", !0)
 				])]),
-				footer: w(() => [a("div", Lt, [s(_, {
+				footer: w(() => [a("div", St, [s(_, {
 					variant: "primary-outline",
 					size: "sm",
 					onClick: l[5] ||= (e) => f("close")
@@ -1009,58 +1036,58 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 			}, 8, ["show"]);
 		};
 	}
-}), zt = { class: "min-h-screen bg-surface-secondary" }, Bt = { class: "mx-auto max-w-5xl p-4 lg:p-6" }, Vt = {
+}), wt = { class: "min-h-screen bg-surface-secondary" }, Tt = { class: "mx-auto max-w-5xl p-4 lg:p-6" }, Et = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, Ht = { class: "mb-4 flex flex-wrap items-center justify-between gap-3" }, Ut = { class: "text-xl font-semibold text-heading" }, Wt = { class: "flex items-center gap-2" }, Gt = {
+}, Dt = { class: "mb-4 flex flex-wrap items-center justify-between gap-3" }, Ot = { class: "text-xl font-semibold text-heading" }, kt = { class: "flex items-center gap-2" }, At = {
 	key: 0,
 	class: "rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white"
-}, Kt = ["disabled"], qt = ["value"], Jt = {
+}, jt = ["disabled"], Mt = ["value"], Nt = {
 	key: 0,
 	class: "mb-4 rounded-lg bg-alert-error-bg p-3 text-sm text-alert-error-text"
-}, Yt = { class: "space-y-4" }, Xt = { class: "space-y-2" }, Zt = { class: "min-w-0" }, Qt = { class: "font-medium text-heading" }, $t = { class: "truncate text-xs text-muted" }, en = { class: "flex shrink-0 gap-1" }, tn = {
+}, Pt = { class: "space-y-4" }, Ft = { class: "space-y-2" }, It = { class: "min-w-0" }, Lt = { class: "font-medium text-heading" }, Rt = { class: "truncate text-xs text-muted" }, zt = { class: "flex shrink-0 gap-1" }, Bt = {
 	key: 0,
 	class: "text-sm text-muted"
-}, nn = { class: "flex gap-2 pt-1" }, rn = { class: "mt-4 border-t border-line-light pt-3" }, an = { class: "mb-2 flex items-center justify-between" }, on = { class: "flex items-center gap-2" }, sn = { class: "min-w-0" }, cn = { class: "font-medium text-heading" }, ln = { class: "truncate text-xs text-muted" }, un = { class: "flex shrink-0 gap-1" }, dn = {
+}, Vt = { class: "flex gap-2 pt-1" }, Ht = { class: "mt-4 border-t border-line-light pt-3" }, Ut = { class: "mb-2 flex items-center justify-between" }, Wt = { class: "flex items-center gap-2" }, Gt = { class: "min-w-0" }, Kt = { class: "font-medium text-heading" }, qt = { class: "truncate text-xs text-muted" }, Jt = { class: "flex shrink-0 gap-1" }, Yt = {
 	key: 0,
 	class: "text-sm text-muted"
-}, fn = {
+}, Xt = {
 	key: 0,
 	class: "text-xs text-muted"
-}, pn = { class: "mt-4 border-t border-line-light pt-3" }, mn = { class: "mb-2 flex items-center justify-between" }, hn = { class: "flex items-center gap-2" }, gn = { class: "min-w-0" }, _n = { class: "font-medium text-heading" }, vn = { class: "truncate text-xs text-muted" }, yn = { class: "flex shrink-0 gap-1" }, bn = {
+}, Zt = { class: "mt-4 border-t border-line-light pt-3" }, Qt = { class: "mb-2 flex items-center justify-between" }, $t = { class: "flex items-center gap-2" }, en = { class: "min-w-0" }, tn = { class: "font-medium text-heading" }, nn = { class: "truncate text-xs text-muted" }, rn = { class: "flex shrink-0 gap-1" }, an = {
 	key: 0,
 	class: "text-sm text-muted"
-}, xn = {
+}, on = {
 	key: 0,
 	class: "text-xs text-muted"
-}, Sn = { class: "mt-4 border-t border-line-light pt-3" }, Cn = { class: "mb-2 text-sm font-semibold text-heading" }, wn = { class: "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" }, Tn = { class: "mb-1.5 text-xs font-medium text-muted" }, En = {
+}, sn = { class: "mt-4 border-t border-line-light pt-3" }, cn = { class: "mb-2 text-sm font-semibold text-heading" }, ln = { class: "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" }, un = { class: "mb-1.5 text-xs font-medium text-muted" }, dn = {
 	key: 0,
 	class: "group relative flex h-28 items-center justify-center overflow-hidden rounded-lg border border-line-default bg-surface-secondary"
-}, Dn = ["src", "alt"], On = {
+}, fn = ["src", "alt"], pn = {
 	key: 1,
 	class: "flex flex-col items-center gap-1 text-subtle"
-}, kn = {
+}, mn = {
 	key: 2,
 	class: "flex items-center justify-center text-subtle"
-}, An = { class: "absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" }, jn = ["onClick"], Mn = ["disabled", "onClick"], Nn = {
+}, hn = { class: "absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" }, gn = ["onClick"], _n = ["disabled", "onClick"], vn = {
 	key: 2,
 	class: "mt-1 flex items-center justify-between gap-1"
-}, Pn = { class: "min-w-0 truncate text-xs text-muted" }, Fn = ["onClick"], In = { class: "mt-4 border-t border-line-light pt-3" }, Ln = { class: "grid grid-cols-3 gap-3 text-center" }, Rn = { class: "rounded-lg bg-surface-secondary p-3" }, zn = { class: "text-lg font-semibold text-heading" }, Bn = { class: "rounded-lg bg-surface-secondary p-3" }, Vn = { class: "text-lg font-semibold text-heading" }, Hn = { class: "rounded-lg bg-surface-secondary p-3" }, Un = {
+}, yn = { class: "min-w-0 truncate text-xs text-muted" }, bn = ["onClick"], xn = { class: "mt-4 border-t border-line-light pt-3" }, Sn = { class: "grid grid-cols-3 gap-3 text-center" }, Cn = { class: "rounded-lg bg-surface-secondary p-3" }, wn = { class: "text-lg font-semibold text-heading" }, Tn = { class: "rounded-lg bg-surface-secondary p-3" }, En = { class: "text-lg font-semibold text-heading" }, Dn = { class: "rounded-lg bg-surface-secondary p-3" }, On = {
 	key: 0,
 	class: "mt-3"
-}, Wn = { class: "flex items-center justify-between gap-2" }, Gn = { class: "min-w-0" }, Kn = { class: "font-medium text-heading" }, qn = { class: "truncate text-xs text-muted" }, Jn = {
+}, kn = { class: "flex items-center justify-between gap-2" }, An = { class: "min-w-0" }, jn = { class: "font-medium text-heading" }, Mn = { class: "truncate text-xs text-muted" }, Nn = {
 	key: 0,
 	class: "mt-2 space-y-1"
-}, Yn = { class: "text-muted" }, Xn = { class: "font-medium text-heading" }, Zn = {
+}, Pn = { class: "text-muted" }, Fn = { class: "font-medium text-heading" }, In = {
 	key: 1,
 	class: "mt-3"
-}, Qn = { class: "flex items-center justify-between gap-2" }, $n = { class: "min-w-0" }, er = { class: "font-medium text-heading" }, tr = { class: "truncate text-xs text-muted" }, nr = { key: 0 }, rr = {
+}, Ln = { class: "flex items-center justify-between gap-2" }, Rn = { class: "min-w-0" }, zn = { class: "font-medium text-heading" }, Bn = { class: "truncate text-xs text-muted" }, Vn = { key: 0 }, Hn = {
 	key: 0,
 	class: "mt-1 text-xs text-muted"
-}, ir = {
+}, Un = {
 	key: 1,
 	class: "mt-2 space-y-1"
-}, ar = { class: "text-muted" }, or = { key: 0 }, sr = { class: "font-medium text-heading" }, cr = { class: "mt-3 flex items-center justify-between rounded-lg border border-line-light p-2.5 text-sm" }, lr = { class: "text-muted" }, ur = { class: "font-semibold text-heading" }, dr = ["title"], fr = /* @__PURE__ */ c({
+}, Wn = { class: "text-muted" }, Gn = { key: 0 }, Kn = { class: "font-medium text-heading" }, qn = { class: "mt-3 flex items-center justify-between rounded-lg border border-line-light p-2.5 text-sm" }, Jn = { class: "text-muted" }, Yn = { class: "font-semibold text-heading" }, Xn = ["title"], Zn = /* @__PURE__ */ c({
 	__name: "TripDetailPage",
 	props: {
 		id: {},
@@ -1274,13 +1301,13 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 		}
 		return (t, l) => {
 			let m = y("BaseButton"), h = y("BaseSettingCard");
-			return g(), i("div", zt, [
-				a("div", Bt, [p.value ? (g(), i("div", Vt, "Loading the trip…")) : u.value ? (g(), i(e, { key: 1 }, [
-					a("div", Ht, [a("div", null, [a("button", {
+			return g(), i("div", wt, [
+				a("div", Tt, [p.value ? (g(), i("div", Et, "Loading the trip…")) : u.value ? (g(), i(e, { key: 1 }, [
+					a("div", Dt, [a("div", null, [a("button", {
 						type: "button",
 						class: "text-sm text-muted hover:text-heading",
 						onClick: Ee
-					}, " ← Trips "), a("h1", Ut, " Trip #" + b(u.value.trip_no) + " · " + b(u.value.from_city ?? "—") + " → " + b(u.value.to_city ?? "—"), 1)]), a("div", Wt, [u.value.cancelled_at ? (g(), i("span", Gt, " Cancelled ")) : E.value.length > 0 ? T((g(), i("select", {
+					}, " ← Trips "), a("h1", Ot, " Trip #" + b(u.value.trip_no) + " · " + b(u.value.from_city ?? "—") + " → " + b(u.value.to_city ?? "—"), 1)]), a("div", kt, [u.value.cancelled_at ? (g(), i("span", At, " Cancelled ")) : E.value.length > 0 ? T((g(), i("select", {
 						key: 1,
 						"onUpdate:modelValue": l[0] ||= (e) => ne.value = e,
 						disabled: D.value,
@@ -1290,7 +1317,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 						key: e.id,
 						value: e.id,
 						class: "bg-surface text-body"
-					}, b(e.name), 9, qt))), 128))], 12, Kt)), [[S, ne.value]]) : (g(), i("span", {
+					}, b(e.name), 9, Mt))), 128))], 12, jt)), [[S, ne.value]]) : (g(), i("span", {
 						key: 2,
 						class: "rounded-full px-3 py-1 text-xs font-semibold text-white",
 						style: f({ backgroundColor: u.value.status.colour ?? "#94a3b8" })
@@ -1303,17 +1330,17 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 						default: w(() => [...l[5] ||= [o(" Cancel Trip ", -1)]]),
 						_: 1
 					}))])]),
-					u.value.cancelled_at ? (g(), i("div", Jt, " This trip is cancelled. ")) : r("", !0),
-					a("div", Yt, [s(h, {
+					u.value.cancelled_at ? (g(), i("div", Nt, " This trip is cancelled. ")) : r("", !0),
+					a("div", Pt, [s(h, {
 						title: "Documents",
 						description: "LR receipts, lorry receipt, invoice receipt and trip documents for this trip."
 					}, {
 						default: w(() => [
-							a("div", Xt, [
+							a("div", Ft, [
 								(g(!0), i(e, null, v(re.value, (e) => (g(), i("div", {
 									key: e.id,
 									class: "flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", Zt, [a("p", Qt, "📄 " + b(e.invoice_number), 1), a("p", $t, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", en, [s(m, {
+								}, [a("div", It, [a("p", Lt, "📄 " + b(e.invoice_number), 1), a("p", Rt, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", zt, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									onClick: (t) => Te(e.invoice_id)
@@ -1329,8 +1356,8 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 									default: w(() => [...l[7] ||= [o(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								re.value.length === 0 ? (g(), i("p", tn, "No LR receipts linked yet.")) : r("", !0),
-								a("div", nn, [s(m, {
+								re.value.length === 0 ? (g(), i("p", Bt, "No LR receipts linked yet.")) : r("", !0),
+								a("div", Vt, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									onClick: l[1] ||= (e) => O.value = !0
@@ -1339,8 +1366,8 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 									_: 1
 								})])
 							]),
-							a("div", rn, [
-								a("div", an, [l[10] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Lorry Receipt", -1), a("div", on, [s(m, {
+							a("div", Ht, [
+								a("div", Ut, [l[10] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Lorry Receipt", -1), a("div", Wt, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									disabled: M.value || re.value.length === 0,
@@ -1359,7 +1386,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 								(g(!0), i(e, null, v(ie.value, (e) => (g(), i("div", {
 									key: e.id,
 									class: "mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", sn, [a("p", cn, "🚛 " + b(e.invoice_number), 1), a("p", ln, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", un, [s(m, {
+								}, [a("div", Gt, [a("p", Kt, "🚛 " + b(e.invoice_number), 1), a("p", qt, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", Jt, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									onClick: (t) => Te(e.invoice_id)
@@ -1375,10 +1402,10 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 									default: w(() => [...l[12] ||= [o(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								ie.value.length === 0 ? (g(), i("p", dn, [l[13] ||= o(" No lorry receipt linked yet. ", -1), re.value.length === 0 ? (g(), i("span", fn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
+								ie.value.length === 0 ? (g(), i("p", Yt, [l[13] ||= o(" No lorry receipt linked yet. ", -1), re.value.length === 0 ? (g(), i("span", Xt, " (Link an LR first)")) : r("", !0)])) : r("", !0)
 							]),
-							a("div", pn, [
-								a("div", mn, [l[14] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Invoice Receipt", -1), a("div", hn, [s(m, {
+							a("div", Zt, [
+								a("div", Qt, [l[14] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Invoice Receipt", -1), a("div", $t, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									disabled: j.value || re.value.length === 0,
@@ -1390,7 +1417,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 								(g(!0), i(e, null, v(ae.value, (e) => (g(), i("div", {
 									key: e.id,
 									class: "mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", gn, [a("p", _n, "🧾 " + b(e.invoice_number), 1), a("p", vn, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", yn, [s(m, {
+								}, [a("div", en, [a("p", tn, "🧾 " + b(e.invoice_number), 1), a("p", nn, b(e.customer_name ?? "No customer") + " · " + b(x(L)(e.amount)), 1)]), a("div", rn, [s(m, {
 									size: "sm",
 									variant: "primary-outline",
 									onClick: (t) => Te(e.invoice_id)
@@ -1406,9 +1433,9 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 									default: w(() => [...l[16] ||= [o(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								ae.value.length === 0 ? (g(), i("p", bn, [l[17] ||= o(" No invoice receipt linked yet. ", -1), re.value.length === 0 ? (g(), i("span", xn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
+								ae.value.length === 0 ? (g(), i("p", an, [l[17] ||= o(" No invoice receipt linked yet. ", -1), re.value.length === 0 ? (g(), i("span", on, " (Link an LR first)")) : r("", !0)])) : r("", !0)
 							]),
-							a("div", Sn, [
+							a("div", sn, [
 								l[26] ||= a("p", { class: "mb-3 text-xs font-semibold uppercase tracking-wide text-muted" }, "Trip Documents", -1),
 								a("input", {
 									ref_key: "podFileInput",
@@ -1421,17 +1448,17 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 								(g(), i(e, null, v(oe, (t) => a("div", {
 									key: t.role,
 									class: "mb-4 last:mb-0"
-								}, [a("p", Cn, b(t.label), 1), a("div", wn, [(g(!0), i(e, null, v(t.slots, (t) => (g(), i("div", {
+								}, [a("p", cn, b(t.label), 1), a("div", ln, [(g(!0), i(e, null, v(t.slots, (t) => (g(), i("div", {
 									key: t.key,
 									class: "flex flex-col"
 								}, [
-									a("p", Tn, b(t.label), 1),
-									se(t.key) ? (g(), i("div", En, [se(t.key).is_image && ce.value[se(t.key).id] ? (g(), i("img", {
+									a("p", un, b(t.label), 1),
+									se(t.key) ? (g(), i("div", dn, [se(t.key).is_image && ce.value[se(t.key).id] ? (g(), i("img", {
 										key: 0,
 										src: ce.value[se(t.key).id],
 										alt: t.label,
 										class: "h-full w-full object-cover"
-									}, null, 8, Dn)) : se(t.key).is_image ? (g(), i("div", kn, [...l[19] ||= [a("svg", {
+									}, null, 8, fn)) : se(t.key).is_image ? (g(), i("div", mn, [...l[19] ||= [a("svg", {
 										class: "h-5 w-5 animate-spin",
 										fill: "none",
 										viewBox: "0 0 24 24"
@@ -1446,7 +1473,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 										class: "opacity-75",
 										fill: "currentColor",
 										d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-									})], -1)]])) : (g(), i("div", On, [...l[18] ||= [a("svg", {
+									})], -1)]])) : (g(), i("div", pn, [...l[18] ||= [a("svg", {
 										class: "h-8 w-8",
 										fill: "none",
 										viewBox: "0 0 24 24",
@@ -1456,7 +1483,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 										"stroke-linejoin": "round",
 										"stroke-width": "1.25",
 										d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-									})], -1), a("span", { class: "text-xs" }, "PDF", -1)]])), a("div", An, [s(m, {
+									})], -1), a("span", { class: "text-xs" }, "PDF", -1)]])), a("div", hn, [s(m, {
 										size: "sm",
 										variant: "primary",
 										onClick: (e) => de(se(t.key).id)
@@ -1478,7 +1505,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 										"stroke-linejoin": "round",
 										"stroke-width": "2",
 										d: "M6 18L18 6M6 6l12 12"
-									})], -1)]], 8, jn)])])) : (g(), i("button", {
+									})], -1)]], 8, gn)])])) : (g(), i("button", {
 										key: 1,
 										type: "button",
 										class: "flex h-28 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong bg-surface-secondary text-subtle transition-colors hover:border-primary-400 hover:text-primary-500",
@@ -1509,37 +1536,37 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 										"stroke-linejoin": "round",
 										"stroke-width": "1.5",
 										d: "M12 4v16m8-8H4"
-									})], -1), l[25] ||= a("span", { class: "text-xs" }, "Upload", -1)], 64))], 8, Mn)),
-									se(t.key) ? (g(), i("div", Nn, [a("span", Pn, b(se(t.key).file_name), 1), a("button", {
+									})], -1), l[25] ||= a("span", { class: "text-xs" }, "Upload", -1)], 64))], 8, _n)),
+									se(t.key) ? (g(), i("div", vn, [a("span", yn, b(se(t.key).file_name), 1), a("button", {
 										type: "button",
 										class: "shrink-0 text-xs text-primary-500 hover:underline",
 										onClick: (e) => Se(t.key)
-									}, " Replace ", 8, Fn)])) : r("", !0)
+									}, " Replace ", 8, bn)])) : r("", !0)
 								]))), 128))])])), 64))
 							]),
-							a("div", In, [
+							a("div", xn, [
 								l[32] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "The Money", -1),
-								a("div", Ln, [
-									a("div", Rn, [l[27] ||= a("p", { class: "text-xs text-muted" }, "Revenue", -1), a("p", zn, b(x(L)(u.value.money.revenue)), 1)]),
-									a("div", Bn, [l[28] ||= a("p", { class: "text-xs text-muted" }, "Cost", -1), a("p", Vn, b(x(L)(u.value.money.cost)), 1)]),
-									a("div", Hn, [l[29] ||= a("p", { class: "text-xs text-muted" }, "Profit", -1), a("p", { class: d(["text-lg font-semibold", u.value.money.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(u.value.money.profit)), 3)])
+								a("div", Sn, [
+									a("div", Cn, [l[27] ||= a("p", { class: "text-xs text-muted" }, "Revenue", -1), a("p", wn, b(x(L)(u.value.money.revenue)), 1)]),
+									a("div", Tn, [l[28] ||= a("p", { class: "text-xs text-muted" }, "Cost", -1), a("p", En, b(x(L)(u.value.money.cost)), 1)]),
+									a("div", Dn, [l[29] ||= a("p", { class: "text-xs text-muted" }, "Profit", -1), a("p", { class: d(["text-lg font-semibold", u.value.money.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(u.value.money.profit)), 3)])
 								]),
-								u.value.money.receivable.length > 0 ? (g(), i("div", Un, [l[30] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "From Customer", -1), (g(!0), i(e, null, v(u.value.money.receivable, (t) => (g(), i("div", {
+								u.value.money.receivable.length > 0 ? (g(), i("div", On, [l[30] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "From Customer", -1), (g(!0), i(e, null, v(u.value.money.receivable, (t) => (g(), i("div", {
 									key: t.invoice_id,
 									class: "mb-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", Wn, [a("div", Gn, [a("p", Kn, "🧾 " + b(t.invoice_number), 1), a("p", qn, b(t.customer_name ?? "No customer") + " · Total " + b(x(L)(t.total)) + " · Due " + b(x(L)(t.due_amount)), 1)]), a("span", { class: d(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
+								}, [a("div", kn, [a("div", An, [a("p", jn, "🧾 " + b(t.invoice_number), 1), a("p", Mn, b(t.customer_name ?? "No customer") + " · Total " + b(x(L)(t.total)) + " · Due " + b(x(L)(t.due_amount)), 1)]), a("span", { class: d(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
 									"bg-status-red/10 text-status-red": t.paid_status === "UNPAID",
 									"bg-status-yellow/10 text-status-yellow": t.paid_status === "PARTIALLY_PAID",
 									"bg-status-green/10 text-status-green": t.paid_status === "PAID"
-								}]) }, b(t.paid_status), 3)]), t.payments.length > 0 ? (g(), i("div", Jn, [(g(!0), i(e, null, v(t.payments, (e) => (g(), i("div", {
+								}]) }, b(t.paid_status), 3)]), t.payments.length > 0 ? (g(), i("div", Nn, [(g(!0), i(e, null, v(t.payments, (e) => (g(), i("div", {
 									key: e.id,
 									class: "flex items-center justify-between gap-2 rounded bg-surface-secondary px-2 py-1 text-xs"
-								}, [a("span", Yn, b(e.number ?? "—") + " · " + b(e.date ?? "—"), 1), a("span", Xn, b(x(L)(e.amount)), 1)]))), 128))])) : r("", !0)]))), 128))])) : r("", !0),
-								u.value.money.payable.length > 0 ? (g(), i("div", Zn, [l[31] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "To Owner", -1), (g(!0), i(e, null, v(u.value.money.payable, (t) => (g(), i("div", {
+								}, [a("span", Pn, b(e.number ?? "—") + " · " + b(e.date ?? "—"), 1), a("span", Fn, b(x(L)(e.amount)), 1)]))), 128))])) : r("", !0)]))), 128))])) : r("", !0),
+								u.value.money.payable.length > 0 ? (g(), i("div", In, [l[31] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "To Owner", -1), (g(!0), i(e, null, v(u.value.money.payable, (t) => (g(), i("div", {
 									key: t.invoice_number,
 									class: "mb-2 rounded-lg border border-line-light p-2.5 text-sm"
 								}, [
-									a("div", Qn, [a("div", $n, [a("p", er, "🚛 " + b(t.bill_number ?? t.invoice_number), 1), a("p", tr, [o(b(t.supplier_name ?? "Unknown supplier"), 1), t.bill_reference ? (g(), i("span", nr, " · " + b(t.bill_reference), 1)) : r("", !0)])]), t.bill_status ? (g(), i("span", {
+									a("div", Ln, [a("div", Rn, [a("p", zn, "🚛 " + b(t.bill_number ?? t.invoice_number), 1), a("p", Bn, [o(b(t.supplier_name ?? "Unknown supplier"), 1), t.bill_reference ? (g(), i("span", Vn, " · " + b(t.bill_reference), 1)) : r("", !0)])]), t.bill_status ? (g(), i("span", {
 										key: 0,
 										class: d(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
 											"bg-status-red/10 text-status-red": t.bill_status === "UNPAID",
@@ -1547,13 +1574,13 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 											"bg-status-green/10 text-status-green": t.bill_status === "SETTLED"
 										}])
 									}, b(t.bill_status), 3)) : r("", !0)]),
-									t.bill_total === null ? r("", !0) : (g(), i("p", rr, " Total " + b(x(L)(t.bill_total)) + " · Due " + b(x(L)(t.bill_due ?? 0)), 1)),
-									t.payments.length > 0 ? (g(), i("div", ir, [(g(!0), i(e, null, v(t.payments, (e) => (g(), i("div", {
+									t.bill_total === null ? r("", !0) : (g(), i("p", Hn, " Total " + b(x(L)(t.bill_total)) + " · Due " + b(x(L)(t.bill_due ?? 0)), 1)),
+									t.payments.length > 0 ? (g(), i("div", Un, [(g(!0), i(e, null, v(t.payments, (e) => (g(), i("div", {
 										key: e.id,
 										class: "flex items-center justify-between gap-2 rounded bg-surface-secondary px-2 py-1 text-xs"
-									}, [a("span", ar, [o(b(e.type === "advance" ? "Advance" : "Final") + " · " + b(e.date ?? "—"), 1), e.reference ? (g(), i("span", or, " · " + b(e.reference), 1)) : r("", !0)]), a("span", sr, b(x(L)(e.amount)), 1)]))), 128))])) : r("", !0)
+									}, [a("span", Wn, [o(b(e.type === "advance" ? "Advance" : "Final") + " · " + b(e.date ?? "—"), 1), e.reference ? (g(), i("span", Gn, " · " + b(e.reference), 1)) : r("", !0)]), a("span", Kn, b(x(L)(e.amount)), 1)]))), 128))])) : r("", !0)
 								]))), 128))])) : r("", !0),
-								a("div", cr, [a("span", lr, [o(" Company paid " + b(x(L)(u.value.money.owner_paid)) + " · balance ", 1), a("span", ur, b(x(L)(u.value.money.owner_balance)), 1)]), u.value.money.bill_status ? (g(), i("span", {
+								a("div", qn, [a("span", Jn, [o(" Company paid " + b(x(L)(u.value.money.owner_paid)) + " · balance ", 1), a("span", Yn, b(x(L)(u.value.money.owner_balance)), 1)]), u.value.money.bill_status ? (g(), i("span", {
 									key: 0,
 									class: d(["rounded-full px-2 py-0.5 text-xs font-semibold", {
 										"bg-status-red/10 text-status-red": u.value.money.bill_status === "UNPAID",
@@ -1561,13 +1588,13 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 										"bg-status-green/10 text-status-green": u.value.money.bill_status === "SETTLED"
 									}]),
 									title: `Bill ${u.value.money.bill_number}`
-								}, b(u.value.money.bill_status), 11, dr)) : r("", !0)])
+								}, b(u.value.money.bill_status), 11, Xn)) : r("", !0)])
 							])
 						]),
 						_: 1
 					})])
 				], 64)) : r("", !0)]),
-				s(Rt, {
+				s(Ct, {
 					show: O.value,
 					client: c.client,
 					notify: c.notify,
@@ -1582,7 +1609,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 					"notify",
 					"trip-id"
 				]),
-				s(Rt, {
+				s(Ct, {
 					show: k.value,
 					client: c.client,
 					notify: c.notify,
@@ -1603,7 +1630,7 @@ var Ge = { class: "max-w-md" }, Ke = { class: "mt-2 flex items-center justify-be
 });
 //#endregion
 //#region ../../node_modules/sortablejs/modular/sortable.esm.js
-function pr(e, t) {
+function Qn(e, t) {
 	var n = Object.keys(e);
 	if (Object.getOwnPropertySymbols) {
 		var r = Object.getOwnPropertySymbols(e);
@@ -1613,26 +1640,26 @@ function pr(e, t) {
 	}
 	return n;
 }
-function mr(e) {
+function $n(e) {
 	for (var t = 1; t < arguments.length; t++) {
 		var n = arguments[t] == null ? {} : arguments[t];
-		t % 2 ? pr(Object(n), !0).forEach(function(t) {
-			gr(e, t, n[t]);
-		}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(n)) : pr(Object(n)).forEach(function(t) {
+		t % 2 ? Qn(Object(n), !0).forEach(function(t) {
+			tr(e, t, n[t]);
+		}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(n)) : Qn(Object(n)).forEach(function(t) {
 			Object.defineProperty(e, t, Object.getOwnPropertyDescriptor(n, t));
 		});
 	}
 	return e;
 }
-function hr(e) {
+function er(e) {
 	"@babel/helpers - typeof";
-	return hr = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
+	return er = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
 		return typeof e;
 	} : function(e) {
 		return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
-	}, hr(e);
+	}, er(e);
 }
-function gr(e, t, n) {
+function tr(e, t, n) {
 	return t in e ? Object.defineProperty(e, t, {
 		value: n,
 		enumerable: !0,
@@ -1640,45 +1667,45 @@ function gr(e, t, n) {
 		writable: !0
 	}) : e[t] = n, e;
 }
-function _r() {
-	return _r = Object.assign || function(e) {
+function nr() {
+	return nr = Object.assign || function(e) {
 		for (var t = 1; t < arguments.length; t++) {
 			var n = arguments[t];
 			for (var r in n) Object.prototype.hasOwnProperty.call(n, r) && (e[r] = n[r]);
 		}
 		return e;
-	}, _r.apply(this, arguments);
+	}, nr.apply(this, arguments);
 }
-function vr(e, t) {
+function rr(e, t) {
 	if (e == null) return {};
 	var n = {}, r = Object.keys(e), i, a;
 	for (a = 0; a < r.length; a++) i = r[a], !(t.indexOf(i) >= 0) && (n[i] = e[i]);
 	return n;
 }
-function yr(e, t) {
+function ir(e, t) {
 	if (e == null) return {};
-	var n = vr(e, t), r, i;
+	var n = rr(e, t), r, i;
 	if (Object.getOwnPropertySymbols) {
 		var a = Object.getOwnPropertySymbols(e);
 		for (i = 0; i < a.length; i++) r = a[i], !(t.indexOf(r) >= 0) && Object.prototype.propertyIsEnumerable.call(e, r) && (n[r] = e[r]);
 	}
 	return n;
 }
-var br = "1.14.0";
-function xr(e) {
+var ar = "1.14.0";
+function or(e) {
 	if (typeof window < "u" && window.navigator) return !!/* @__PURE__ */ navigator.userAgent.match(e);
 }
-var Sr = xr(/(?:Trident.*rv[ :]?11\.|msie|iemobile|Windows Phone)/i), Cr = xr(/Edge/i), wr = xr(/firefox/i), Tr = xr(/safari/i) && !xr(/chrome/i) && !xr(/android/i), Er = xr(/iP(ad|od|hone)/i), Dr = xr(/chrome/i) && xr(/android/i), Or = {
+var sr = or(/(?:Trident.*rv[ :]?11\.|msie|iemobile|Windows Phone)/i), cr = or(/Edge/i), lr = or(/firefox/i), ur = or(/safari/i) && !or(/chrome/i) && !or(/android/i), dr = or(/iP(ad|od|hone)/i), fr = or(/chrome/i) && or(/android/i), pr = {
 	capture: !1,
 	passive: !1
 };
 function R(e, t, n) {
-	e.addEventListener(t, n, !Sr && Or);
+	e.addEventListener(t, n, !sr && pr);
 }
 function z(e, t, n) {
-	e.removeEventListener(t, n, !Sr && Or);
+	e.removeEventListener(t, n, !sr && pr);
 }
-function kr(e, t) {
+function mr(e, t) {
 	if (t) {
 		if (t[0] === ">" && (t = t.substring(1)), e) try {
 			if (e.matches) return e.matches(t);
@@ -1690,22 +1717,22 @@ function kr(e, t) {
 		return !1;
 	}
 }
-function Ar(e) {
+function hr(e) {
 	return e.host && e !== document && e.host.nodeType ? e.host : e.parentNode;
 }
-function jr(e, t, n, r) {
+function gr(e, t, n, r) {
 	if (e) {
 		n ||= document;
 		do {
-			if (t != null && (t[0] === ">" ? e.parentNode === n && kr(e, t) : kr(e, t)) || r && e === n) return e;
+			if (t != null && (t[0] === ">" ? e.parentNode === n && mr(e, t) : mr(e, t)) || r && e === n) return e;
 			if (e === n) break;
-		} while (e = Ar(e));
+		} while (e = hr(e));
 	}
 	return null;
 }
-var Mr = /\s+/g;
+var _r = /\s+/g;
 function B(e, t, n) {
-	e && t && (e.classList ? e.classList[n ? "add" : "remove"](t) : e.className = ((" " + e.className + " ").replace(Mr, " ").replace(" " + t + " ", " ") + (n ? " " + t : "")).replace(Mr, " "));
+	e && t && (e.classList ? e.classList[n ? "add" : "remove"](t) : e.className = ((" " + e.className + " ").replace(_r, " ").replace(" " + t + " ", " ") + (n ? " " + t : "")).replace(_r, " "));
 }
 function V(e, t, n) {
 	var r = e && e.style;
@@ -1714,7 +1741,7 @@ function V(e, t, n) {
 		!(t in r) && t.indexOf("webkit") === -1 && (t = "-webkit-" + t), r[t] = n + (typeof n == "string" ? "" : "px");
 	}
 }
-function Nr(e, t) {
+function vr(e, t) {
 	var n = "";
 	if (typeof e == "string") n = e;
 	else do {
@@ -1724,7 +1751,7 @@ function Nr(e, t) {
 	var i = window.DOMMatrix || window.WebKitCSSMatrix || window.CSSMatrix || window.MSCSSMatrix;
 	return i && new i(n);
 }
-function Pr(e, t, n) {
+function yr(e, t, n) {
 	if (e) {
 		var r = e.getElementsByTagName(t), i = 0, a = r.length;
 		if (n) for (; i < a; i++) n(r[i], i);
@@ -1732,13 +1759,13 @@ function Pr(e, t, n) {
 	}
 	return [];
 }
-function Fr() {
+function br() {
 	return document.scrollingElement || document.documentElement;
 }
 function H(e, t, n, r, i) {
 	if (!(!e.getBoundingClientRect && e !== window)) {
 		var a, o, s, c, l, u, d;
-		if (e !== window && e.parentNode && e !== Fr() ? (a = e.getBoundingClientRect(), o = a.top, s = a.left, c = a.bottom, l = a.right, u = a.height, d = a.width) : (o = 0, s = 0, c = window.innerHeight, l = window.innerWidth, u = window.innerHeight, d = window.innerWidth), (t || n) && e !== window && (i ||= e.parentNode, !Sr)) do
+		if (e !== window && e.parentNode && e !== br() ? (a = e.getBoundingClientRect(), o = a.top, s = a.left, c = a.bottom, l = a.right, u = a.height, d = a.width) : (o = 0, s = 0, c = window.innerHeight, l = window.innerWidth, u = window.innerHeight, d = window.innerWidth), (t || n) && e !== window && (i ||= e.parentNode, !sr)) do
 			if (i && i.getBoundingClientRect && (V(i, "transform") !== "none" || n && V(i, "position") !== "static")) {
 				var f = i.getBoundingClientRect();
 				o -= f.top + parseInt(V(i, "border-top-width")), s -= f.left + parseInt(V(i, "border-left-width")), c = o + a.height, l = s + a.width;
@@ -1746,7 +1773,7 @@ function H(e, t, n, r, i) {
 			}
 		while (i = i.parentNode);
 		if (r && e !== window) {
-			var p = Nr(i || e), m = p && p.a, h = p && p.d;
+			var p = vr(i || e), m = p && p.a, h = p && p.d;
 			p && (o /= h, s /= m, d /= m, u /= h, c = o + u, l = s + d);
 		}
 		return {
@@ -1759,18 +1786,18 @@ function H(e, t, n, r, i) {
 		};
 	}
 }
-function Ir(e, t, n) {
-	for (var r = Hr(e, !0), i = H(e)[t]; r;) {
+function xr(e, t, n) {
+	for (var r = Dr(e, !0), i = H(e)[t]; r;) {
 		var a = H(r)[n], o = void 0;
 		if (o = n === "top" || n === "left" ? i >= a : i <= a, !o) return r;
-		if (r === Fr()) break;
-		r = Hr(r, !1);
+		if (r === br()) break;
+		r = Dr(r, !1);
 	}
 	return !1;
 }
-function Lr(e, t, n, r) {
+function Sr(e, t, n, r) {
 	for (var i = 0, a = 0, o = e.children; a < o.length;) {
-		if (o[a].style.display !== "none" && o[a] !== Q.ghost && (r || o[a] !== Q.dragged) && jr(o[a], n.draggable, e, !1)) {
+		if (o[a].style.display !== "none" && o[a] !== Q.ghost && (r || o[a] !== Q.dragged) && gr(o[a], n.draggable, e, !1)) {
 			if (i === t) return o[a];
 			i++;
 		}
@@ -1778,75 +1805,75 @@ function Lr(e, t, n, r) {
 	}
 	return null;
 }
-function Rr(e, t) {
-	for (var n = e.lastElementChild; n && (n === Q.ghost || V(n, "display") === "none" || t && !kr(n, t));) n = n.previousElementSibling;
+function Cr(e, t) {
+	for (var n = e.lastElementChild; n && (n === Q.ghost || V(n, "display") === "none" || t && !mr(n, t));) n = n.previousElementSibling;
 	return n || null;
 }
-function zr(e, t) {
+function wr(e, t) {
 	var n = 0;
 	if (!e || !e.parentNode) return -1;
-	for (; e = e.previousElementSibling;) e.nodeName.toUpperCase() !== "TEMPLATE" && e !== Q.clone && (!t || kr(e, t)) && n++;
+	for (; e = e.previousElementSibling;) e.nodeName.toUpperCase() !== "TEMPLATE" && e !== Q.clone && (!t || mr(e, t)) && n++;
 	return n;
 }
-function Br(e) {
-	var t = 0, n = 0, r = Fr();
+function Tr(e) {
+	var t = 0, n = 0, r = br();
 	if (e) do {
-		var i = Nr(e), a = i.a, o = i.d;
+		var i = vr(e), a = i.a, o = i.d;
 		t += e.scrollLeft * a, n += e.scrollTop * o;
 	} while (e !== r && (e = e.parentNode));
 	return [t, n];
 }
-function Vr(e, t) {
+function Er(e, t) {
 	for (var n in e) if (e.hasOwnProperty(n)) {
 		for (var r in t) if (t.hasOwnProperty(r) && t[r] === e[n][r]) return Number(n);
 	}
 	return -1;
 }
-function Hr(e, t) {
-	if (!e || !e.getBoundingClientRect) return Fr();
+function Dr(e, t) {
+	if (!e || !e.getBoundingClientRect) return br();
 	var n = e, r = !1;
 	do
 		if (n.clientWidth < n.scrollWidth || n.clientHeight < n.scrollHeight) {
 			var i = V(n);
 			if (n.clientWidth < n.scrollWidth && (i.overflowX == "auto" || i.overflowX == "scroll") || n.clientHeight < n.scrollHeight && (i.overflowY == "auto" || i.overflowY == "scroll")) {
-				if (!n.getBoundingClientRect || n === document.body) return Fr();
+				if (!n.getBoundingClientRect || n === document.body) return br();
 				if (r || t) return n;
 				r = !0;
 			}
 		}
 	while (n = n.parentNode);
-	return Fr();
+	return br();
 }
-function Ur(e, t) {
+function Or(e, t) {
 	if (e && t) for (var n in t) t.hasOwnProperty(n) && (e[n] = t[n]);
 	return e;
 }
-function Wr(e, t) {
+function kr(e, t) {
 	return Math.round(e.top) === Math.round(t.top) && Math.round(e.left) === Math.round(t.left) && Math.round(e.height) === Math.round(t.height) && Math.round(e.width) === Math.round(t.width);
 }
-var Gr;
-function Kr(e, t) {
+var Ar;
+function jr(e, t) {
 	return function() {
-		if (!Gr) {
+		if (!Ar) {
 			var n = arguments, r = this;
-			n.length === 1 ? e.call(r, n[0]) : e.apply(r, n), Gr = setTimeout(function() {
-				Gr = void 0;
+			n.length === 1 ? e.call(r, n[0]) : e.apply(r, n), Ar = setTimeout(function() {
+				Ar = void 0;
 			}, t);
 		}
 	};
 }
-function qr() {
-	clearTimeout(Gr), Gr = void 0;
+function Mr() {
+	clearTimeout(Ar), Ar = void 0;
 }
-function Jr(e, t, n) {
+function Nr(e, t, n) {
 	e.scrollLeft += t, e.scrollTop += n;
 }
-function Yr(e) {
+function Pr(e) {
 	var t = window.Polymer, n = window.jQuery || window.Zepto;
 	return t && t.dom ? t.dom(e).cloneNode(!0) : n ? n(e).clone(!0)[0] : e.cloneNode(!0);
 }
-var Xr = "Sortable" + (/* @__PURE__ */ new Date()).getTime();
-function Zr() {
+var Fr = "Sortable" + (/* @__PURE__ */ new Date()).getTime();
+function Ir() {
 	var e = [], t;
 	return {
 		captureAnimationState: function() {
@@ -1856,9 +1883,9 @@ function Zr() {
 						target: t,
 						rect: H(t)
 					});
-					var n = mr({}, e[e.length - 1].rect);
+					var n = $n({}, e[e.length - 1].rect);
 					if (t.thisAnimationDuration) {
-						var r = Nr(t, !0);
+						var r = vr(t, !0);
 						r && (n.top -= r.f, n.left -= r.e);
 					}
 					t.fromRect = n;
@@ -1869,7 +1896,7 @@ function Zr() {
 			e.push(t);
 		},
 		removeAnimationState: function(t) {
-			e.splice(Vr(e, { target: t }), 1);
+			e.splice(Er(e, { target: t }), 1);
 		},
 		animateAll: function(n) {
 			var r = this;
@@ -1879,8 +1906,8 @@ function Zr() {
 			}
 			var i = !1, a = 0;
 			e.forEach(function(e) {
-				var t = 0, n = e.target, o = n.fromRect, s = H(n), c = n.prevFromRect, l = n.prevToRect, u = e.rect, d = Nr(n, !0);
-				d && (s.top -= d.f, s.left -= d.e), n.toRect = s, n.thisAnimationDuration && Wr(c, s) && !Wr(o, s) && (u.top - s.top) / (u.left - s.left) === (o.top - s.top) / (o.left - s.left) && (t = $r(u, c, l, r.options)), Wr(s, o) || (n.prevFromRect = o, n.prevToRect = s, t ||= r.options.animation, r.animate(n, u, s, t)), t && (i = !0, a = Math.max(a, t), clearTimeout(n.animationResetTimer), n.animationResetTimer = setTimeout(function() {
+				var t = 0, n = e.target, o = n.fromRect, s = H(n), c = n.prevFromRect, l = n.prevToRect, u = e.rect, d = vr(n, !0);
+				d && (s.top -= d.f, s.left -= d.e), n.toRect = s, n.thisAnimationDuration && kr(c, s) && !kr(o, s) && (u.top - s.top) / (u.left - s.left) === (o.top - s.top) / (o.left - s.left) && (t = Rr(u, c, l, r.options)), kr(s, o) || (n.prevFromRect = o, n.prevToRect = s, t ||= r.options.animation, r.animate(n, u, s, t)), t && (i = !0, a = Math.max(a, t), clearTimeout(n.animationResetTimer), n.animationResetTimer = setTimeout(function() {
 					n.animationTime = 0, n.prevFromRect = null, n.fromRect = null, n.prevToRect = null, n.thisAnimationDuration = null;
 				}, t), n.thisAnimationDuration = t);
 			}), clearTimeout(t), i ? t = setTimeout(function() {
@@ -1890,26 +1917,26 @@ function Zr() {
 		animate: function(e, t, n, r) {
 			if (r) {
 				V(e, "transition", ""), V(e, "transform", "");
-				var i = Nr(this.el), a = i && i.a, o = i && i.d, s = (t.left - n.left) / (a || 1), c = (t.top - n.top) / (o || 1);
-				e.animatingX = !!s, e.animatingY = !!c, V(e, "transform", "translate3d(" + s + "px," + c + "px,0)"), this.forRepaintDummy = Qr(e), V(e, "transition", "transform " + r + "ms" + (this.options.easing ? " " + this.options.easing : "")), V(e, "transform", "translate3d(0,0,0)"), typeof e.animated == "number" && clearTimeout(e.animated), e.animated = setTimeout(function() {
+				var i = vr(this.el), a = i && i.a, o = i && i.d, s = (t.left - n.left) / (a || 1), c = (t.top - n.top) / (o || 1);
+				e.animatingX = !!s, e.animatingY = !!c, V(e, "transform", "translate3d(" + s + "px," + c + "px,0)"), this.forRepaintDummy = Lr(e), V(e, "transition", "transform " + r + "ms" + (this.options.easing ? " " + this.options.easing : "")), V(e, "transform", "translate3d(0,0,0)"), typeof e.animated == "number" && clearTimeout(e.animated), e.animated = setTimeout(function() {
 					V(e, "transition", ""), V(e, "transform", ""), e.animated = !1, e.animatingX = !1, e.animatingY = !1;
 				}, r);
 			}
 		}
 	};
 }
-function Qr(e) {
+function Lr(e) {
 	return e.offsetWidth;
 }
-function $r(e, t, n, r) {
+function Rr(e, t, n, r) {
 	return Math.sqrt((t.top - e.top) ** 2 + (t.left - e.left) ** 2) / Math.sqrt((t.top - n.top) ** 2 + (t.left - n.left) ** 2) * r.animation;
 }
-var ei = [], ti = { initializeByDefault: !0 }, ni = {
+var zr = [], Br = { initializeByDefault: !0 }, Vr = {
 	mount: function(e) {
-		for (var t in ti) ti.hasOwnProperty(t) && !(t in e) && (e[t] = ti[t]);
-		ei.forEach(function(t) {
+		for (var t in Br) Br.hasOwnProperty(t) && !(t in e) && (e[t] = Br[t]);
+		zr.forEach(function(t) {
 			if (t.pluginName === e.pluginName) throw `Sortable: Cannot mount plugin ${e.pluginName} more than once`;
-		}), ei.push(e);
+		}), zr.push(e);
 	},
 	pluginEvent: function(e, t, n) {
 		var r = this;
@@ -1917,16 +1944,16 @@ var ei = [], ti = { initializeByDefault: !0 }, ni = {
 			r.eventCanceled = !0;
 		};
 		var i = e + "Global";
-		ei.forEach(function(r) {
-			t[r.pluginName] && (t[r.pluginName][i] && t[r.pluginName][i](mr({ sortable: t }, n)), t.options[r.pluginName] && t[r.pluginName][e] && t[r.pluginName][e](mr({ sortable: t }, n)));
+		zr.forEach(function(r) {
+			t[r.pluginName] && (t[r.pluginName][i] && t[r.pluginName][i]($n({ sortable: t }, n)), t.options[r.pluginName] && t[r.pluginName][e] && t[r.pluginName][e]($n({ sortable: t }, n)));
 		});
 	},
 	initializePlugins: function(e, t, n, r) {
-		for (var i in ei.forEach(function(r) {
+		for (var i in zr.forEach(function(r) {
 			var i = r.pluginName;
 			if (!(!e.options[i] && !r.initializeByDefault)) {
 				var a = new r(e, t, e.options);
-				a.sortable = e, a.options = e.options, e[i] = a, _r(n, a.defaults);
+				a.sortable = e, a.options = e.options, e[i] = a, nr(n, a.defaults);
 			}
 		}), e.options) if (e.options.hasOwnProperty(i)) {
 			var a = this.modifyOption(e, i, e.options[i]);
@@ -1935,56 +1962,56 @@ var ei = [], ti = { initializeByDefault: !0 }, ni = {
 	},
 	getEventProperties: function(e, t) {
 		var n = {};
-		return ei.forEach(function(r) {
-			typeof r.eventProperties == "function" && _r(n, r.eventProperties.call(t[r.pluginName], e));
+		return zr.forEach(function(r) {
+			typeof r.eventProperties == "function" && nr(n, r.eventProperties.call(t[r.pluginName], e));
 		}), n;
 	},
 	modifyOption: function(e, t, n) {
 		var r;
-		return ei.forEach(function(i) {
+		return zr.forEach(function(i) {
 			e[i.pluginName] && i.optionListeners && typeof i.optionListeners[t] == "function" && (r = i.optionListeners[t].call(e[i.pluginName], n));
 		}), r;
 	}
 };
-function ri(e) {
+function Hr(e) {
 	var t = e.sortable, n = e.rootEl, r = e.name, i = e.targetEl, a = e.cloneEl, o = e.toEl, s = e.fromEl, c = e.oldIndex, l = e.newIndex, u = e.oldDraggableIndex, d = e.newDraggableIndex, f = e.originalEvent, p = e.putSortable, m = e.extraEventProperties;
-	if (t ||= n && n[Xr], t) {
+	if (t ||= n && n[Fr], t) {
 		var h, g = t.options, _ = "on" + r.charAt(0).toUpperCase() + r.substr(1);
-		window.CustomEvent && !Sr && !Cr ? h = new CustomEvent(r, {
+		window.CustomEvent && !sr && !cr ? h = new CustomEvent(r, {
 			bubbles: !0,
 			cancelable: !0
 		}) : (h = document.createEvent("Event"), h.initEvent(r, !0, !0)), h.to = o || n, h.from = s || n, h.item = i || n, h.clone = a, h.oldIndex = c, h.newIndex = l, h.oldDraggableIndex = u, h.newDraggableIndex = d, h.originalEvent = f, h.pullMode = p ? p.lastPutMode : void 0;
-		var v = mr(mr({}, m), ni.getEventProperties(r, t));
+		var v = $n($n({}, m), Vr.getEventProperties(r, t));
 		for (var y in v) h[y] = v[y];
 		n && n.dispatchEvent(h), g[_] && g[_].call(t, h);
 	}
 }
-var ii = ["evt"], U = function(e, t) {
-	var n = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, r = n.evt, i = yr(n, ii);
-	ni.pluginEvent.bind(Q)(e, t, mr({
+var Ur = ["evt"], U = function(e, t) {
+	var n = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, r = n.evt, i = ir(n, Ur);
+	Vr.pluginEvent.bind(Q)(e, t, $n({
 		dragEl: G,
 		parentEl: K,
 		ghostEl: q,
 		rootEl: J,
-		nextEl: ai,
-		lastDownEl: oi,
+		nextEl: Wr,
+		lastDownEl: Gr,
 		cloneEl: Y,
-		cloneHidden: si,
-		dragStarted: Si,
+		cloneHidden: Kr,
+		dragStarted: si,
 		putSortable: X,
 		activeSortable: Q.active,
 		originalEvent: r,
-		oldIndex: ci,
-		oldDraggableIndex: ui,
-		newIndex: li,
-		newDraggableIndex: di,
-		hideGhostForTarget: Bi,
-		unhideGhostForTarget: Vi,
+		oldIndex: qr,
+		oldDraggableIndex: Yr,
+		newIndex: Jr,
+		newDraggableIndex: Xr,
+		hideGhostForTarget: Ti,
+		unhideGhostForTarget: Ei,
 		cloneNowHidden: function() {
-			si = !0;
+			Kr = !0;
 		},
 		cloneNowShown: function() {
-			si = !1;
+			Kr = !1;
 		},
 		dispatchSortableEvent: function(e) {
 			W({
@@ -1996,45 +2023,45 @@ var ii = ["evt"], U = function(e, t) {
 	}, i));
 };
 function W(e) {
-	ri(mr({
+	Hr($n({
 		putSortable: X,
 		cloneEl: Y,
 		targetEl: G,
 		rootEl: J,
-		oldIndex: ci,
-		oldDraggableIndex: ui,
-		newIndex: li,
-		newDraggableIndex: di
+		oldIndex: qr,
+		oldDraggableIndex: Yr,
+		newIndex: Jr,
+		newDraggableIndex: Xr
 	}, e));
 }
-var G, K, q, J, ai, oi, Y, si, ci, li, ui, di, fi, X, pi = !1, mi = !1, hi = [], gi, _i, vi, yi, bi, xi, Si, Ci, wi, Ti = !1, Ei = !1, Di, Z, Oi = [], ki = !1, Ai = [], ji = typeof document < "u", Mi = Er, Ni = Cr || Sr ? "cssFloat" : "float", Pi = ji && !Dr && !Er && "draggable" in document.createElement("div"), Fi = function() {
-	if (ji) {
-		if (Sr) return !1;
+var G, K, q, J, Wr, Gr, Y, Kr, qr, Jr, Yr, Xr, Zr, X, Qr = !1, $r = !1, ei = [], ti, ni, ri, ii, ai, oi, si, ci, li, ui = !1, di = !1, fi, Z, pi = [], mi = !1, hi = [], gi = typeof document < "u", _i = dr, vi = cr || sr ? "cssFloat" : "float", yi = gi && !fr && !dr && "draggable" in document.createElement("div"), bi = function() {
+	if (gi) {
+		if (sr) return !1;
 		var e = document.createElement("x");
 		return e.style.cssText = "pointer-events:auto", e.style.pointerEvents === "auto";
 	}
-}(), Ii = function(e, t) {
-	var n = V(e), r = parseInt(n.width) - parseInt(n.paddingLeft) - parseInt(n.paddingRight) - parseInt(n.borderLeftWidth) - parseInt(n.borderRightWidth), i = Lr(e, 0, t), a = Lr(e, 1, t), o = i && V(i), s = a && V(a), c = o && parseInt(o.marginLeft) + parseInt(o.marginRight) + H(i).width, l = s && parseInt(s.marginLeft) + parseInt(s.marginRight) + H(a).width;
+}(), xi = function(e, t) {
+	var n = V(e), r = parseInt(n.width) - parseInt(n.paddingLeft) - parseInt(n.paddingRight) - parseInt(n.borderLeftWidth) - parseInt(n.borderRightWidth), i = Sr(e, 0, t), a = Sr(e, 1, t), o = i && V(i), s = a && V(a), c = o && parseInt(o.marginLeft) + parseInt(o.marginRight) + H(i).width, l = s && parseInt(s.marginLeft) + parseInt(s.marginRight) + H(a).width;
 	if (n.display === "flex") return n.flexDirection === "column" || n.flexDirection === "column-reverse" ? "vertical" : "horizontal";
 	if (n.display === "grid") return n.gridTemplateColumns.split(" ").length <= 1 ? "vertical" : "horizontal";
 	if (i && o.float && o.float !== "none") {
 		var u = o.float === "left" ? "left" : "right";
 		return a && (s.clear === "both" || s.clear === u) ? "vertical" : "horizontal";
 	}
-	return i && (o.display === "block" || o.display === "flex" || o.display === "table" || o.display === "grid" || c >= r && n[Ni] === "none" || a && n[Ni] === "none" && c + l > r) ? "vertical" : "horizontal";
-}, Li = function(e, t, n) {
+	return i && (o.display === "block" || o.display === "flex" || o.display === "table" || o.display === "grid" || c >= r && n[vi] === "none" || a && n[vi] === "none" && c + l > r) ? "vertical" : "horizontal";
+}, Si = function(e, t, n) {
 	var r = n ? e.left : e.top, i = n ? e.right : e.bottom, a = n ? e.width : e.height, o = n ? t.left : t.top, s = n ? t.right : t.bottom, c = n ? t.width : t.height;
 	return r === o || i === s || r + a / 2 === o + c / 2;
-}, Ri = function(e, t) {
+}, Ci = function(e, t) {
 	var n;
-	return hi.some(function(r) {
-		var i = r[Xr].options.emptyInsertThreshold;
-		if (!(!i || Rr(r))) {
+	return ei.some(function(r) {
+		var i = r[Fr].options.emptyInsertThreshold;
+		if (!(!i || Cr(r))) {
 			var a = H(r), o = e >= a.left - i && e <= a.right + i, s = t >= a.top - i && t <= a.bottom + i;
 			if (o && s) return n = r;
 		}
 	}), n;
-}, zi = function(e) {
+}, wi = function(e) {
 	function t(e, n) {
 		return function(r, i, a, o) {
 			var s = r.options.group.name && i.options.group.name && r.options.group.name === i.options.group.name;
@@ -2047,31 +2074,31 @@ var G, K, q, J, ai, oi, Y, si, ci, li, ui, di, fi, X, pi = !1, mi = !1, hi = [],
 		};
 	}
 	var n = {}, r = e.group;
-	(!r || hr(r) != "object") && (r = { name: r }), n.name = r.name, n.checkPull = t(r.pull, !0), n.checkPut = t(r.put), n.revertClone = r.revertClone, e.group = n;
-}, Bi = function() {
-	!Fi && q && V(q, "display", "none");
-}, Vi = function() {
-	!Fi && q && V(q, "display", "");
+	(!r || er(r) != "object") && (r = { name: r }), n.name = r.name, n.checkPull = t(r.pull, !0), n.checkPut = t(r.put), n.revertClone = r.revertClone, e.group = n;
+}, Ti = function() {
+	!bi && q && V(q, "display", "none");
+}, Ei = function() {
+	!bi && q && V(q, "display", "");
 };
-ji && document.addEventListener("click", function(e) {
-	if (mi) return e.preventDefault(), e.stopPropagation && e.stopPropagation(), e.stopImmediatePropagation && e.stopImmediatePropagation(), mi = !1, !1;
+gi && document.addEventListener("click", function(e) {
+	if ($r) return e.preventDefault(), e.stopPropagation && e.stopPropagation(), e.stopImmediatePropagation && e.stopImmediatePropagation(), $r = !1, !1;
 }, !0);
-var Hi = function(e) {
+var Di = function(e) {
 	if (G) {
 		e = e.touches ? e.touches[0] : e;
-		var t = Ri(e.clientX, e.clientY);
+		var t = Ci(e.clientX, e.clientY);
 		if (t) {
 			var n = {};
 			for (var r in e) e.hasOwnProperty(r) && (n[r] = e[r]);
-			n.target = n.rootEl = t, n.preventDefault = void 0, n.stopPropagation = void 0, t[Xr]._onDragOver(n);
+			n.target = n.rootEl = t, n.preventDefault = void 0, n.stopPropagation = void 0, t[Fr]._onDragOver(n);
 		}
 	}
-}, Ui = function(e) {
-	G && G.parentNode[Xr]._isOutsideThisEl(e.target);
+}, Oi = function(e) {
+	G && G.parentNode[Fr]._isOutsideThisEl(e.target);
 };
 function Q(e, t) {
 	if (!(e && e.nodeType && e.nodeType === 1)) throw `Sortable: \`el\` must be an HTMLElement, not ${{}.toString.call(e)}`;
-	this.el = e, this.options = t = _r({}, t), e[Xr] = this;
+	this.el = e, this.options = t = nr({}, t), e[Fr] = this;
 	var n = {
 		group: null,
 		sort: !0,
@@ -2084,7 +2111,7 @@ function Q(e, t) {
 		invertedSwapThreshold: null,
 		removeCloneOnHide: !0,
 		direction: function() {
-			return Ii(e, this.options);
+			return xi(e, this.options);
 		},
 		ghostClass: "sortable-ghost",
 		chosenClass: "sortable-chosen",
@@ -2111,17 +2138,17 @@ function Q(e, t) {
 			x: 0,
 			y: 0
 		},
-		supportPointer: Q.supportPointer !== !1 && "PointerEvent" in window && !Tr,
+		supportPointer: Q.supportPointer !== !1 && "PointerEvent" in window && !ur,
 		emptyInsertThreshold: 5
 	};
-	for (var r in ni.initializePlugins(this, e, n), n) !(r in t) && (t[r] = n[r]);
-	for (var i in zi(t), this) i.charAt(0) === "_" && typeof this[i] == "function" && (this[i] = this[i].bind(this));
-	this.nativeDraggable = t.forceFallback ? !1 : Pi, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? R(e, "pointerdown", this._onTapStart) : (R(e, "mousedown", this._onTapStart), R(e, "touchstart", this._onTapStart)), this.nativeDraggable && (R(e, "dragover", this), R(e, "dragenter", this)), hi.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), _r(this, Zr());
+	for (var r in Vr.initializePlugins(this, e, n), n) !(r in t) && (t[r] = n[r]);
+	for (var i in wi(t), this) i.charAt(0) === "_" && typeof this[i] == "function" && (this[i] = this[i].bind(this));
+	this.nativeDraggable = t.forceFallback ? !1 : yi, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? R(e, "pointerdown", this._onTapStart) : (R(e, "mousedown", this._onTapStart), R(e, "touchstart", this._onTapStart)), this.nativeDraggable && (R(e, "dragover", this), R(e, "dragenter", this)), ei.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), nr(this, Ir());
 }
 Q.prototype = {
 	constructor: Q,
 	_isOutsideThisEl: function(e) {
-		!this.el.contains(e) && e !== this.el && (Ci = null);
+		!this.el.contains(e) && e !== this.el && (ci = null);
 	},
 	_getDirection: function(e, t) {
 		return typeof this.options.direction == "function" ? this.options.direction.call(this, e, t, G) : this.options.direction;
@@ -2129,8 +2156,8 @@ Q.prototype = {
 	_onTapStart: function(e) {
 		if (e.cancelable) {
 			var t = this, n = this.el, r = this.options, i = r.preventOnFilter, a = e.type, o = e.touches && e.touches[0] || e.pointerType && e.pointerType === "touch" && e, s = (o || e).target, c = e.target.shadowRoot && (e.path && e.path[0] || e.composedPath && e.composedPath()[0]) || s, l = r.filter;
-			if ($i(n), !G && !(/mousedown|pointerdown/.test(a) && e.button !== 0 || r.disabled) && !c.isContentEditable && !(!this.nativeDraggable && Tr && s && s.tagName.toUpperCase() === "SELECT") && (s = jr(s, r.draggable, n, !1), !(s && s.animated) && oi !== s)) {
-				if (ci = zr(s), ui = zr(s, r.draggable), typeof l == "function") {
+			if (Ri(n), !G && !(/mousedown|pointerdown/.test(a) && e.button !== 0 || r.disabled) && !c.isContentEditable && !(!this.nativeDraggable && ur && s && s.tagName.toUpperCase() === "SELECT") && (s = gr(s, r.draggable, n, !1), !(s && s.animated) && Gr !== s)) {
+				if (qr = wr(s), Yr = wr(s, r.draggable), typeof l == "function") {
 					if (l.call(this, e, s, this)) {
 						W({
 							sortable: t,
@@ -2143,7 +2170,7 @@ Q.prototype = {
 						return;
 					}
 				} else if (l && (l = l.split(",").some(function(r) {
-					if (r = jr(c, r.trim(), n, !1), r) return W({
+					if (r = gr(c, r.trim(), n, !1), r) return W({
 						sortable: t,
 						rootEl: r,
 						name: "filter",
@@ -2155,7 +2182,7 @@ Q.prototype = {
 					i && e.cancelable && e.preventDefault();
 					return;
 				}
-				r.handle && !jr(c, r.handle, n, !1) || this._prepareDragStart(e, o, s);
+				r.handle && !gr(c, r.handle, n, !1) || this._prepareDragStart(e, o, s);
 			}
 		}
 	},
@@ -2163,23 +2190,23 @@ Q.prototype = {
 		var r = this, i = r.el, a = r.options, o = i.ownerDocument, s;
 		if (n && !G && n.parentNode === i) {
 			var c = H(n);
-			if (J = i, G = n, K = G.parentNode, ai = G.nextSibling, oi = n, fi = a.group, Q.dragged = G, gi = {
+			if (J = i, G = n, K = G.parentNode, Wr = G.nextSibling, Gr = n, Zr = a.group, Q.dragged = G, ti = {
 				target: G,
 				clientX: (t || e).clientX,
 				clientY: (t || e).clientY
-			}, bi = gi.clientX - c.left, xi = gi.clientY - c.top, this._lastX = (t || e).clientX, this._lastY = (t || e).clientY, G.style["will-change"] = "all", s = function() {
+			}, ai = ti.clientX - c.left, oi = ti.clientY - c.top, this._lastX = (t || e).clientX, this._lastY = (t || e).clientY, G.style["will-change"] = "all", s = function() {
 				if (U("delayEnded", r, { evt: e }), Q.eventCanceled) {
 					r._onDrop();
 					return;
 				}
-				r._disableDelayedDragEvents(), !wr && r.nativeDraggable && (G.draggable = !0), r._triggerDragStart(e, t), W({
+				r._disableDelayedDragEvents(), !lr && r.nativeDraggable && (G.draggable = !0), r._triggerDragStart(e, t), W({
 					sortable: r,
 					name: "choose",
 					originalEvent: e
 				}), B(G, a.chosenClass, !0);
 			}, a.ignore.split(",").forEach(function(e) {
-				Pr(G, e.trim(), Ki);
-			}), R(o, "dragover", Hi), R(o, "mousemove", Hi), R(o, "touchmove", Hi), R(o, "mouseup", r._onDrop), R(o, "touchend", r._onDrop), R(o, "touchcancel", r._onDrop), wr && this.nativeDraggable && (this.options.touchStartThreshold = 4, G.draggable = !0), U("delayStart", this, { evt: e }), a.delay && (!a.delayOnTouchOnly || t) && (!this.nativeDraggable || !(Cr || Sr))) {
+				yr(G, e.trim(), ji);
+			}), R(o, "dragover", Di), R(o, "mousemove", Di), R(o, "touchmove", Di), R(o, "mouseup", r._onDrop), R(o, "touchend", r._onDrop), R(o, "touchcancel", r._onDrop), lr && this.nativeDraggable && (this.options.touchStartThreshold = 4, G.draggable = !0), U("delayStart", this, { evt: e }), a.delay && (!a.delayOnTouchOnly || t) && (!this.nativeDraggable || !(cr || sr))) {
 				if (Q.eventCanceled) {
 					this._onDrop();
 					return;
@@ -2193,7 +2220,7 @@ Q.prototype = {
 		Math.max(Math.abs(t.clientX - this._lastX), Math.abs(t.clientY - this._lastY)) >= Math.floor(this.options.touchStartThreshold / (this.nativeDraggable && window.devicePixelRatio || 1)) && this._disableDelayedDrag();
 	},
 	_disableDelayedDrag: function() {
-		G && Ki(G), clearTimeout(this._dragStartTimer), this._disableDelayedDragEvents();
+		G && ji(G), clearTimeout(this._dragStartTimer), this._disableDelayedDragEvents();
 	},
 	_disableDelayedDragEvents: function() {
 		var e = this.el.ownerDocument;
@@ -2202,14 +2229,14 @@ Q.prototype = {
 	_triggerDragStart: function(e, t) {
 		t ||= e.pointerType == "touch" && e, !this.nativeDraggable || t ? this.options.supportPointer ? R(document, "pointermove", this._onTouchMove) : t ? R(document, "touchmove", this._onTouchMove) : R(document, "mousemove", this._onTouchMove) : (R(G, "dragend", this), R(J, "dragstart", this._onDragStart));
 		try {
-			document.selection ? ea(function() {
+			document.selection ? zi(function() {
 				document.selection.empty();
 			}) : window.getSelection().removeAllRanges();
 		} catch {}
 	},
 	_dragStarted: function(e, t) {
-		if (pi = !1, J && G) {
-			U("dragStarted", this, { evt: t }), this.nativeDraggable && R(document, "dragover", Ui);
+		if (Qr = !1, J && G) {
+			U("dragStarted", this, { evt: t }), this.nativeDraggable && R(document, "dragover", Oi);
 			var n = this.options;
 			!e && B(G, n.dragClass, !1), B(G, n.ghostClass, !0), Q.active = this, e && this._appendGhost(), W({
 				sortable: this,
@@ -2219,33 +2246,33 @@ Q.prototype = {
 		} else this._nulling();
 	},
 	_emulateDragOver: function() {
-		if (_i) {
-			this._lastX = _i.clientX, this._lastY = _i.clientY, Bi();
-			for (var e = document.elementFromPoint(_i.clientX, _i.clientY), t = e; e && e.shadowRoot && (e = e.shadowRoot.elementFromPoint(_i.clientX, _i.clientY), e !== t);) t = e;
-			if (G.parentNode[Xr]._isOutsideThisEl(e), t) do {
-				if (t[Xr]) {
+		if (ni) {
+			this._lastX = ni.clientX, this._lastY = ni.clientY, Ti();
+			for (var e = document.elementFromPoint(ni.clientX, ni.clientY), t = e; e && e.shadowRoot && (e = e.shadowRoot.elementFromPoint(ni.clientX, ni.clientY), e !== t);) t = e;
+			if (G.parentNode[Fr]._isOutsideThisEl(e), t) do {
+				if (t[Fr]) {
 					var n = void 0;
-					if (n = t[Xr]._onDragOver({
-						clientX: _i.clientX,
-						clientY: _i.clientY,
+					if (n = t[Fr]._onDragOver({
+						clientX: ni.clientX,
+						clientY: ni.clientY,
 						target: e,
 						rootEl: t
 					}), n && !this.options.dragoverBubble) break;
 				}
 				e = t;
 			} while (t = t.parentNode);
-			Vi();
+			Ei();
 		}
 	},
 	_onTouchMove: function(e) {
-		if (gi) {
-			var t = this.options, n = t.fallbackTolerance, r = t.fallbackOffset, i = e.touches ? e.touches[0] : e, a = q && Nr(q, !0), o = q && a && a.a, s = q && a && a.d, c = Mi && Z && Br(Z), l = (i.clientX - gi.clientX + r.x) / (o || 1) + (c ? c[0] - Oi[0] : 0) / (o || 1), u = (i.clientY - gi.clientY + r.y) / (s || 1) + (c ? c[1] - Oi[1] : 0) / (s || 1);
-			if (!Q.active && !pi) {
+		if (ti) {
+			var t = this.options, n = t.fallbackTolerance, r = t.fallbackOffset, i = e.touches ? e.touches[0] : e, a = q && vr(q, !0), o = q && a && a.a, s = q && a && a.d, c = _i && Z && Tr(Z), l = (i.clientX - ti.clientX + r.x) / (o || 1) + (c ? c[0] - pi[0] : 0) / (o || 1), u = (i.clientY - ti.clientY + r.y) / (s || 1) + (c ? c[1] - pi[1] : 0) / (s || 1);
+			if (!Q.active && !Qr) {
 				if (n && Math.max(Math.abs(i.clientX - this._lastX), Math.abs(i.clientY - this._lastY)) < n) return;
 				this._onDragStart(e, !0);
 			}
 			if (q) {
-				a ? (a.e += l - (vi || 0), a.f += u - (yi || 0)) : a = {
+				a ? (a.e += l - (ri || 0), a.f += u - (ii || 0)) : a = {
 					a: 1,
 					b: 0,
 					c: 0,
@@ -2254,19 +2281,19 @@ Q.prototype = {
 					f: u
 				};
 				var d = `matrix(${a.a},${a.b},${a.c},${a.d},${a.e},${a.f})`;
-				V(q, "webkitTransform", d), V(q, "mozTransform", d), V(q, "msTransform", d), V(q, "transform", d), vi = l, yi = u, _i = i;
+				V(q, "webkitTransform", d), V(q, "mozTransform", d), V(q, "msTransform", d), V(q, "transform", d), ri = l, ii = u, ni = i;
 			}
 			e.cancelable && e.preventDefault();
 		}
 	},
 	_appendGhost: function() {
 		if (!q) {
-			var e = this.options.fallbackOnBody ? document.body : J, t = H(G, !0, Mi, !0, e), n = this.options;
-			if (Mi) {
+			var e = this.options.fallbackOnBody ? document.body : J, t = H(G, !0, _i, !0, e), n = this.options;
+			if (_i) {
 				for (Z = e; V(Z, "position") === "static" && V(Z, "transform") === "none" && Z !== document;) Z = Z.parentNode;
-				Z !== document.body && Z !== document.documentElement ? (Z === document && (Z = Fr()), t.top += Z.scrollTop, t.left += Z.scrollLeft) : Z = Fr(), Oi = Br(Z);
+				Z !== document.body && Z !== document.documentElement ? (Z === document && (Z = br()), t.top += Z.scrollTop, t.left += Z.scrollLeft) : Z = br(), pi = Tr(Z);
 			}
-			q = G.cloneNode(!0), B(q, n.ghostClass, !1), B(q, n.fallbackClass, !0), B(q, n.dragClass, !0), V(q, "transition", ""), V(q, "transform", ""), V(q, "box-sizing", "border-box"), V(q, "margin", 0), V(q, "top", t.top), V(q, "left", t.left), V(q, "width", t.width), V(q, "height", t.height), V(q, "opacity", "0.8"), V(q, "position", Mi ? "absolute" : "fixed"), V(q, "zIndex", "100000"), V(q, "pointerEvents", "none"), Q.ghost = q, e.appendChild(q), V(q, "transform-origin", bi / parseInt(q.style.width) * 100 + "% " + xi / parseInt(q.style.height) * 100 + "%");
+			q = G.cloneNode(!0), B(q, n.ghostClass, !1), B(q, n.fallbackClass, !0), B(q, n.dragClass, !0), V(q, "transition", ""), V(q, "transform", ""), V(q, "box-sizing", "border-box"), V(q, "margin", 0), V(q, "top", t.top), V(q, "left", t.left), V(q, "width", t.width), V(q, "height", t.height), V(q, "opacity", "0.8"), V(q, "position", _i ? "absolute" : "fixed"), V(q, "zIndex", "100000"), V(q, "pointerEvents", "none"), Q.ghost = q, e.appendChild(q), V(q, "transform-origin", ai / parseInt(q.style.width) * 100 + "% " + oi / parseInt(q.style.height) * 100 + "%");
 		}
 	},
 	_onDragStart: function(e, t) {
@@ -2275,18 +2302,18 @@ Q.prototype = {
 			this._onDrop();
 			return;
 		}
-		U("setupClone", this), Q.eventCanceled || (Y = Yr(G), Y.draggable = !1, Y.style["will-change"] = "", this._hideClone(), B(Y, this.options.chosenClass, !1), Q.clone = Y), n.cloneId = ea(function() {
+		U("setupClone", this), Q.eventCanceled || (Y = Pr(G), Y.draggable = !1, Y.style["will-change"] = "", this._hideClone(), B(Y, this.options.chosenClass, !1), Q.clone = Y), n.cloneId = zi(function() {
 			U("clone", n), !Q.eventCanceled && (n.options.removeCloneOnHide || J.insertBefore(Y, G), n._hideClone(), W({
 				sortable: n,
 				name: "clone"
 			}));
-		}), !t && B(G, i.dragClass, !0), t ? (mi = !0, n._loopId = setInterval(n._emulateDragOver, 50)) : (z(document, "mouseup", n._onDrop), z(document, "touchend", n._onDrop), z(document, "touchcancel", n._onDrop), r && (r.effectAllowed = "move", i.setData && i.setData.call(n, r, G)), R(document, "drop", n), V(G, "transform", "translateZ(0)")), pi = !0, n._dragStartId = ea(n._dragStarted.bind(n, t, e)), R(document, "selectstart", n), Si = !0, Tr && V(document.body, "user-select", "none");
+		}), !t && B(G, i.dragClass, !0), t ? ($r = !0, n._loopId = setInterval(n._emulateDragOver, 50)) : (z(document, "mouseup", n._onDrop), z(document, "touchend", n._onDrop), z(document, "touchcancel", n._onDrop), r && (r.effectAllowed = "move", i.setData && i.setData.call(n, r, G)), R(document, "drop", n), V(G, "transform", "translateZ(0)")), Qr = !0, n._dragStartId = zi(n._dragStarted.bind(n, t, e)), R(document, "selectstart", n), si = !0, ur && V(document.body, "user-select", "none");
 	},
 	_onDragOver: function(e) {
-		var t = this.el, n = e.target, r, i, a, o = this.options, s = o.group, c = Q.active, l = fi === s, u = o.sort, d = X || c, f, p = this, m = !1;
-		if (ki) return;
+		var t = this.el, n = e.target, r, i, a, o = this.options, s = o.group, c = Q.active, l = Zr === s, u = o.sort, d = X || c, f, p = this, m = !1;
+		if (mi) return;
 		function h(o, s) {
-			U(o, p, mr({
+			U(o, p, $n({
 				evt: e,
 				isOwner: l,
 				axis: f ? "vertical" : "horizontal",
@@ -2298,7 +2325,7 @@ Q.prototype = {
 				target: n,
 				completed: _,
 				onMove: function(n, i) {
-					return Gi(J, t, G, r, n, H(n), e, i);
+					return Ai(J, t, G, r, n, H(n), e, i);
 				},
 				changed: v
 			}, s));
@@ -2309,48 +2336,48 @@ Q.prototype = {
 		function _(r) {
 			return h("dragOverCompleted", { insertion: r }), r && (l ? c._hideClone() : c._showClone(p), p !== d && (B(G, X ? X.options.ghostClass : c.options.ghostClass, !1), B(G, o.ghostClass, !0)), X !== p && p !== Q.active ? X = p : p === Q.active && X && (X = null), d === p && (p._ignoreWhileAnimating = n), p.animateAll(function() {
 				h("dragOverAnimationComplete"), p._ignoreWhileAnimating = null;
-			}), p !== d && (d.animateAll(), d._ignoreWhileAnimating = null)), (n === G && !G.animated || n === t && !n.animated) && (Ci = null), !o.dragoverBubble && !e.rootEl && n !== document && (G.parentNode[Xr]._isOutsideThisEl(e.target), !r && Hi(e)), !o.dragoverBubble && e.stopPropagation && e.stopPropagation(), m = !0;
+			}), p !== d && (d.animateAll(), d._ignoreWhileAnimating = null)), (n === G && !G.animated || n === t && !n.animated) && (ci = null), !o.dragoverBubble && !e.rootEl && n !== document && (G.parentNode[Fr]._isOutsideThisEl(e.target), !r && Di(e)), !o.dragoverBubble && e.stopPropagation && e.stopPropagation(), m = !0;
 		}
 		function v() {
-			li = zr(G), di = zr(G, o.draggable), W({
+			Jr = wr(G), Xr = wr(G, o.draggable), W({
 				sortable: p,
 				name: "change",
 				toEl: t,
-				newIndex: li,
-				newDraggableIndex: di,
+				newIndex: Jr,
+				newDraggableIndex: Xr,
 				originalEvent: e
 			});
 		}
-		if (e.preventDefault !== void 0 && e.cancelable && e.preventDefault(), n = jr(n, o.draggable, t, !0), h("dragOver"), Q.eventCanceled) return m;
+		if (e.preventDefault !== void 0 && e.cancelable && e.preventDefault(), n = gr(n, o.draggable, t, !0), h("dragOver"), Q.eventCanceled) return m;
 		if (G.contains(e.target) || n.animated && n.animatingX && n.animatingY || p._ignoreWhileAnimating === n) return _(!1);
-		if (mi = !1, c && !o.disabled && (l ? u || (a = K !== J) : X === this || (this.lastPutMode = fi.checkPull(this, c, G, e)) && s.checkPut(this, c, G, e))) {
+		if ($r = !1, c && !o.disabled && (l ? u || (a = K !== J) : X === this || (this.lastPutMode = Zr.checkPull(this, c, G, e)) && s.checkPut(this, c, G, e))) {
 			if (f = this._getDirection(e, n) === "vertical", r = H(G), h("dragOverValid"), Q.eventCanceled) return m;
-			if (a) return K = J, g(), this._hideClone(), h("revert"), Q.eventCanceled || (ai ? J.insertBefore(G, ai) : J.appendChild(G)), _(!0);
-			var y = Rr(t, o.draggable);
-			if (!y || Yi(e, f, this) && !y.animated) {
+			if (a) return K = J, g(), this._hideClone(), h("revert"), Q.eventCanceled || (Wr ? J.insertBefore(G, Wr) : J.appendChild(G)), _(!0);
+			var y = Cr(t, o.draggable);
+			if (!y || Pi(e, f, this) && !y.animated) {
 				if (y === G) return _(!1);
-				if (y && t === e.target && (n = y), n && (i = H(n)), Gi(J, t, G, r, n, i, e, !!n) !== !1) return g(), t.appendChild(G), K = t, v(), _(!0);
-			} else if (y && Ji(e, f, this)) {
-				var b = Lr(t, 0, o, !0);
+				if (y && t === e.target && (n = y), n && (i = H(n)), Ai(J, t, G, r, n, i, e, !!n) !== !1) return g(), t.appendChild(G), K = t, v(), _(!0);
+			} else if (y && Ni(e, f, this)) {
+				var b = Sr(t, 0, o, !0);
 				if (b === G) return _(!1);
-				if (n = b, i = H(n), Gi(J, t, G, r, n, i, e, !1) !== !1) return g(), t.insertBefore(G, b), K = t, v(), _(!0);
+				if (n = b, i = H(n), Ai(J, t, G, r, n, i, e, !1) !== !1) return g(), t.insertBefore(G, b), K = t, v(), _(!0);
 			} else if (n.parentNode === t) {
 				i = H(n);
-				var x = 0, S, C = G.parentNode !== t, w = !Li(G.animated && G.toRect || r, n.animated && n.toRect || i, f), T = f ? "top" : "left", E = Ir(n, "top", "top") || Ir(G, "top", "top"), D = E ? E.scrollTop : void 0;
-				Ci !== n && (S = i[T], Ti = !1, Ei = !w && o.invertSwap || C), x = Xi(e, n, i, f, w ? 1 : o.swapThreshold, o.invertedSwapThreshold == null ? o.swapThreshold : o.invertedSwapThreshold, Ei, Ci === n);
+				var x = 0, S, C = G.parentNode !== t, w = !Si(G.animated && G.toRect || r, n.animated && n.toRect || i, f), T = f ? "top" : "left", E = xr(n, "top", "top") || xr(G, "top", "top"), D = E ? E.scrollTop : void 0;
+				ci !== n && (S = i[T], ui = !1, di = !w && o.invertSwap || C), x = Fi(e, n, i, f, w ? 1 : o.swapThreshold, o.invertedSwapThreshold == null ? o.swapThreshold : o.invertedSwapThreshold, di, ci === n);
 				var O;
 				if (x !== 0) {
-					var k = zr(G);
+					var k = wr(G);
 					do
 						k -= x, O = K.children[k];
 					while (O && (V(O, "display") === "none" || O === q));
 				}
 				if (x === 0 || O === n) return _(!1);
-				Ci = n, wi = x;
+				ci = n, li = x;
 				var A = n.nextElementSibling, j = !1;
 				j = x === 1;
-				var M = Gi(J, t, G, r, n, i, e, j);
-				if (M !== !1) return (M === 1 || M === -1) && (j = M === 1), ki = !0, setTimeout(qi, 30), g(), j && !A ? t.appendChild(G) : n.parentNode.insertBefore(G, j ? A : n), E && Jr(E, 0, D - E.scrollTop), K = G.parentNode, S !== void 0 && !Ei && (Di = Math.abs(S - H(n)[T])), v(), _(!0);
+				var M = Ai(J, t, G, r, n, i, e, j);
+				if (M !== !1) return (M === 1 || M === -1) && (j = M === 1), mi = !0, setTimeout(Mi, 30), g(), j && !A ? t.appendChild(G) : n.parentNode.insertBefore(G, j ? A : n), E && Nr(E, 0, D - E.scrollTop), K = G.parentNode, S !== void 0 && !di && (fi = Math.abs(S - H(n)[T])), v(), _(!0);
 			}
 			if (t.contains(G)) return _(!1);
 		}
@@ -2358,7 +2385,7 @@ Q.prototype = {
 	},
 	_ignoreWhileAnimating: null,
 	_offMoveEvents: function() {
-		z(document, "mousemove", this._onTouchMove), z(document, "touchmove", this._onTouchMove), z(document, "pointermove", this._onTouchMove), z(document, "dragover", Hi), z(document, "mousemove", Hi), z(document, "touchmove", Hi);
+		z(document, "mousemove", this._onTouchMove), z(document, "touchmove", this._onTouchMove), z(document, "pointermove", this._onTouchMove), z(document, "dragover", Di), z(document, "mousemove", Di), z(document, "touchmove", Di);
 	},
 	_offUpEvents: function() {
 		var e = this.el.ownerDocument;
@@ -2366,18 +2393,18 @@ Q.prototype = {
 	},
 	_onDrop: function(e) {
 		var t = this.el, n = this.options;
-		if (li = zr(G), di = zr(G, n.draggable), U("drop", this, { evt: e }), K = G && G.parentNode, li = zr(G), di = zr(G, n.draggable), Q.eventCanceled) {
+		if (Jr = wr(G), Xr = wr(G, n.draggable), U("drop", this, { evt: e }), K = G && G.parentNode, Jr = wr(G), Xr = wr(G, n.draggable), Q.eventCanceled) {
 			this._nulling();
 			return;
 		}
-		pi = !1, Ei = !1, Ti = !1, clearInterval(this._loopId), clearTimeout(this._dragStartTimer), ta(this.cloneId), ta(this._dragStartId), this.nativeDraggable && (z(document, "drop", this), z(t, "dragstart", this._onDragStart)), this._offMoveEvents(), this._offUpEvents(), Tr && V(document.body, "user-select", ""), V(G, "transform", ""), e && (Si && (e.cancelable && e.preventDefault(), !n.dropBubble && e.stopPropagation()), q && q.parentNode && q.parentNode.removeChild(q), (J === K || X && X.lastPutMode !== "clone") && Y && Y.parentNode && Y.parentNode.removeChild(Y), G && (this.nativeDraggable && z(G, "dragend", this), Ki(G), G.style["will-change"] = "", Si && !pi && B(G, X ? X.options.ghostClass : this.options.ghostClass, !1), B(G, this.options.chosenClass, !1), W({
+		Qr = !1, di = !1, ui = !1, clearInterval(this._loopId), clearTimeout(this._dragStartTimer), Bi(this.cloneId), Bi(this._dragStartId), this.nativeDraggable && (z(document, "drop", this), z(t, "dragstart", this._onDragStart)), this._offMoveEvents(), this._offUpEvents(), ur && V(document.body, "user-select", ""), V(G, "transform", ""), e && (si && (e.cancelable && e.preventDefault(), !n.dropBubble && e.stopPropagation()), q && q.parentNode && q.parentNode.removeChild(q), (J === K || X && X.lastPutMode !== "clone") && Y && Y.parentNode && Y.parentNode.removeChild(Y), G && (this.nativeDraggable && z(G, "dragend", this), ji(G), G.style["will-change"] = "", si && !Qr && B(G, X ? X.options.ghostClass : this.options.ghostClass, !1), B(G, this.options.chosenClass, !1), W({
 			sortable: this,
 			name: "unchoose",
 			toEl: K,
 			newIndex: null,
 			newDraggableIndex: null,
 			originalEvent: e
-		}), J === K ? li !== ci && li >= 0 && (W({
+		}), J === K ? Jr !== qr && Jr >= 0 && (W({
 			sortable: this,
 			name: "update",
 			toEl: K,
@@ -2387,7 +2414,7 @@ Q.prototype = {
 			name: "sort",
 			toEl: K,
 			originalEvent: e
-		})) : (li >= 0 && (W({
+		})) : (Jr >= 0 && (W({
 			rootEl: K,
 			name: "add",
 			toEl: K,
@@ -2409,7 +2436,7 @@ Q.prototype = {
 			name: "sort",
 			toEl: K,
 			originalEvent: e
-		})), X && X.save()), Q.active && ((li == null || li === -1) && (li = ci, di = ui), W({
+		})), X && X.save()), Q.active && ((Jr == null || Jr === -1) && (Jr = qr, Xr = Yr), W({
 			sortable: this,
 			name: "end",
 			toEl: K,
@@ -2417,9 +2444,9 @@ Q.prototype = {
 		}), this.save()))), this._nulling();
 	},
 	_nulling: function() {
-		U("nulling", this), J = G = K = q = ai = Y = oi = si = gi = _i = Si = li = di = ci = ui = Ci = wi = X = fi = Q.dragged = Q.ghost = Q.clone = Q.active = null, Ai.forEach(function(e) {
+		U("nulling", this), J = G = K = q = Wr = Y = Gr = Kr = ti = ni = si = Jr = Xr = qr = Yr = ci = li = X = Zr = Q.dragged = Q.ghost = Q.clone = Q.active = null, hi.forEach(function(e) {
 			e.checked = !0;
-		}), Ai.length = vi = yi = 0;
+		}), hi.length = ri = ii = 0;
 	},
 	handleEvent: function(e) {
 		switch (e.type) {
@@ -2429,7 +2456,7 @@ Q.prototype = {
 				break;
 			case "dragenter":
 			case "dragover":
-				G && (this._onDragOver(e), Wi(e));
+				G && (this._onDragOver(e), ki(e));
 				break;
 			case "selectstart":
 				e.preventDefault();
@@ -2437,14 +2464,14 @@ Q.prototype = {
 		}
 	},
 	toArray: function() {
-		for (var e = [], t, n = this.el.children, r = 0, i = n.length, a = this.options; r < i; r++) t = n[r], jr(t, a.draggable, this.el, !1) && e.push(t.getAttribute(a.dataIdAttr) || Qi(t));
+		for (var e = [], t, n = this.el.children, r = 0, i = n.length, a = this.options; r < i; r++) t = n[r], gr(t, a.draggable, this.el, !1) && e.push(t.getAttribute(a.dataIdAttr) || Li(t));
 		return e;
 	},
 	sort: function(e, t) {
 		var n = {}, r = this.el;
 		this.toArray().forEach(function(e, t) {
 			var i = r.children[t];
-			jr(i, this.options.draggable, r, !1) && (n[e] = i);
+			gr(i, this.options.draggable, r, !1) && (n[e] = i);
 		}, this), t && this.captureAnimationState(), e.forEach(function(e) {
 			n[e] && (r.removeChild(n[e]), r.appendChild(n[e]));
 		}), t && this.animateAll();
@@ -2454,25 +2481,25 @@ Q.prototype = {
 		e && e.set && e.set(this);
 	},
 	closest: function(e, t) {
-		return jr(e, t || this.options.draggable, this.el, !1);
+		return gr(e, t || this.options.draggable, this.el, !1);
 	},
 	option: function(e, t) {
 		var n = this.options;
 		if (t === void 0) return n[e];
-		var r = ni.modifyOption(this, e, t);
-		r === void 0 ? n[e] = t : n[e] = r, e === "group" && zi(n);
+		var r = Vr.modifyOption(this, e, t);
+		r === void 0 ? n[e] = t : n[e] = r, e === "group" && wi(n);
 	},
 	destroy: function() {
 		U("destroy", this);
 		var e = this.el;
-		e[Xr] = null, z(e, "mousedown", this._onTapStart), z(e, "touchstart", this._onTapStart), z(e, "pointerdown", this._onTapStart), this.nativeDraggable && (z(e, "dragover", this), z(e, "dragenter", this)), Array.prototype.forEach.call(e.querySelectorAll("[draggable]"), function(e) {
+		e[Fr] = null, z(e, "mousedown", this._onTapStart), z(e, "touchstart", this._onTapStart), z(e, "pointerdown", this._onTapStart), this.nativeDraggable && (z(e, "dragover", this), z(e, "dragenter", this)), Array.prototype.forEach.call(e.querySelectorAll("[draggable]"), function(e) {
 			e.removeAttribute("draggable");
-		}), this._onDrop(), this._disableDelayedDragEvents(), hi.splice(hi.indexOf(this.el), 1), this.el = e = null;
+		}), this._onDrop(), this._disableDelayedDragEvents(), ei.splice(ei.indexOf(this.el), 1), this.el = e = null;
 	},
 	_hideClone: function() {
-		if (!si) {
+		if (!Kr) {
 			if (U("hideClone", this), Q.eventCanceled) return;
-			V(Y, "display", "none"), this.options.removeCloneOnHide && Y.parentNode && Y.parentNode.removeChild(Y), si = !0;
+			V(Y, "display", "none"), this.options.removeCloneOnHide && Y.parentNode && Y.parentNode.removeChild(Y), Kr = !0;
 		}
 	},
 	_showClone: function(e) {
@@ -2480,99 +2507,99 @@ Q.prototype = {
 			this._hideClone();
 			return;
 		}
-		if (si) {
+		if (Kr) {
 			if (U("showClone", this), Q.eventCanceled) return;
-			G.parentNode == J && !this.options.group.revertClone ? J.insertBefore(Y, G) : ai ? J.insertBefore(Y, ai) : J.appendChild(Y), this.options.group.revertClone && this.animate(G, Y), V(Y, "display", ""), si = !1;
+			G.parentNode == J && !this.options.group.revertClone ? J.insertBefore(Y, G) : Wr ? J.insertBefore(Y, Wr) : J.appendChild(Y), this.options.group.revertClone && this.animate(G, Y), V(Y, "display", ""), Kr = !1;
 		}
 	}
 };
-function Wi(e) {
+function ki(e) {
 	e.dataTransfer && (e.dataTransfer.dropEffect = "move"), e.cancelable && e.preventDefault();
 }
-function Gi(e, t, n, r, i, a, o, s) {
-	var c, l = e[Xr], u = l.options.onMove, d;
-	return window.CustomEvent && !Sr && !Cr ? c = new CustomEvent("move", {
+function Ai(e, t, n, r, i, a, o, s) {
+	var c, l = e[Fr], u = l.options.onMove, d;
+	return window.CustomEvent && !sr && !cr ? c = new CustomEvent("move", {
 		bubbles: !0,
 		cancelable: !0
 	}) : (c = document.createEvent("Event"), c.initEvent("move", !0, !0)), c.to = t, c.from = e, c.dragged = n, c.draggedRect = r, c.related = i || t, c.relatedRect = a || H(t), c.willInsertAfter = s, c.originalEvent = o, e.dispatchEvent(c), u && (d = u.call(l, c, o)), d;
 }
-function Ki(e) {
+function ji(e) {
 	e.draggable = !1;
 }
-function qi() {
-	ki = !1;
+function Mi() {
+	mi = !1;
 }
-function Ji(e, t, n) {
-	var r = H(Lr(n.el, 0, n.options, !0)), i = 10;
+function Ni(e, t, n) {
+	var r = H(Sr(n.el, 0, n.options, !0)), i = 10;
 	return t ? e.clientX < r.left - i || e.clientY < r.top && e.clientX < r.right : e.clientY < r.top - i || e.clientY < r.bottom && e.clientX < r.left;
 }
-function Yi(e, t, n) {
-	var r = H(Rr(n.el, n.options.draggable)), i = 10;
+function Pi(e, t, n) {
+	var r = H(Cr(n.el, n.options.draggable)), i = 10;
 	return t ? e.clientX > r.right + i || e.clientX <= r.right && e.clientY > r.bottom && e.clientX >= r.left : e.clientX > r.right && e.clientY > r.top || e.clientX <= r.right && e.clientY > r.bottom + i;
 }
-function Xi(e, t, n, r, i, a, o, s) {
+function Fi(e, t, n, r, i, a, o, s) {
 	var c = r ? e.clientY : e.clientX, l = r ? n.height : n.width, u = r ? n.top : n.left, d = r ? n.bottom : n.right, f = !1;
 	if (!o) {
-		if (s && Di < l * i) {
-			if (!Ti && (wi === 1 ? c > u + l * a / 2 : c < d - l * a / 2) && (Ti = !0), Ti) f = !0;
-			else if (wi === 1 ? c < u + Di : c > d - Di) return -wi;
-		} else if (c > u + l * (1 - i) / 2 && c < d - l * (1 - i) / 2) return Zi(t);
+		if (s && fi < l * i) {
+			if (!ui && (li === 1 ? c > u + l * a / 2 : c < d - l * a / 2) && (ui = !0), ui) f = !0;
+			else if (li === 1 ? c < u + fi : c > d - fi) return -li;
+		} else if (c > u + l * (1 - i) / 2 && c < d - l * (1 - i) / 2) return Ii(t);
 	}
 	return f ||= o, f && (c < u + l * a / 2 || c > d - l * a / 2) ? c > u + l / 2 ? 1 : -1 : 0;
 }
-function Zi(e) {
-	return zr(G) < zr(e) ? 1 : -1;
+function Ii(e) {
+	return wr(G) < wr(e) ? 1 : -1;
 }
-function Qi(e) {
+function Li(e) {
 	for (var t = e.tagName + e.className + e.src + e.href + e.textContent, n = t.length, r = 0; n--;) r += t.charCodeAt(n);
 	return r.toString(36);
 }
-function $i(e) {
-	Ai.length = 0;
+function Ri(e) {
+	hi.length = 0;
 	for (var t = e.getElementsByTagName("input"), n = t.length; n--;) {
 		var r = t[n];
-		r.checked && Ai.push(r);
+		r.checked && hi.push(r);
 	}
 }
-function ea(e) {
+function zi(e) {
 	return setTimeout(e, 0);
 }
-function ta(e) {
+function Bi(e) {
 	return clearTimeout(e);
 }
-ji && R(document, "touchmove", function(e) {
-	(Q.active || pi) && e.cancelable && e.preventDefault();
+gi && R(document, "touchmove", function(e) {
+	(Q.active || Qr) && e.cancelable && e.preventDefault();
 }), Q.utils = {
 	on: R,
 	off: z,
 	css: V,
-	find: Pr,
+	find: yr,
 	is: function(e, t) {
-		return !!jr(e, t, e, !1);
+		return !!gr(e, t, e, !1);
 	},
-	extend: Ur,
-	throttle: Kr,
-	closest: jr,
+	extend: Or,
+	throttle: jr,
+	closest: gr,
 	toggleClass: B,
-	clone: Yr,
-	index: zr,
-	nextTick: ea,
-	cancelNextTick: ta,
-	detectDirection: Ii,
-	getChild: Lr
+	clone: Pr,
+	index: wr,
+	nextTick: zi,
+	cancelNextTick: Bi,
+	detectDirection: xi,
+	getChild: Sr
 }, Q.get = function(e) {
-	return e[Xr];
+	return e[Fr];
 }, Q.mount = function() {
 	var e = [...arguments];
 	e[0].constructor === Array && (e = e[0]), e.forEach(function(e) {
 		if (!e.prototype || !e.prototype.constructor) throw `Sortable: Mounted plugin must be a constructor function, not ${{}.toString.call(e)}`;
-		e.utils && (Q.utils = mr(mr({}, Q.utils), e.utils)), ni.mount(e);
+		e.utils && (Q.utils = $n($n({}, Q.utils), e.utils)), Vr.mount(e);
 	});
 }, Q.create = function(e, t) {
 	return new Q(e, t);
-}, Q.version = br;
-var $ = [], na, ra, ia = !1, aa, oa, sa, ca;
-function la() {
+}, Q.version = ar;
+var $ = [], Vi, Hi, Ui = !1, Wi, Gi, Ki, qi;
+function Ji() {
 	function e() {
 		for (var e in this.defaults = {
 			scroll: !0,
@@ -2592,63 +2619,63 @@ function la() {
 			!this.options.dragOverBubble && !t.rootEl && this._handleAutoScroll(t);
 		},
 		drop: function() {
-			this.sortable.nativeDraggable ? z(document, "dragover", this._handleAutoScroll) : (z(document, "pointermove", this._handleFallbackAutoScroll), z(document, "touchmove", this._handleFallbackAutoScroll), z(document, "mousemove", this._handleFallbackAutoScroll)), da(), ua(), qr();
+			this.sortable.nativeDraggable ? z(document, "dragover", this._handleAutoScroll) : (z(document, "pointermove", this._handleFallbackAutoScroll), z(document, "touchmove", this._handleFallbackAutoScroll), z(document, "mousemove", this._handleFallbackAutoScroll)), Xi(), Yi(), Mr();
 		},
 		nulling: function() {
-			sa = ra = na = ia = ca = aa = oa = null, $.length = 0;
+			Ki = Hi = Vi = Ui = qi = Wi = Gi = null, $.length = 0;
 		},
 		_handleFallbackAutoScroll: function(e) {
 			this._handleAutoScroll(e, !0);
 		},
 		_handleAutoScroll: function(e, t) {
 			var n = this, r = (e.touches ? e.touches[0] : e).clientX, i = (e.touches ? e.touches[0] : e).clientY, a = document.elementFromPoint(r, i);
-			if (sa = e, t || this.options.forceAutoScrollFallback || Cr || Sr || Tr) {
-				fa(e, this.options, a, t);
-				var o = Hr(a, !0);
-				ia && (!ca || r !== aa || i !== oa) && (ca && da(), ca = setInterval(function() {
-					var a = Hr(document.elementFromPoint(r, i), !0);
-					a !== o && (o = a, ua()), fa(e, n.options, a, t);
-				}, 10), aa = r, oa = i);
+			if (Ki = e, t || this.options.forceAutoScrollFallback || cr || sr || ur) {
+				Zi(e, this.options, a, t);
+				var o = Dr(a, !0);
+				Ui && (!qi || r !== Wi || i !== Gi) && (qi && Xi(), qi = setInterval(function() {
+					var a = Dr(document.elementFromPoint(r, i), !0);
+					a !== o && (o = a, Yi()), Zi(e, n.options, a, t);
+				}, 10), Wi = r, Gi = i);
 			} else {
-				if (!this.options.bubbleScroll || Hr(a, !0) === Fr()) {
-					ua();
+				if (!this.options.bubbleScroll || Dr(a, !0) === br()) {
+					Yi();
 					return;
 				}
-				fa(e, this.options, Hr(a, !1), !1);
+				Zi(e, this.options, Dr(a, !1), !1);
 			}
 		}
-	}, _r(e, {
+	}, nr(e, {
 		pluginName: "scroll",
 		initializeByDefault: !0
 	});
 }
-function ua() {
+function Yi() {
 	$.forEach(function(e) {
 		clearInterval(e.pid);
 	}), $ = [];
 }
-function da() {
-	clearInterval(ca);
+function Xi() {
+	clearInterval(qi);
 }
-var fa = Kr(function(e, t, n, r) {
+var Zi = jr(function(e, t, n, r) {
 	if (t.scroll) {
-		var i = (e.touches ? e.touches[0] : e).clientX, a = (e.touches ? e.touches[0] : e).clientY, o = t.scrollSensitivity, s = t.scrollSpeed, c = Fr(), l = !1, u;
-		ra !== n && (ra = n, ua(), na = t.scroll, u = t.scrollFn, na === !0 && (na = Hr(n, !0)));
-		var d = 0, f = na;
+		var i = (e.touches ? e.touches[0] : e).clientX, a = (e.touches ? e.touches[0] : e).clientY, o = t.scrollSensitivity, s = t.scrollSpeed, c = br(), l = !1, u;
+		Hi !== n && (Hi = n, Yi(), Vi = t.scroll, u = t.scrollFn, Vi === !0 && (Vi = Dr(n, !0)));
+		var d = 0, f = Vi;
 		do {
 			var p = f, m = H(p), h = m.top, g = m.bottom, _ = m.left, v = m.right, y = m.width, b = m.height, x = void 0, S = void 0, C = p.scrollWidth, w = p.scrollHeight, T = V(p), E = p.scrollLeft, D = p.scrollTop;
 			p === c ? (x = y < C && (T.overflowX === "auto" || T.overflowX === "scroll" || T.overflowX === "visible"), S = b < w && (T.overflowY === "auto" || T.overflowY === "scroll" || T.overflowY === "visible")) : (x = y < C && (T.overflowX === "auto" || T.overflowX === "scroll"), S = b < w && (T.overflowY === "auto" || T.overflowY === "scroll"));
 			var O = x && (Math.abs(v - i) <= o && E + y < C) - (Math.abs(_ - i) <= o && !!E), k = S && (Math.abs(g - a) <= o && D + b < w) - (Math.abs(h - a) <= o && !!D);
 			if (!$[d]) for (var A = 0; A <= d; A++) $[A] || ($[A] = {});
 			($[d].vx != O || $[d].vy != k || $[d].el !== p) && ($[d].el = p, $[d].vx = O, $[d].vy = k, clearInterval($[d].pid), (O != 0 || k != 0) && (l = !0, $[d].pid = setInterval(function() {
-				r && this.layer === 0 && Q.active._onTouchMove(sa);
+				r && this.layer === 0 && Q.active._onTouchMove(Ki);
 				var t = $[this.layer].vy ? $[this.layer].vy * s : 0, n = $[this.layer].vx ? $[this.layer].vx * s : 0;
-				typeof u == "function" && u.call(Q.dragged.parentNode[Xr], n, t, e, sa, $[this.layer].el) !== "continue" || Jr($[this.layer].el, n, t);
+				typeof u == "function" && u.call(Q.dragged.parentNode[Fr], n, t, e, Ki, $[this.layer].el) !== "continue" || Nr($[this.layer].el, n, t);
 			}.bind({ layer: d }), 24))), d++;
-		} while (t.bubbleScroll && f !== c && (f = Hr(f, !1)));
-		ia = l;
+		} while (t.bubbleScroll && f !== c && (f = Dr(f, !1)));
+		Ui = l;
 	}
-}, 30), pa = function(e) {
+}, 30), Qi = function(e) {
 	var t = e.originalEvent, n = e.putSortable, r = e.dragEl, i = e.activeSortable, a = e.dispatchSortableEvent, o = e.hideGhostForTarget, s = e.unhideGhostForTarget;
 	if (t) {
 		var c = n || i;
@@ -2660,8 +2687,8 @@ var fa = Kr(function(e, t, n, r) {
 		}));
 	}
 };
-function ma() {}
-ma.prototype = {
+function $i() {}
+$i.prototype = {
 	startIndex: null,
 	dragStart: function(e) {
 		this.startIndex = e.oldDraggableIndex;
@@ -2669,36 +2696,36 @@ ma.prototype = {
 	onSpill: function(e) {
 		var t = e.dragEl, n = e.putSortable;
 		this.sortable.captureAnimationState(), n && n.captureAnimationState();
-		var r = Lr(this.sortable.el, this.startIndex, this.options);
+		var r = Sr(this.sortable.el, this.startIndex, this.options);
 		r ? this.sortable.el.insertBefore(t, r) : this.sortable.el.appendChild(t), this.sortable.animateAll(), n && n.animateAll();
 	},
-	drop: pa
-}, _r(ma, { pluginName: "revertOnSpill" });
-function ha() {}
-ha.prototype = {
+	drop: Qi
+}, nr($i, { pluginName: "revertOnSpill" });
+function ea() {}
+ea.prototype = {
 	onSpill: function(e) {
 		var t = e.dragEl, n = e.putSortable || this.sortable;
 		n.captureAnimationState(), t.parentNode && t.parentNode.removeChild(t), n.animateAll();
 	},
-	drop: pa
-}, _r(ha, { pluginName: "removeOnSpill" }), Q.mount(new la()), Q.mount(ha, ma);
+	drop: Qi
+}, nr(ea, { pluginName: "removeOnSpill" }), Q.mount(new Ji()), Q.mount(ea, $i);
 //#endregion
 //#region resources/js/support/filters.ts
-var ga = {
+var ta = {
 	customer: "",
 	status: "",
 	search: "",
 	unbilled: ""
 };
-function _a(e) {
+function na(e) {
 	return {
-		customer: Ta(e.customer),
-		status: Ta(e.status),
-		search: wa(e.search).slice(0, 200),
+		customer: ua(e.customer),
+		status: ua(e.status),
+		search: la(e.search).slice(0, 200),
 		unbilled: e.unbilled === "1" ? "1" : ""
 	};
 }
-function va(e) {
+function ra(e) {
 	let t = {};
 	for (let n of [
 		"customer",
@@ -2708,10 +2735,10 @@ function va(e) {
 	]) e[n] !== "" && (t[n] = e[n]);
 	return t;
 }
-function ya(e) {
+function ia(e) {
 	return e.customer !== "" || e.status !== "" || e.search !== "" || e.unbilled !== "";
 }
-function ba(e) {
+function aa(e) {
 	return [
 		e.customer,
 		e.status,
@@ -2719,36 +2746,36 @@ function ba(e) {
 		e.unbilled
 	].join("|");
 }
-function xa(e, t) {
+function oa(e, t) {
 	return e.customer === t.customer && e.status === t.status && e.search === t.search && e.unbilled === t.unbilled;
 }
-function Sa(e) {
+function sa(e) {
 	let t = Number(e);
 	return e !== "" && Number.isInteger(t) && t > 0 ? t : null;
 }
-function Ca(e) {
-	let t = {}, n = Sa(e.customer);
+function ca(e) {
+	let t = {}, n = sa(e.customer);
 	n !== null && (t.customer_id = n);
-	let r = Sa(e.status);
+	let r = sa(e.status);
 	return r !== null && (t.status_id = r), e.search !== "" && (t.search = e.search), e.unbilled === "1" && (t.unbilled_only = !0), t;
 }
-function wa(e) {
+function la(e) {
 	let t = Array.isArray(e) ? e[0] : e;
 	return typeof t == "string" ? t.trim() : "";
 }
-function Ta(e) {
-	let t = wa(e);
-	return Sa(t) === null ? "" : t;
+function ua(e) {
+	let t = la(e);
+	return sa(t) === null ? "" : t;
 }
 //#endregion
 //#region resources/js/components/TripCard.vue?vue&type=script&setup=true&lang.ts
-var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "text-sm font-medium text-heading" }, Oa = { class: "relative" }, ka = {
+var da = { class: "flex items-start justify-between gap-2" }, fa = { class: "text-sm font-medium text-heading" }, pa = { class: "relative" }, ma = {
 	key: 0,
 	class: "absolute end-0 z-20 mt-1 w-44 rounded-lg border border-line-default bg-surface p-1 shadow-lg"
-}, Aa = ["onClick"], ja = { class: "mt-1 text-sm text-muted" }, Ma = {
+}, ha = ["onClick"], ga = { class: "mt-1 text-sm text-muted" }, _a = {
 	key: 0,
 	class: "mt-1 text-xs text-muted"
-}, Na = { class: "mt-2 flex items-center justify-between gap-2" }, Pa = { class: "text-xs text-muted" }, Fa = /* @__PURE__ */ c({
+}, va = { class: "mt-2 flex items-center justify-between gap-2" }, ya = { class: "text-xs text-muted" }, ba = /* @__PURE__ */ c({
 	__name: "TripCard",
 	props: {
 		trip: {},
@@ -2777,12 +2804,12 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			class: d(["cursor-pointer rounded-lg border border-line-default bg-surface p-3 shadow-sm hover:bg-hover", { "opacity-50": n.trip.cancelled_at }]),
 			onClick: o[1] ||= (e) => c("open", n.trip)
 		}, [
-			a("div", Ea, [a("p", Da, " #" + b(n.trip.trip_no) + " · " + b(u.value), 1), a("div", Oa, [a("button", {
+			a("div", da, [a("p", fa, " #" + b(n.trip.trip_no) + " · " + b(u.value), 1), a("div", pa, [a("button", {
 				type: "button",
 				class: "rounded px-1 text-muted hover:text-heading",
 				"aria-label": "Trip menu",
 				onClick: E(m, ["stop"])
-			}, " ⋯ "), l.value ? (g(), i("div", ka, [
+			}, " ⋯ "), l.value ? (g(), i("div", ma, [
 				a("button", {
 					type: "button",
 					class: "block w-full rounded px-2 py-1.5 text-start text-sm text-body hover:bg-hover",
@@ -2796,7 +2823,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 					type: "button",
 					class: "block w-full rounded px-2 py-1.5 text-start text-sm text-body hover:bg-hover",
 					onClick: (t) => h(e.id)
-				}, b(e.name), 9, Aa))), 128)),
+				}, b(e.name), 9, ha))), 128)),
 				n.trip.cancelled_at ? r("", !0) : (g(), i("button", {
 					key: 0,
 					type: "button",
@@ -2804,24 +2831,24 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 					onClick: y
 				}, " Cancel trip "))
 			])) : r("", !0)])]),
-			a("p", ja, b(f.value), 1),
-			n.trip.lorry_no ? (g(), i("p", Ma, "🚛 " + b(n.trip.lorry_no), 1)) : r("", !0),
-			a("div", Na, [a("span", Pa, b(n.trip.lr_count) + " LR" + b(n.trip.lr_count === 1 ? "" : "s") + " · " + b(x(L)(n.trip.revenue)), 1), a("span", { class: d(["text-sm font-semibold", p.value]) }, b(x(L)(n.trip.profit)), 3)])
+			a("p", ga, b(f.value), 1),
+			n.trip.lorry_no ? (g(), i("p", _a, "🚛 " + b(n.trip.lorry_no), 1)) : r("", !0),
+			a("div", va, [a("span", ya, b(n.trip.lr_count) + " LR" + b(n.trip.lr_count === 1 ? "" : "s") + " · " + b(x(L)(n.trip.revenue)), 1), a("span", { class: d(["text-sm font-semibold", p.value]) }, b(x(L)(n.trip.profit)), 3)])
 		], 2));
 	}
-}), Ia = {
+}), xa = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, La = {
+}, Sa = {
 	key: 1,
 	class: "rounded-2xl border border-line-default bg-surface p-12 text-center"
-}, Ra = {
+}, Ca = {
 	key: 2,
 	class: "flex items-stretch gap-4 overflow-x-auto pb-4"
-}, za = { class: "flex shrink-0 items-center gap-2 border-b border-line-default bg-surface-secondary/60 px-3 py-2.5" }, Ba = { class: "truncate text-sm font-semibold text-heading" }, Va = { class: "ml-auto shrink-0 rounded-full bg-surface-tertiary px-2 py-0.5 text-xs font-medium text-muted" }, Ha = ["data-status-id"], Ua = ["data-trip-id"], Wa = {
+}, wa = { class: "flex shrink-0 items-center gap-2 border-b border-line-default bg-surface-secondary/60 px-3 py-2.5" }, Ta = { class: "truncate text-sm font-semibold text-heading" }, Ea = { class: "ml-auto shrink-0 rounded-full bg-surface-tertiary px-2 py-0.5 text-xs font-medium text-muted" }, Da = ["data-status-id"], Oa = ["data-trip-id"], ka = {
 	key: 0,
 	class: "rounded-lg border border-dashed border-line-default py-10 text-center text-xs text-muted"
-}, Ga = /* @__PURE__ */ c({
+}, Aa = /* @__PURE__ */ c({
 	__name: "TripsBoardView",
 	props: {
 		client: { type: [Function, Object] },
@@ -2839,7 +2866,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		async function x() {
 			l.value = !0;
 			try {
-				c.value = await Ae(o.client, Ca(o.filters));
+				c.value = await Ae(o.client, ca(o.filters));
 			} catch (e) {
 				o.notify("error", I(e, "Unable to load the board."));
 			} finally {
@@ -2848,7 +2875,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}
 		m(() => {
 			x();
-		}), C(() => ba(o.filters), () => void x()), p(() => {
+		}), C(() => aa(o.filters), () => void x()), p(() => {
 			for (let e of u.values()) e.destroy();
 			u.clear(), d.clear();
 		});
@@ -2898,11 +2925,11 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 				o.notify("error", I(e, "Unable to cancel the trip."));
 			}
 		}
-		return (t, o) => (g(), i("div", null, [l.value ? (g(), i("div", Ia, "Loading the board…")) : y.value ? (g(), i("div", La, [...o[0] ||= [
+		return (t, o) => (g(), i("div", null, [l.value ? (g(), i("div", xa, "Loading the board…")) : y.value ? (g(), i("div", Sa, [...o[0] ||= [
 			a("p", { class: "text-4xl" }, "🚛", -1),
 			a("h2", { class: "mt-3 text-lg font-semibold text-heading" }, "No trips yet", -1),
 			a("p", { class: "mt-1 text-sm text-muted" }, " Your board is empty. Create your first trip by mapping an existing LR Receipt, or by filling a new one. ", -1)
-		]])) : (g(), i("div", Ra, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("section", {
+		]])) : (g(), i("div", Ca, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("section", {
 			key: t.status.id,
 			class: "flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-line-default bg-surface shadow-sm"
 		}, [
@@ -2910,13 +2937,13 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 				class: "h-1 w-full shrink-0",
 				style: f({ backgroundColor: t.status.colour ?? "#94a3b8" })
 			}, null, 4),
-			a("header", za, [
+			a("header", wa, [
 				a("span", {
 					class: "inline-block h-2.5 w-2.5 shrink-0 rounded-full",
 					style: f({ backgroundColor: t.status.colour ?? "#94a3b8" })
 				}, null, 4),
-				a("span", Ba, b(t.status.name), 1),
-				a("span", Va, b(t.cards.length), 1)
+				a("span", Ta, b(t.status.name), 1),
+				a("span", Ea, b(t.cards.length), 1)
 			]),
 			a("div", {
 				ref_for: !0,
@@ -2926,25 +2953,25 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			}, [(g(!0), i(e, null, v(t.cards, (e) => (g(), i("div", {
 				key: e.id,
 				"data-trip-id": e.id
-			}, [s(Fa, {
+			}, [s(ba, {
 				trip: e,
 				statuses: n.statuses,
 				onOpen: E,
 				onMove: D,
 				onCancel: O
-			}, null, 8, ["trip", "statuses"])], 8, Ua))), 128)), t.cards.length === 0 ? (g(), i("p", Wa, " Drop trips here ")) : r("", !0)], 8, Ha)
+			}, null, 8, ["trip", "statuses"])], 8, Oa))), 128)), t.cards.length === 0 ? (g(), i("p", ka, " Drop trips here ")) : r("", !0)], 8, Da)
 		]))), 128))]))]));
 	}
-}), Ka = {
+}), ja = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, qa = {
+}, Ma = {
 	key: 1,
 	class: "rounded-2xl border border-line-default bg-surface p-12 text-center"
-}, Ja = {
+}, Na = {
 	key: 2,
 	class: "overflow-x-auto rounded-2xl border border-line-default bg-surface"
-}, Ya = { class: "w-full text-sm" }, Xa = ["onClick"], Za = { class: "p-3 font-medium text-heading" }, Qa = { class: "p-3 text-body" }, $a = { class: "p-3 text-body" }, eo = { class: "p-3 text-body" }, to = { class: "p-3 text-body" }, no = { class: "p-3 text-end text-body" }, ro = { class: "p-3 text-end text-body" }, io = /* @__PURE__ */ c({
+}, Pa = { class: "w-full text-sm" }, Fa = ["onClick"], Ia = { class: "p-3 font-medium text-heading" }, La = { class: "p-3 text-body" }, Ra = { class: "p-3 text-body" }, za = { class: "p-3 text-body" }, Ba = { class: "p-3 text-body" }, Va = { class: "p-3 text-end text-body" }, Ha = { class: "p-3 text-end text-body" }, Ua = /* @__PURE__ */ c({
 	__name: "TripsListView",
 	props: {
 		client: { type: [Function, Object] },
@@ -2959,7 +2986,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		async function f() {
 			s.value = !0;
 			try {
-				o.value = await Ae(r.client, Ca(r.filters));
+				o.value = await Ae(r.client, ca(r.filters));
 			} catch (e) {
 				r.notify("error", I(e, "Unable to load trips."));
 			} finally {
@@ -2968,15 +2995,15 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}
 		m(() => {
 			f();
-		}), C(() => ba(r.filters), () => void f());
+		}), C(() => aa(r.filters), () => void f());
 		function p(e) {
 			r.router?.push(A.trip(e.id));
 		}
-		return (t, n) => (g(), i("div", null, [s.value ? (g(), i("div", Ka, "Loading trips…")) : c.value ? (g(), i("div", qa, [...n[0] ||= [
+		return (t, n) => (g(), i("div", null, [s.value ? (g(), i("div", ja, "Loading trips…")) : c.value ? (g(), i("div", Ma, [...n[0] ||= [
 			a("p", { class: "text-4xl" }, "🚛", -1),
 			a("h2", { class: "mt-3 text-lg font-semibold text-heading" }, "No trips found", -1),
 			a("p", { class: "mt-1 text-sm text-muted" }, "Try adjusting your filters, or create a new trip.", -1)
-		]])) : (g(), i("div", Ja, [a("table", Ya, [n[1] ||= a("thead", null, [a("tr", { class: "border-b border-line-default text-start text-xs uppercase text-muted" }, [
+		]])) : (g(), i("div", Na, [a("table", Pa, [n[1] ||= a("thead", null, [a("tr", { class: "border-b border-line-default text-start text-xs uppercase text-muted" }, [
 			a("th", { class: "p-3 text-start font-medium" }, "#"),
 			a("th", { class: "p-3 text-start font-medium" }, "Route"),
 			a("th", { class: "p-3 text-start font-medium" }, "Customer"),
@@ -2990,29 +3017,29 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			class: d(["cursor-pointer border-b border-line-light hover:bg-hover", { "opacity-50": e.cancelled_at }]),
 			onClick: (t) => p(e)
 		}, [
-			a("td", Za, "#" + b(e.trip_no), 1),
-			a("td", Qa, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1),
-			a("td", $a, b(e.customers.map((e) => e.name).filter(Boolean).join(", ") || "—"), 1),
-			a("td", eo, b(e.lorry_no ?? "—"), 1),
-			a("td", to, b(u(e.status_id)), 1),
-			a("td", no, b(x(L)(e.revenue)), 1),
-			a("td", ro, b(x(L)(e.cost)), 1),
+			a("td", Ia, "#" + b(e.trip_no), 1),
+			a("td", La, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1),
+			a("td", Ra, b(e.customers.map((e) => e.name).filter(Boolean).join(", ") || "—"), 1),
+			a("td", za, b(e.lorry_no ?? "—"), 1),
+			a("td", Ba, b(u(e.status_id)), 1),
+			a("td", Va, b(x(L)(e.revenue)), 1),
+			a("td", Ha, b(x(L)(e.cost)), 1),
 			a("td", { class: d(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(e.profit)), 3)
-		], 10, Xa))), 128))])])]))]));
+		], 10, Fa))), 128))])])]))]));
 	}
-}), ao = { class: "mb-4 flex items-center justify-between gap-3" }, oo = { class: "flex items-center gap-2" }, so = { class: "text-sm font-semibold text-heading" }, co = { class: "text-sm text-muted" }, lo = {
+}), Wa = { class: "mb-4 flex items-center justify-between gap-3" }, Ga = { class: "flex items-center gap-2" }, Ka = { class: "text-sm font-semibold text-heading" }, qa = { class: "text-sm text-muted" }, Ja = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, uo = { class: "grid grid-cols-1 gap-3 md:grid-cols-7" }, fo = { class: "mb-2 flex items-center justify-between" }, po = { class: "text-xs font-medium text-muted" }, mo = {
+}, Ya = { class: "grid grid-cols-1 gap-3 md:grid-cols-7" }, Xa = { class: "mb-2 flex items-center justify-between" }, Za = { class: "text-xs font-medium text-muted" }, Qa = {
 	key: 0,
 	class: "rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-muted"
-}, ho = { class: "flex-1 space-y-2" }, go = ["onClick"], _o = { class: "truncate text-xs font-medium text-heading" }, vo = { class: "mt-0.5 text-xs text-muted" }, yo = {
+}, $a = { class: "flex-1 space-y-2" }, eo = ["onClick"], to = { class: "truncate text-xs font-medium text-heading" }, no = { class: "mt-0.5 text-xs text-muted" }, ro = {
 	key: 0,
 	class: "mt-2 border-t border-line-light pt-1 text-xs text-muted"
-}, bo = {
+}, io = {
 	key: 0,
 	class: "mt-4"
-}, xo = { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, So = { class: "flex flex-wrap gap-2" }, Co = ["onClick"], wo = { class: "text-xs font-medium text-heading" }, To = { class: "text-xs text-muted" }, Eo = /* @__PURE__ */ c({
+}, ao = { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, oo = { class: "flex flex-wrap gap-2" }, so = ["onClick"], co = { class: "text-xs font-medium text-heading" }, lo = { class: "text-xs text-muted" }, uo = /* @__PURE__ */ c({
 	__name: "TripsWeekView",
 	props: {
 		client: { type: [Function, Object] },
@@ -3055,7 +3082,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		async function E() {
 			u.value = !0;
 			try {
-				l.value = await Ae(c.client, Ca(c.filters));
+				l.value = await Ae(c.client, ca(c.filters));
 			} catch (e) {
 				c.notify("error", I(e, "Unable to load trips."));
 			} finally {
@@ -3064,7 +3091,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}
 		m(() => {
 			E();
-		}), C(() => ba(c.filters), () => void E());
+		}), C(() => aa(c.filters), () => void E());
 		function D() {
 			let e = new Date(f.value);
 			e.setDate(e.getDate() - 7), f.value = e;
@@ -3088,7 +3115,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}
 		return (t, n) => {
 			let c = y("BaseButton");
-			return g(), i("div", null, [a("div", ao, [a("div", oo, [
+			return g(), i("div", null, [a("div", Wa, [a("div", Ga, [
 				s(c, {
 					size: "sm",
 					variant: "white",
@@ -3097,7 +3124,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 					default: w(() => [...n[0] ||= [o("←", -1)]]),
 					_: 1
 				}),
-				a("span", so, b(T.value), 1),
+				a("span", Ka, b(T.value), 1),
 				s(c, {
 					size: "sm",
 					variant: "white",
@@ -3114,25 +3141,25 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 					default: w(() => [...n[2] ||= [o("Today", -1)]]),
 					_: 1
 				})
-			]), a("span", co, b(l.value.length) + " trips this week", 1)]), u.value ? (g(), i("div", lo, "Loading the week…")) : (g(), i(e, { key: 1 }, [a("div", uo, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("div", {
+			]), a("span", qa, b(l.value.length) + " trips this week", 1)]), u.value ? (g(), i("div", Ja, "Loading the week…")) : (g(), i(e, { key: 1 }, [a("div", Ya, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("div", {
 				key: t.dateStr,
 				class: d(["flex min-h-48 flex-col rounded-xl border bg-surface p-2", t.isToday ? "border-primary-400" : "border-line-default"])
 			}, [
-				a("div", fo, [a("div", null, [a("p", po, b(t.name), 1), a("p", { class: d(["text-lg font-semibold", t.isToday ? "text-primary-500" : "text-heading"]) }, b(t.date.getDate()), 3)]), t.trips.length > 0 ? (g(), i("span", mo, b(t.trips.length), 1)) : r("", !0)]),
-				a("div", ho, [(g(!0), i(e, null, v(t.trips, (e) => (g(), i("div", {
+				a("div", Xa, [a("div", null, [a("p", Za, b(t.name), 1), a("p", { class: d(["text-lg font-semibold", t.isToday ? "text-primary-500" : "text-heading"]) }, b(t.date.getDate()), 3)]), t.trips.length > 0 ? (g(), i("span", Qa, b(t.trips.length), 1)) : r("", !0)]),
+				a("div", $a, [(g(!0), i(e, null, v(t.trips, (e) => (g(), i("div", {
 					key: e.id,
 					class: "cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover",
 					onClick: (t) => j(e)
-				}, [a("p", _o, "#" + b(e.trip_no) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("p", vo, b(e.lorry_no ?? "No lorry") + " · " + b(x(L)(e.revenue)), 1)], 8, go))), 128))]),
-				t.trips.length > 0 ? (g(), i("p", yo, b(x(L)(t.revenue)), 1)) : r("", !0)
-			], 2))), 128))]), S.value.length > 0 ? (g(), i("div", bo, [a("p", xo, " Unscheduled (" + b(S.value.length) + ") ", 1), a("div", So, [(g(!0), i(e, null, v(S.value, (e) => (g(), i("div", {
+				}, [a("p", to, "#" + b(e.trip_no) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("p", no, b(e.lorry_no ?? "No lorry") + " · " + b(x(L)(e.revenue)), 1)], 8, eo))), 128))]),
+				t.trips.length > 0 ? (g(), i("p", ro, b(x(L)(t.revenue)), 1)) : r("", !0)
+			], 2))), 128))]), S.value.length > 0 ? (g(), i("div", io, [a("p", ao, " Unscheduled (" + b(S.value.length) + ") ", 1), a("div", oo, [(g(!0), i(e, null, v(S.value, (e) => (g(), i("div", {
 				key: e.id,
 				class: "cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover",
 				onClick: (t) => j(e)
-			}, [a("p", wo, "#" + b(e.trip_no), 1), a("p", To, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1)], 8, Co))), 128))])])) : r("", !0)], 64))]);
+			}, [a("p", co, "#" + b(e.trip_no), 1), a("p", lo, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1)], 8, so))), 128))])])) : r("", !0)], 64))]);
 		};
 	}
-}), Do = { class: "mt-4 flex flex-wrap items-end gap-3" }, Oo = { class: "min-w-44 flex-1" }, ko = { class: "min-w-44 flex-1" }, Ao = { class: "min-w-44 flex-1" }, jo = { class: "flex items-center gap-1.5 pb-2.5 text-sm text-body" }, Mo = ["checked"], No = 350, Po = /* @__PURE__ */ c({
+}), fo = { class: "mt-4 flex flex-wrap items-end gap-3" }, po = { class: "min-w-44 flex-1" }, mo = { class: "min-w-44 flex-1" }, ho = { class: "min-w-44 flex-1" }, go = { class: "flex items-center gap-1.5 pb-2.5 text-sm text-body" }, _o = ["checked"], vo = 350, yo = /* @__PURE__ */ c({
 	__name: "TripFilters",
 	props: {
 		modelValue: {},
@@ -3149,11 +3176,11 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}))]), m = t({
 			get: () => v(f.value, c.modelValue.status),
 			set: (e) => b({ status: e?.id ?? "" })
-		}), h = t(() => ya(c.modelValue));
+		}), h = t(() => ia(c.modelValue));
 		C(() => c.modelValue.search, (e) => {
 			e !== u.value && (u.value = e);
 		}), C(u, (e) => {
-			clearTimeout(d), d = setTimeout(() => b({ search: e.trim() }), No);
+			clearTimeout(d), d = setTimeout(() => b({ search: e.trim() }), vo);
 		}), p(() => clearTimeout(d));
 		function v(e, t) {
 			return e.find((e) => e.id === t) ?? e[0];
@@ -3168,24 +3195,24 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			b({ unbilled: c.modelValue.unbilled === "1" ? "" : "1" });
 		}
 		function S() {
-			u.value = "", l("update:modelValue", { ...ga });
+			u.value = "", l("update:modelValue", { ...ta });
 		}
 		return (t, n) => {
 			let c = y("BaseSelectInput"), l = y("BaseCustomerSelectInput"), d = y("BaseInput");
-			return g(), i("div", Do, [
-				a("label", Oo, [n[3] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Status", -1), s(c, {
+			return g(), i("div", fo, [
+				a("label", po, [n[3] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Status", -1), s(c, {
 					modelValue: m.value,
 					"onUpdate:modelValue": n[0] ||= (e) => m.value = e,
 					options: f.value,
 					"label-key": "label"
 				}, null, 8, ["modelValue", "options"])]),
-				a("label", ko, [n[4] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Customer", -1), s(l, {
+				a("label", mo, [n[4] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Customer", -1), s(l, {
 					"model-value": e.modelValue.customer ? Number(e.modelValue.customer) : null,
 					"can-deselect": "",
 					placeholder: "All customers",
 					"onUpdate:modelValue": n[1] ||= (e) => b({ customer: e ? String(e) : "" })
 				}, null, 8, ["model-value"])]),
-				a("label", Ao, [n[5] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Search", -1), s(d, {
+				a("label", ho, [n[5] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Search", -1), s(d, {
 					modelValue: u.value,
 					"onUpdate:modelValue": n[2] ||= (e) => u.value = e,
 					type: "text",
@@ -3193,12 +3220,12 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 					autocomplete: "off",
 					placeholder: "Search route, lorry, goods..."
 				}, null, 8, ["modelValue"])]),
-				a("label", jo, [a("input", {
+				a("label", go, [a("input", {
 					type: "checkbox",
 					class: "accent-primary-600",
 					checked: e.modelValue.unbilled === "1",
 					onChange: x
-				}, null, 40, Mo), n[6] ||= o(" Unbilled only ", -1)]),
+				}, null, 40, _o), n[6] ||= o(" Unbilled only ", -1)]),
 				h.value ? (g(), i("button", {
 					key: 0,
 					type: "button",
@@ -3208,10 +3235,10 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			]);
 		};
 	}
-}), Fo = {
+}), bo = {
 	class: "inline-flex overflow-hidden rounded-lg border border-line-default",
 	"aria-label": "Trip views"
-}, Io = ["aria-current", "onClick"], Lo = { class: "max-sm:sr-only" }, Ro = /* @__PURE__ */ c({
+}, xo = ["aria-current", "onClick"], So = { class: "max-sm:sr-only" }, Co = /* @__PURE__ */ c({
 	__name: "TripViewSwitcher",
 	props: {
 		active: {},
@@ -3250,7 +3277,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		}
 		return (t, n) => {
 			let r = y("BaseIcon");
-			return g(), i("nav", Fo, [(g(), i(e, null, v(c, (e) => a("button", {
+			return g(), i("nav", bo, [(g(), i(e, null, v(c, (e) => a("button", {
 				key: e.id,
 				type: "button",
 				class: d(["flex items-center gap-1.5 border-e border-line-default px-3 py-1.5 text-sm font-medium last:border-e-0", l(e) ? "bg-primary-50 text-primary-500" : "bg-surface text-muted hover:bg-hover hover:text-heading"]),
@@ -3259,10 +3286,10 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			}, [s(r, {
 				name: e.icon,
 				class: "h-4 w-4"
-			}, null, 8, ["name"]), a("span", Lo, b(e.label), 1)], 10, Io)), 64))]);
+			}, null, 8, ["name"]), a("span", So, b(e.label), 1)], 10, xo)), 64))]);
 		};
 	}
-}), zo = { class: "flex flex-wrap items-center justify-end gap-3" }, Bo = /* @__PURE__ */ c({
+}), wo = { class: "flex flex-wrap items-center justify-end gap-3" }, To = /* @__PURE__ */ c({
 	__name: "TripsPage",
 	props: {
 		client: { type: [Function, Object] },
@@ -3270,7 +3297,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 		router: {}
 	},
 	setup(e) {
-		let r = e, i = r.router, c = _([]), l = _(!0), u = t(() => r.router.currentRoute.value), f = t(() => _a(u.value.query)), p = t(() => va(f.value)), h = t(() => String(u.value.name ?? ""));
+		let r = e, i = r.router, c = _([]), l = _(!0), u = t(() => r.router.currentRoute.value), f = t(() => na(u.value.query)), p = t(() => ra(f.value)), h = t(() => String(u.value.name ?? ""));
 		C(h, (e) => v(e)), m(() => {
 			v(h.value), b();
 		});
@@ -3291,9 +3318,9 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			}
 		}
 		function S(e) {
-			xa(e, f.value) || i.replace({
+			oa(e, f.value) || i.replace({
 				name: h.value === j.trips ? j.board : h.value,
-				query: va(e)
+				query: ra(e)
 			});
 		}
 		function T(e) {
@@ -3307,8 +3334,8 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			return g(), n(C, null, {
 				default: w(() => [
 					s(v, { title: "Trips" }, {
-						actions: w(() => [a("div", zo, [
-							s(Ro, {
+						actions: w(() => [a("div", wo, [
+							s(Co, {
 								active: h.value,
 								query: p.value,
 								onSelect: T
@@ -3349,7 +3376,7 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 						})]),
 						_: 1
 					}),
-					s(Po, {
+					s(yo, {
 						"model-value": f.value,
 						statuses: c.value,
 						"onUpdate:modelValue": S
@@ -3368,15 +3395,15 @@ var Ea = { class: "flex items-start justify-between gap-2" }, Da = { class: "tex
 			});
 		};
 	}
-}), Vo = `${O}:view-trip`;
-function Ho(e) {
+}), Eo = `${O}:view-trip`;
+function Do(e) {
 	e.registerPage({
 		id: "trips",
 		module: O,
 		path: "",
-		component: M(e, Bo),
+		component: M(e, To),
 		meta: {
-			ability: Vo,
+			ability: Eo,
 			title: "trips.title"
 		},
 		children: [
@@ -3384,9 +3411,9 @@ function Ho(e) {
 				id: "board",
 				module: O,
 				path: "",
-				component: M(e, Ga),
+				component: M(e, Aa),
 				meta: {
-					ability: Vo,
+					ability: Eo,
 					title: "trips.title"
 				}
 			},
@@ -3394,9 +3421,9 @@ function Ho(e) {
 				id: "list",
 				module: O,
 				path: "list",
-				component: M(e, io),
+				component: M(e, Ua),
 				meta: {
-					ability: Vo,
+					ability: Eo,
 					title: "trips.title"
 				}
 			},
@@ -3404,9 +3431,9 @@ function Ho(e) {
 				id: "week",
 				module: O,
 				path: "week",
-				component: M(e, Eo),
+				component: M(e, uo),
 				meta: {
-					ability: Vo,
+					ability: Eo,
 					title: "trips.title"
 				}
 			}
@@ -3415,18 +3442,18 @@ function Ho(e) {
 		id: "new",
 		module: O,
 		path: "new",
-		component: M(e, yt),
+		component: M(e, it),
 		meta: {
-			ability: Vo,
+			ability: Eo,
 			title: "trips.title"
 		}
 	}), e.registerPage({
 		id: "trip",
 		module: O,
 		path: ":id(\\d+)",
-		component: M(e, fr),
+		component: M(e, Zn),
 		meta: {
-			ability: Vo,
+			ability: Eo,
 			title: "trips.title"
 		}
 	});
@@ -3434,6 +3461,6 @@ function Ho(e) {
 //#endregion
 //#region resources/js/init.ts
 window.InvoiceShelf.booting((e, t, n) => {
-	n.addMessages(D), Ho(n), ke(n);
+	n.addMessages(D), Do(n), ke(n);
 });
 //#endregion

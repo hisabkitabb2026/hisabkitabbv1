@@ -51,8 +51,12 @@ export async function fetchTrip(client: AxiosInstance, id: number): Promise<Trip
 export async function createTripFromLrs(
   client: AxiosInstance,
   invoiceIds: number[],
+  extra?: { pickup_date?: string; notes?: string },
 ): Promise<Trip> {
-  const { data } = await client.post(`${BASE}/from-lrs`, { invoice_ids: invoiceIds })
+  const { data } = await client.post(`${BASE}/from-lrs`, {
+    invoice_ids: invoiceIds,
+    ...extra,
+  })
 
   return data.data
 }
