@@ -87,10 +87,11 @@ class PaymentService implements PaymentPdfDataProvider
             $targetAllocations = $replaceAllocations
                 ? $allocations
                 : $lockedPayment->allocations()
-                    ->get(['invoice_id', 'amount'])
+                    ->get(['invoice_id', 'amount', 'tds_amount'])
                     ->map(fn ($allocation) => [
                         'invoice_id' => (int) $allocation->invoice_id,
                         'amount' => (int) $allocation->amount,
+                        'tds_amount' => (int) ($allocation->tds_amount ?? 0),
                     ])
                     ->all();
             $customerChanged = (int) $lockedPayment->customer_id !== (int) $attributes['customer_id'];
