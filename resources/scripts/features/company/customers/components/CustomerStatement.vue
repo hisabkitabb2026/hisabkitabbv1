@@ -314,7 +314,15 @@ function setCreditAmount(index: number, value: number): void {
 }
 
 function isEligibleInvoice(invoice: Invoice): boolean {
-  return invoice.type === 'INVOICE' && invoice.status !== 'DRAFT' && invoice.due_amount > 0
+  if (invoice.type !== 'INVOICE' || invoice.status === 'DRAFT' || invoice.due_amount <= 0) {
+    return false
+  }
+  // HisabKitab: Only allow standard Invoices and Invoice Receipt template; exclude lr_receipt and lorry_receipt
+  const template = invoice.template_name
+  if (template === 'lr_receipt' || template === 'lorry_receipt') {
+    return false
+  }
+  return true
 }
 
 function allocateCreditOldestFirst(): void {

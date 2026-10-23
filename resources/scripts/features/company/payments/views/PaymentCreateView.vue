@@ -253,7 +253,7 @@ function availableInvoices(selectedInvoiceId: number): Invoice[] {
     .map(({ invoice_id }) => invoice_id)
     .filter((id) => id !== selectedInvoiceId)
   return invoiceList.value
-    .filter((invoice) => isEligibleInvoice(invoice) || invoice.id === selectedInvoiceId)
+    .filter((invoice) => isEligibleInvoice(invoice) || (selectedInvoiceId > 0 && invoice.id === selectedInvoiceId))
     .filter((invoice) => !chosenInvoiceIds.includes(invoice.id))
 }
 
@@ -261,7 +261,15 @@ function availableInvoices(selectedInvoiceId: number): Invoice[] {
 const eligibleInvoices = computed<Invoice[]>(() => invoiceList.value.filter(isEligibleInvoice))
 
 function isEligibleInvoice(invoice: Invoice): boolean {
-  return invoice.type === 'INVOICE' && invoice.status !== 'DRAFT' && invoice.due_amount > 0
+  if (invoice.type !== 'INVOICE' || invoice.status === 'DRAFT' || invoice.due_amount <= 0) {
+    return false
+  }
+  // HisabKitab: Only allow standard Invoices and Invoice Receipt template; exclude lr_receipt and lorry_receipt
+  const template = invoice.template_name
+  if (template === 'lr_receipt' || template === 'lorry_receipt') {
+    return false
+  }
+  return true
 }
 
 function onManualCustomerSelect(): void {

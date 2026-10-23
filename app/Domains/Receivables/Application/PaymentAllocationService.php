@@ -224,6 +224,14 @@ class PaymentAllocationService
             ]);
         }
 
+        // HisabKitab: Only standard Invoices and Invoice Receipt template can receive customer payments
+        $excludedTemplates = ['lr_receipt', 'lorry_receipt'];
+        if (in_array($invoice->template_name, $excludedTemplates, true)) {
+            throw ValidationException::withMessages([
+                'allocations' => ['payment_allocation_invoice_not_payable'],
+            ]);
+        }
+
         $allocatedByOtherPayments = (int) PaymentAllocation::query()
             ->where('invoice_id', $invoice->id)
             ->where('payment_id', '!=', $payment->id)
