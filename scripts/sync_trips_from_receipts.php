@@ -20,11 +20,31 @@ $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 $isExecute = in_array('--execute', $argv, true);
+$isFresh = in_array('--fresh', $argv, true);
 
 echo "============================================================\n";
 echo "  TRIP & TRANSPORT RECEIPTS HISTORICAL SYNC SCRIPT\n";
 echo "  Mode: ".($isExecute ? 'EXECUTE (Applying changes to DB)' : 'DRY RUN (Preview only, use --execute to apply)')."\n";
+if ($isFresh) {
+    echo "  Option: FRESH (Wipe existing trip records first)\n";
+}
 echo "============================================================\n\n";
+
+if ($isFresh) {
+    echo "Clearing all existing trip records...\n";
+    if ($isExecute) {
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        \Illuminate\Support\Facades\DB::table('trip_receipts')->truncate();
+        \Illuminate\Support\Facades\DB::table('trip_events')->truncate();
+        \Illuminate\Support\Facades\DB::table('trip_expenses')->truncate();
+        \Illuminate\Support\Facades\DB::table('trips')->truncate();
+        \Illuminate\Support\Facades\DB::table('media')->where('model_type', 'trip')->delete();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        echo "[✓] All Trips module records deleted successfully.\n\n";
+    } else {
+        echo "[Preview] Would wipe tables: trips, trip_receipts, trip_events, trip_expenses, and trip documents.\n\n";
+    }
+}
 
 $companies = Company::all();
 
