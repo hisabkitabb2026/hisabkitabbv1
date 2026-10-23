@@ -76,7 +76,7 @@ else
         cp .env.example .env
     fi
     echo "**** Updating .env values from container environment ****"
-    /inject.sh
+    bash /inject.sh
 fi
 
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
