@@ -83,8 +83,8 @@ FROM base AS production
     # starts neither a cron daemon nor a scheduler, so without this service
     # nothing in routes/console.php ever runs: no recurring invoices, no
     # overdue flagging, no estimate expiry. Set SCHEDULER_ENABLED=false to run
-    # the schedule from somewhere else instead.
-    # HisabKitab feature — s6-overlay removed (permission conflict with www-data user)
-
-    USER www-data
-
+    # the schedule from somewhere else instead. The service is registered in
+    # user-bundles.d/user/contents.d, where S6 Overlay 3.2.3 (serversideup v5)
+    # keeps the user bundle; an /etc/s6-overlay/s6-rc.d/user directory makes the
+    # container fail at boot.
+    COPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/
