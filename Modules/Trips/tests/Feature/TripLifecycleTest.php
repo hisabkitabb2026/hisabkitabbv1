@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use App\Domains\Accounts\Models\User;
-use App\Domains\Receivables\Application\PaymentService;
 use App\Domains\Receivables\Models\Payment;
 use App\Domains\Sales\Models\Invoice;
 use App\Domains\Sales\Models\InvoiceItem;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Modules\Trips\Application\TripLifecycleService;
@@ -29,7 +29,7 @@ beforeEach(function () {
     Artisan::call('migrate', ['--path' => 'Modules/LorryReceipt/database/migrations', '--force' => true]);
     Artisan::call('migrate', ['--path' => 'Modules/Trips/database/migrations', '--force' => true]);
 
-    \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['trip' => Trip::class]);
+    Relation::morphMap(['trip' => Trip::class]);
 
     app(TripStatusService::class)->ensureDefaults($this->companyId);
 });

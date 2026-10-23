@@ -25,7 +25,6 @@ final class TripStatusService
      */
     public const DEFAULTS = [
         ['code' => 'booked', 'name' => 'Booked', 'colour' => '#6366f1', 'is_default' => true, 'is_closed' => false],
-        ['code' => 'assigned', 'name' => 'Assigned', 'colour' => '#f59e0b', 'is_default' => false, 'is_closed' => false],
         ['code' => 'in_transit', 'name' => 'In Transit', 'colour' => '#3b82f6', 'is_default' => false, 'is_closed' => false],
         ['code' => 'delivered', 'name' => 'Delivered', 'colour' => '#10b981', 'is_default' => false, 'is_closed' => true],
     ];
@@ -33,10 +32,10 @@ final class TripStatusService
     public function ensureDefaults(int $companyId): void
     {
         DB::transaction(function () use ($companyId): void {
-            // Reassign any trips in obsolete statuses (billed, settled, cancelled) to delivered
+            // Reassign any trips in obsolete statuses (billed, settled, cancelled, assigned)
             $obsolete = TripStatus::query()
                 ->forCompany($companyId)
-                ->whereIn('code', ['billed', 'settled', 'cancelled'])
+                ->whereIn('code', ['billed', 'settled', 'cancelled', 'assigned'])
                 ->get();
 
             if ($obsolete->isNotEmpty()) {
@@ -45,23 +44,32 @@ final class TripStatusService
                     ->where('code', 'delivered')
                     ->first();
 
+                $inTransit = TripStatus::query()
+                    ->forCompany($companyId)
+                    ->where('code', 'in_transit')
+                    ->first();
+
                 if (! $delivered) {
                     $delivered = TripStatus::query()->create([
                         'company_id' => $companyId,
                         'code' => 'delivered',
                         'name' => 'Delivered',
                         'colour' => '#10b981',
-                        'position' => 4,
+                        'position' => 3,
                         'is_default' => false,
                         'is_closed' => true,
                     ]);
                 }
 
                 foreach ($obsolete as $oldStatus) {
-                    Trip::query()
-                        ->where('company_id', $companyId)
-                        ->where('status_id', $oldStatus->id)
-                        ->update(['status_id' => $delivered->id]);
+                    $target = ($oldStatus->code === 'assigned') ? ($inTransit ?? $delivered) : $delivered;
+
+                    if ($target) {
+                        Trip::query()
+                            ->where('company_id', $companyId)
+                            ->where('status_id', $oldStatus->id)
+                            ->update(['status_id' => $target->id]);
+                    }
 
                     $oldStatus->delete();
                 }
@@ -75,7 +83,7 @@ final class TripStatusService
                     ]);
                 }
             } else {
-                // Ensure the 4 canonical statuses exist and have the correct positions and properties
+                // Ensure the 3 canonical statuses exist and have the correct positions and properties
                 foreach (self::DEFAULTS as $position => $status) {
                     TripStatus::query()->updateOrCreate(
                         ['company_id' => $companyId, 'code' => $status['code']],

@@ -26,9 +26,8 @@ class TripLifecycleService
 
     private const STATUS_RANKS = [
         'booked' => 1,
-        'assigned' => 2,
-        'in_transit' => 3,
-        'delivered' => 4,
+        'in_transit' => 2,
+        'delivered' => 3,
     ];
 
     public function __construct(

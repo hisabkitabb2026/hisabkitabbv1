@@ -5,12 +5,12 @@
 use App\Domains\Accounts\Models\User;
 use App\Domains\Sales\Models\Invoice;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Modules\LorryReceipt\Application\LorryReceiptPayablesService;
 use Modules\LorryReceipt\Models\LorryPartyProfile;
 use Modules\Trips\Application\TripService;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
@@ -207,4 +207,3 @@ it('fetches and links multiple different lorry receipts matching trip LRs on dem
     expect($lorryNumbers)->toContain('LORRY-10')
         ->and($lorryNumbers)->toContain('LORRY-20');
 });
-

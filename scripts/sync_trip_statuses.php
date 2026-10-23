@@ -12,7 +12,7 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
-echo "=== SYNC TRIP STATUSES (4 STATUSES) ===\n";
+echo "=== SYNC TRIP STATUSES (3 STATUSES: Booked -> In Transit -> Delivered) ===\n";
 
 $companyIds = TripStatus::query()->distinct()->pluck('company_id');
 if ($companyIds->isEmpty()) {

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\Trips\Application\TripService;
 use Modules\Trips\Models\Trip;
+use Modules\Trips\Models\TripReceipt;
 
 /**
  * The whole trip: fields, status, documents, timeline, expenses, owner
@@ -22,7 +23,7 @@ class TripResource extends JsonResource
     {
         $service = app(TripService::class);
 
-        $lrNumbers = $this->receipts->where('type', \Modules\Trips\Models\TripReceipt::TYPE_LR)->map(fn ($r) => (string) $r->invoice_number)->filter()->unique()->values()->all();
+        $lrNumbers = $this->receipts->where('type', TripReceipt::TYPE_LR)->map(fn ($r) => (string) $r->invoice_number)->filter()->unique()->values()->all();
 
         return [
             'id' => (int) $this->id,
