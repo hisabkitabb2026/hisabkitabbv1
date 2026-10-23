@@ -48,6 +48,8 @@ class TripCardResource extends JsonResource
                 ->values(),
             'lr_count' => $lrs->count(),
             'revenue' => $money['revenue'],
+            'actual_revenue' => $money['actual_revenue'],
+            'tds_amount' => $money['tds_amount'],
             'cost' => $money['cost'],
             'profit' => $money['profit'],
             'owner_balance' => $money['owner_balance'],

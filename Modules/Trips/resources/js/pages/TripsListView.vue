@@ -33,6 +33,9 @@ const sortedTrips = computed(() => [...trips.value].sort((a, b) => b.trip_no - a
 const statusName = (statusId: number): string =>
   props.statuses.find((s) => s.id === statusId)?.name ?? '—'
 
+const statusColour = (statusId: number): string =>
+  props.statuses.find((s) => s.id === statusId)?.colour ?? '#6366f1'
+
 async function load(): Promise<void> {
   loading.value = true
 
@@ -78,7 +81,9 @@ function openTrip(trip: TripCardModel): void {
             <th class="p-3 text-start font-medium">Customer</th>
             <th class="p-3 text-start font-medium">Lorry</th>
             <th class="p-3 text-start font-medium">Status</th>
-            <th class="p-3 text-end font-medium">Revenue</th>
+            <th class="p-3 text-end font-medium">Billed Rev</th>
+            <th class="p-3 text-end font-medium">Actual Rev (Bank)</th>
+            <th class="p-3 text-end font-medium">TDS</th>
             <th class="p-3 text-end font-medium">Cost</th>
             <th class="p-3 text-end font-medium">Profit</th>
           </tr>
@@ -97,8 +102,23 @@ function openTrip(trip: TripCardModel): void {
               {{ trip.customers.map((c) => c.name).filter(Boolean).join(', ') || '—' }}
             </td>
             <td class="p-3 text-body">{{ trip.lorry_no ?? '—' }}</td>
-            <td class="p-3 text-body">{{ statusName(trip.status_id) }}</td>
-            <td class="p-3 text-end text-body">{{ formatMoney(trip.revenue) }}</td>
+            <td class="p-3 text-body">
+              <span
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                :style="{ backgroundColor: statusColour(trip.status_id) + '20', color: statusColour(trip.status_id) }"
+              >
+                {{ statusName(trip.status_id) }}
+              </span>
+            </td>
+            <td class="p-3 text-end text-body font-medium">
+              {{ trip.revenue > 0 ? formatMoney(trip.revenue) : '—' }}
+            </td>
+            <td class="p-3 text-end font-medium text-emerald-600">
+              {{ trip.actual_revenue > 0 ? formatMoney(trip.actual_revenue) : (trip.revenue > 0 ? formatMoney(0) : '—') }}
+            </td>
+            <td class="p-3 text-end font-medium text-indigo-600">
+              {{ trip.tds_amount > 0 ? formatMoney(trip.tds_amount) : '—' }}
+            </td>
             <td class="p-3 text-end text-body">{{ formatMoney(trip.cost) }}</td>
             <td
               class="p-3 text-end font-semibold"

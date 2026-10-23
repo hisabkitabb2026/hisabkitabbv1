@@ -689,10 +689,23 @@ function backToBoard(): void {
             <div class="mt-4 border-t border-line-light pt-3">
               <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">The Money</p>
 
-              <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+              <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-5">
                 <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Revenue</p>
-                  <p class="text-lg font-semibold text-heading">{{ formatMoney(trip.money.revenue) }}</p>
+                  <p class="text-xs text-muted">Billed Revenue</p>
+                  <p class="text-lg font-semibold text-heading">{{ trip.money.revenue > 0 ? formatMoney(trip.money.revenue) : '—' }}</p>
+                </div>
+                <div class="rounded-lg bg-surface-secondary p-3">
+                  <p class="text-xs text-muted">Actual Rev (Bank)</p>
+                  <p class="text-lg font-semibold text-status-green">{{ formatMoney(trip.money.actual_revenue ?? 0) }}</p>
+                  <p v-if="(trip.money.customer_due ?? 0) > 0" class="mt-0.5 text-[10px] text-muted">
+                    Due: {{ formatMoney(trip.money.customer_due) }}
+                  </p>
+                </div>
+                <div class="rounded-lg bg-surface-secondary p-3">
+                  <p class="text-xs text-muted">TDS Deducted</p>
+                  <p class="text-lg font-semibold text-indigo-600">
+                    {{ (trip.money.tds_amount ?? 0) > 0 ? formatMoney(trip.money.tds_amount) : '—' }}
+                  </p>
                 </div>
                 <div class="rounded-lg bg-surface-secondary p-3">
                   <p class="text-xs text-muted">Cost</p>
@@ -705,15 +718,6 @@ function backToBoard(): void {
                     :class="trip.money.profit >= 0 ? 'text-status-green' : 'text-status-red'"
                   >
                     {{ formatMoney(trip.money.profit) }}
-                  </p>
-                </div>
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Customer Paid</p>
-                  <p class="text-lg font-semibold text-status-green">
-                    {{ formatMoney(trip.money.customer_paid ?? 0) }}
-                  </p>
-                  <p v-if="(trip.money.customer_due ?? 0) > 0" class="mt-0.5 text-[10px] text-muted">
-                    Due: {{ formatMoney(trip.money.customer_due) }}
                   </p>
                 </div>
               </div>
@@ -730,7 +734,7 @@ function backToBoard(): void {
                     <div class="min-w-0">
                       <p class="font-medium text-heading">🧾 {{ rec.invoice_number }}</p>
                       <p class="truncate text-xs text-muted">
-                        {{ rec.customer_name ?? 'No customer' }} · Total {{ formatMoney(rec.total) }} · Due {{ formatMoney(rec.due_amount) }}
+                        {{ rec.customer_name ?? 'No customer' }} · Billed {{ formatMoney(rec.total) }} · Due {{ formatMoney(rec.due_amount) }}
                       </p>
                     </div>
                     <span
@@ -751,7 +755,12 @@ function backToBoard(): void {
                       class="flex items-center justify-between gap-2 rounded bg-surface-secondary px-2 py-1 text-xs"
                     >
                       <span class="text-muted">{{ pay.number ?? '—' }} · {{ pay.date ?? '—' }}</span>
-                      <span class="font-medium text-heading">{{ formatMoney(pay.amount) }}</span>
+                      <div class="text-right">
+                        <span class="font-medium text-heading">{{ formatMoney(pay.amount + (pay.tds_amount ?? 0)) }}</span>
+                        <span v-if="(pay.tds_amount ?? 0) > 0" class="block text-[10px] text-muted">
+                          Bank: {{ formatMoney(pay.amount) }} | TDS: {{ formatMoney(pay.tds_amount) }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -27,8 +27,9 @@ export interface TripCard {
   delivered_date: string | null
   cancelled_at: string | null
   customers: TripCustomer[]
-  lr_count: number
   revenue: number
+  actual_revenue: number
+  tds_amount: number
   cost: number
   profit: number
   owner_balance: number
@@ -68,6 +69,8 @@ export interface TripExpense {
 
 export interface TripMoney {
   revenue: number
+  actual_revenue: number
+  tds_amount: number
   cost: number
   owner_paid: number
   owner_balance: number
@@ -87,6 +90,8 @@ export interface TripReceivablePayment {
   number: string | null
   date: string | null
   amount: number
+  tds_amount?: number
+  gross_amount?: number
   notes: string | null
   method: string | null
 }
@@ -97,6 +102,8 @@ export interface TripReceivable {
   customer_name: string | null
   total: number
   due_amount: number
+  bank_amount?: number
+  tds_amount?: number
   paid_status: string
   payments: TripReceivablePayment[]
 }

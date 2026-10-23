@@ -500,13 +500,10 @@ final class TripService
      */
     public function money(Trip $trip): array
     {
-        // Revenue: prefer the Invoice Receipt (the final bill to the customer
-        // after delivery). Fall back to LR receipts when no invoice receipt is
-        // linked yet — the LR is the estimate, the invoice is the actual.
+        // Revenue: ONLY from Invoice Receipts (the final bill to the customer).
+        // No longer falls back to LR receipts. If no invoice receipt is linked, revenue is 0.
         $invoiceReceipts = $trip->receipts->where('type', TripReceipt::TYPE_INVOICE);
-        $revenue = $invoiceReceipts->isNotEmpty()
-            ? (int) $invoiceReceipts->sum('amount')
-            : (int) $trip->receipts->where('type', TripReceipt::TYPE_LR)->sum('amount');
+        $revenue = (int) $invoiceReceipts->sum('amount');
         $expenses = (int) $trip->expenses->sum('amount');
 
         $lorryReceipts = $trip->receipts->where('type', TripReceipt::TYPE_LORRY);
@@ -546,18 +543,27 @@ final class TripService
 
         $receivable = $this->receivable($trip);
         $customerPaid = 0;
+        $actualRevenue = 0;
+        $tdsAmount = 0;
         $customerDue = 0;
 
         if (! empty($receivable)) {
             foreach ($receivable as $rec) {
                 $recTotal = (int) ($rec['total'] ?? 0);
                 $recDue = (int) ($rec['due_amount'] ?? 0);
+                $recBank = (int) ($rec['bank_amount'] ?? 0);
+                $recTds = (int) ($rec['tds_amount'] ?? 0);
+
+                $actualRevenue += $recBank;
+                $tdsAmount += $recTds;
                 $customerPaid += max(0, $recTotal - $recDue);
                 $customerDue += $recDue;
             }
         } else {
             $customerDue = $revenue;
             $customerPaid = 0;
+            $actualRevenue = 0;
+            $tdsAmount = 0;
         }
 
         $paymentStatus = 'UNPAID';
@@ -571,6 +577,8 @@ final class TripService
 
         return [
             'revenue' => $revenue,
+            'actual_revenue' => $actualRevenue,
+            'tds_amount' => $tdsAmount,
             'cost' => $cost,
             'owner_paid' => $ownerPaid,
             'owner_balance' => $ownerBalance,
@@ -633,25 +641,41 @@ final class TripService
             ->get();
 
         return $invoices->map(function (Invoice $invoice): array {
+            $bankSum = 0;
+            $tdsSum = 0;
+
+            $payments = $invoice->payments
+                ->sortBy('payment_date')
+                ->map(function ($payment) use (&$bankSum, &$tdsSum): array {
+                    $b = (int) ($payment->pivot->amount ?? 0);
+                    $t = (int) ($payment->pivot->tds_amount ?? 0);
+                    $bankSum += $b;
+                    $tdsSum += $t;
+
+                    return [
+                        'id' => (int) $payment->id,
+                        'number' => $payment->payment_number,
+                        'date' => $this->safeDate($payment->payment_date),
+                        'amount' => $b,
+                        'tds_amount' => $t,
+                        'gross_amount' => $b + $t,
+                        'notes' => $payment->notes,
+                        'method' => $payment->paymentMethod?->name,
+                    ];
+                })
+                ->values()
+                ->all();
+
             return [
                 'invoice_id' => (int) $invoice->id,
                 'invoice_number' => $invoice->invoice_number,
                 'customer_name' => $invoice->customer?->name,
                 'total' => (int) $invoice->total,
                 'due_amount' => (int) $invoice->due_amount,
+                'bank_amount' => $bankSum,
+                'tds_amount' => $tdsSum,
                 'paid_status' => $invoice->paid_status,
-                'payments' => $invoice->payments
-                    ->sortBy('payment_date')
-                    ->map(fn ($payment): array => [
-                        'id' => (int) $payment->id,
-                        'number' => $payment->payment_number,
-                        'date' => $this->safeDate($payment->payment_date),
-                        'amount' => (int) $payment->pivot->amount,
-                        'notes' => $payment->notes,
-                        'method' => $payment->paymentMethod?->name,
-                    ])
-                    ->values()
-                    ->all(),
+                'payments' => $payments,
             ];
         })->values()->all();
     }

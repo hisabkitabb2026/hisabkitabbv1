@@ -176,7 +176,7 @@ class Payment extends Model implements HasMedia
     public function invoices(): BelongsToMany
     {
         return $this->belongsToMany(Invoice::class, 'customer_payment_allocations', 'payment_id', 'invoice_id')
-            ->withPivot(['amount', 'base_amount'])
+            ->withPivot(['amount', 'base_amount', 'tds_amount', 'base_tds_amount'])
             ->withTimestamps();
     }
 
