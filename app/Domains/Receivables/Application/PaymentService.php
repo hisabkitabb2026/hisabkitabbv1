@@ -68,7 +68,17 @@ class PaymentService implements PaymentPdfDataProvider
             return $payment;
         });
 
-        return $this->loadPayment($payment);
+        $loaded = $this->loadPayment($payment);
+
+        if (class_exists(\Modules\Trips\Application\TripLifecycleService::class)) {
+            try {
+                app(\Modules\Trips\Application\TripLifecycleService::class)->syncFromPayment($loaded);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('TripLifecycleService sync error on payment create: '.$e->getMessage());
+            }
+        }
+
+        return $loaded;
     }
 
     /**
@@ -125,7 +135,17 @@ class PaymentService implements PaymentPdfDataProvider
             return $lockedPayment;
         });
 
-        return $this->loadPayment($payment);
+        $loaded = $this->loadPayment($payment);
+
+        if (class_exists(\Modules\Trips\Application\TripLifecycleService::class)) {
+            try {
+                app(\Modules\Trips\Application\TripLifecycleService::class)->syncFromPayment($loaded);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('TripLifecycleService sync error on payment update: '.$e->getMessage());
+            }
+        }
+
+        return $loaded;
     }
 
     public function delete(Collection $ids): bool
@@ -172,7 +192,7 @@ class PaymentService implements PaymentPdfDataProvider
 
     public function getPdfData(Payment $payment): mixed
     {
-        $payment->loadMissing('allocations.invoice.currency');
+        $payment->loadMissing(['allocations.invoice.currency', 'allocations.invoice.items']);
 
         $company = Company::find($payment->company_id);
 
@@ -206,7 +226,7 @@ class PaymentService implements PaymentPdfDataProvider
     {
         return Payment::with([
             'customer',
-            'allocations.invoice',
+            'allocations.invoice.items',
             'paymentMethod',
             'fields',
         ])->findOrFail($payment->id);

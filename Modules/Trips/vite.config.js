@@ -31,6 +31,7 @@ function vueGlobalPlugin() {
 }
 
 export default defineConfig({
+  publicDir: false,
   define: {
     __MODULE_VERSION__: JSON.stringify(moduleManifest.version),
   },

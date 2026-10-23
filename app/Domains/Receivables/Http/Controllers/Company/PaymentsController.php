@@ -87,7 +87,7 @@ class PaymentsController extends Controller
     {
         $this->authorize('view', $payment);
 
-        return new PaymentResource($payment->load(['allocations.invoice']));
+        return new PaymentResource($payment->load(['allocations.invoice.items']));
     }
 
     /**

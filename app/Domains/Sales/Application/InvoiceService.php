@@ -87,7 +87,17 @@ class InvoiceService implements InvoicePdfDataProvider
             $this->customFieldValueWriter->attach($invoice, $customFields);
         }
 
-        return Invoice::with(self::DETAIL_RELATIONS)->findOrFail($invoice->id);
+        $fresh = Invoice::with(self::DETAIL_RELATIONS)->findOrFail($invoice->id);
+
+        if (class_exists(\Modules\Trips\Application\TripLifecycleService::class)) {
+            try {
+                app(\Modules\Trips\Application\TripLifecycleService::class)->syncFromInvoice($fresh);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('TripLifecycleService sync error on create: '.$e->getMessage());
+            }
+        }
+
+        return $fresh;
     }
 
     /**
@@ -171,7 +181,17 @@ class InvoiceService implements InvoicePdfDataProvider
             $this->customFieldValueWriter->update($invoice, $customFields);
         }
 
-        return Invoice::with(self::DETAIL_RELATIONS)->findOrFail($invoice->id);
+        $fresh = Invoice::with(self::DETAIL_RELATIONS)->findOrFail($invoice->id);
+
+        if (class_exists(\Modules\Trips\Application\TripLifecycleService::class)) {
+            try {
+                app(\Modules\Trips\Application\TripLifecycleService::class)->syncFromInvoice($fresh);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('TripLifecycleService sync error on update: '.$e->getMessage());
+            }
+        }
+
+        return $fresh;
     }
 
     public function delete(Collection $ids): bool

@@ -77,10 +77,18 @@
         <div v-if="paymentAllocations.length" class="divide-y divide-line-light">
           <div v-for="allocation in paymentAllocations" :key="allocation.id ?? allocation.invoice_id" class="flex items-center justify-between gap-4 py-3 text-sm">
             <div>
-              <router-link v-if="allocation.invoice" :to="`/admin/invoices/${allocation.invoice.id}/view`" class="font-medium text-primary-600 hover:text-primary-700">
-                {{ allocation.invoice.invoice_number }}
-              </router-link>
-              <span v-else class="font-medium text-heading">{{ $t('payments.invoice') }}</span>
+              <div class="flex items-center gap-2">
+                <router-link v-if="allocation.invoice" :to="`/admin/invoices/${allocation.invoice.id}/view`" class="font-medium text-primary-600 hover:text-primary-700">
+                  {{ allocation.invoice.invoice_number }}
+                </router-link>
+                <span v-else class="font-medium text-heading">{{ $t('payments.invoice') }}</span>
+                <span
+                  v-if="allocation.consignment_numbers && allocation.consignment_numbers.length"
+                  class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20"
+                >
+                  LR: {{ allocation.consignment_numbers.join(', ') }}
+                </span>
+              </div>
               <span v-if="allocation.invoice?.formatted_invoice_date" class="block mt-0.5 text-xs text-muted">{{ allocation.invoice.formatted_invoice_date }}</span>
             </div>
             <div class="text-right">

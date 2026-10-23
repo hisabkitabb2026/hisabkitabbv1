@@ -24,10 +24,12 @@ class TripCardResource extends JsonResource
         $money = $service->money($this->resource);
 
         $lrs = $this->receipts->where('type', TripReceipt::TYPE_LR)->values();
+        $lrNumbers = $lrs->map(fn ($receipt) => (string) $receipt->invoice_number)->filter()->unique()->values()->all();
 
         return [
             'id' => (int) $this->id,
             'trip_no' => (int) $this->trip_no,
+            'lr_numbers' => $lrNumbers,
             'from_city' => $this->from_city,
             'to_city' => $this->to_city,
             'goods' => $this->goods,
@@ -49,6 +51,9 @@ class TripCardResource extends JsonResource
             'cost' => $money['cost'],
             'profit' => $money['profit'],
             'owner_balance' => $money['owner_balance'],
+            'customer_paid' => $money['customer_paid'],
+            'customer_due' => $money['customer_due'],
+            'payment_status' => $money['payment_status'],
         ];
     }
 }

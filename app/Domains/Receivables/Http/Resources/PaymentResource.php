@@ -146,15 +146,40 @@ class PaymentResource extends JsonResource
      */
     private function allocationRows(Collection $allocations): Collection
     {
-        return $allocations->map(fn ($allocation) => [
-            'id' => $allocation->id,
-            'invoice_id' => $allocation->invoice_id,
-            'amount' => $allocation->amount,
-            'base_amount' => $allocation->base_amount,
-            'tds_amount' => (int) ($allocation->tds_amount ?? 0),
-            'base_tds_amount' => (int) ($allocation->base_tds_amount ?? 0),
-            'total_amount' => (int) $allocation->amount + (int) ($allocation->tds_amount ?? 0),
-            'invoice' => $allocation->invoice ? new InvoiceResource($allocation->invoice) : null,
-        ]);
+        return $allocations->map(function ($allocation) {
+            $invoice = $allocation->invoice;
+            $consignmentNumbers = [];
+
+            if ($invoice) {
+                if ($invoice->relationLoaded('items')) {
+                    $consignmentNumbers = $invoice->items
+                        ->pluck('tr_consignment_number')
+                        ->filter(fn ($v) => $v !== null && trim((string) $v) !== '')
+                        ->unique()
+                        ->values()
+                        ->all();
+                } else {
+                    $consignmentNumbers = $invoice->items()
+                        ->whereNotNull('tr_consignment_number')
+                        ->where('tr_consignment_number', '!=', '')
+                        ->pluck('tr_consignment_number')
+                        ->unique()
+                        ->values()
+                        ->all();
+                }
+            }
+
+            return [
+                'id' => $allocation->id,
+                'invoice_id' => $allocation->invoice_id,
+                'amount' => $allocation->amount,
+                'base_amount' => $allocation->base_amount,
+                'tds_amount' => (int) ($allocation->tds_amount ?? 0),
+                'base_tds_amount' => (int) ($allocation->base_tds_amount ?? 0),
+                'total_amount' => (int) $allocation->amount + (int) ($allocation->tds_amount ?? 0),
+                'consignment_numbers' => $consignmentNumbers,
+                'invoice' => $invoice ? new InvoiceResource($invoice) : null,
+            ];
+        });
     }
 }

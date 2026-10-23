@@ -350,7 +350,19 @@
                         @if ($allocation->invoice && $allocation->invoice->invoice_number)
                             <tr>
                                 <td class="attribute-label">@lang('pdf_invoice_label')</td>
-                                <td class="attribute-value"> &nbsp;{{ $allocation->invoice->invoice_number }}</td>
+                                <td class="attribute-value">
+                                    &nbsp;{{ $allocation->invoice->invoice_number }}
+                                    @php
+                                        $lrNumbers = $allocation->invoice->items
+                                            ? $allocation->invoice->items->pluck('tr_consignment_number')->filter()->unique()->values()->all()
+                                            : [];
+                                    @endphp
+                                    @if (!empty($lrNumbers))
+                                        <span style="font-size: 11px; color: #4338ca; font-weight: normal;">
+                                            (LR: {{ implode(', ', $lrNumbers) }})
+                                        </span>
+                                    @endif
+                                </td>
                             </tr>
                             @if (($allocation->tds_amount ?? 0) > 0)
                                 <tr>

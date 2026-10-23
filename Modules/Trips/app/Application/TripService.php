@@ -544,16 +544,44 @@ final class TripService
         $cost = $lorryCost + $expenses;
         $bill = $bills->first();
 
+        $receivable = $this->receivable($trip);
+        $customerPaid = 0;
+        $customerDue = 0;
+
+        if (! empty($receivable)) {
+            foreach ($receivable as $rec) {
+                $recTotal = (int) ($rec['total'] ?? 0);
+                $recDue = (int) ($rec['due_amount'] ?? 0);
+                $customerPaid += max(0, $recTotal - $recDue);
+                $customerDue += $recDue;
+            }
+        } else {
+            $customerDue = $revenue;
+            $customerPaid = 0;
+        }
+
+        $paymentStatus = 'UNPAID';
+        if ($revenue > 0) {
+            if ($customerDue <= 0 && $customerPaid >= $revenue) {
+                $paymentStatus = 'PAID';
+            } elseif ($customerPaid > 0) {
+                $paymentStatus = 'PARTIALLY_PAID';
+            }
+        }
+
         return [
             'revenue' => $revenue,
             'cost' => $cost,
             'owner_paid' => $ownerPaid,
             'owner_balance' => $ownerBalance,
             'profit' => $revenue - $cost,
+            'customer_paid' => $customerPaid,
+            'customer_due' => $customerDue,
+            'payment_status' => $paymentStatus,
             'bill_id' => $bill?->id,
             'bill_number' => $bill?->number,
             'bill_status' => $bill?->settlement_status,
-            'receivable' => $this->receivable($trip),
+            'receivable' => $receivable,
             'payable' => $this->payable($trip),
         ];
     }

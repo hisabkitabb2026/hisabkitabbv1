@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Trips\Providers;
 
+use App\Domains\Receivables\Models\Payment;
+use App\Domains\Receivables\Models\PaymentAllocation;
+use App\Domains\Sales\Models\Invoice;
+use App\Domains\Sales\Models\InvoiceItem;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use InvoiceShelf\Modules\Contracts\DataCleanup as DataCleanupContract;
 use InvoiceShelf\Modules\Support\ModuleServiceProvider;
+use Modules\Trips\Application\TripLifecycleService;
 use Modules\Trips\Lifecycle\DataCleanup as TripsDataCleanup;
 use Modules\Trips\Models\Trip;
 use Modules\Trips\Support\ModuleRegistration;
@@ -45,5 +50,27 @@ class TripsServiceProvider extends ModuleServiceProvider
         $this->loadRoutesFrom($modulePath.'/routes/api.php');
 
         $this->loadViewsFrom($modulePath.'/resources/views', 'trips');
+
+        // Automatically sync trips as transport receipts and payments are saved
+        Invoice::saved(function (Invoice $invoice): void {
+            app(TripLifecycleService::class)->syncFromInvoice($invoice);
+        });
+
+        Invoice::deleted(function (Invoice $invoice): void {
+            app(TripLifecycleService::class)->handleInvoiceDeleted($invoice);
+        });
+
+        InvoiceItem::saved(function (InvoiceItem $item): void {
+            app(TripLifecycleService::class)->syncFromInvoiceItem($item);
+        });
+
+        PaymentAllocation::saved(function (PaymentAllocation $allocation): void {
+            app(TripLifecycleService::class)->syncFromPaymentAllocation($allocation);
+        });
+
+        Payment::saved(function (Payment $payment): void {
+            app(TripLifecycleService::class)->syncFromPayment($payment);
+        });
     }
 }
+

@@ -22,9 +22,12 @@ class TripResource extends JsonResource
     {
         $service = app(TripService::class);
 
+        $lrNumbers = $this->receipts->where('type', \Modules\Trips\Models\TripReceipt::TYPE_LR)->map(fn ($r) => (string) $r->invoice_number)->filter()->unique()->values()->all();
+
         return [
             'id' => (int) $this->id,
             'trip_no' => (int) $this->trip_no,
+            'lr_numbers' => $lrNumbers,
             'from_city' => $this->from_city,
             'to_city' => $this->to_city,
             'goods' => $this->goods,

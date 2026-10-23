@@ -61,7 +61,11 @@ function onCancel(): void {
   >
     <div class="flex items-start justify-between gap-2">
       <p class="text-sm font-medium text-heading">
-        #{{ trip.trip_no }} · {{ route }}
+        #{{ trip.trip_no }}
+        <span v-if="trip.lr_numbers && trip.lr_numbers.length" class="text-xs font-normal text-muted">
+          [{{ trip.lr_numbers.join(', ') }}]
+        </span>
+        · {{ route }}
       </p>
       <div class="relative">
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -116,6 +120,32 @@ function onCancel(): void {
       </span>
       <span class="text-sm font-semibold" :class="profitClass">
         {{ formatMoney(trip.profit) }}
+      </span>
+    </div>
+
+    <div class="mt-2.5 flex items-center justify-between border-t border-line-light pt-2 text-xs">
+      <div class="flex items-center gap-1.5">
+        <span
+          v-if="trip.payment_status === 'PAID'"
+          class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+        >
+          ● Payment Received
+        </span>
+        <span
+          v-else-if="trip.payment_status === 'PARTIALLY_PAID'"
+          class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20"
+        >
+          ◐ Partially Paid
+        </span>
+        <span
+          v-else
+          class="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-inset ring-slate-500/20"
+        >
+          ○ Payment Pending
+        </span>
+      </div>
+      <span v-if="trip.customer_paid > 0" class="text-[11px] text-muted">
+        Recvd: <span class="font-medium text-heading">{{ formatMoney(trip.customer_paid) }}</span>
       </span>
     </div>
   </article>

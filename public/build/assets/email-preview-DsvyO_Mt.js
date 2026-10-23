@@ -1,0 +1,1 @@
+import{i as e}from"./client-Dbiy1D36.js";var t=/<head\b[^>]*>/i;function n(n){let r=e();if(r===``)return n;let i=`<base href="${r}/">`,a=t.exec(n);if(a===null)return i+n;let o=a.index+a[0].length;return n.slice(0,o)+i+n.slice(o)}function r(e){let t=e?.data??e,r=typeof t==`string`?n(t):String(t);return URL.createObjectURL(new Blob([r],{type:`text/html`}))}export{r as t};

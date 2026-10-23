@@ -16,6 +16,7 @@ export interface TripCustomer {
 export interface TripCard {
   id: number
   trip_no: number
+  lr_numbers?: string[]
   from_city: string | null
   to_city: string | null
   goods: string | null
@@ -31,6 +32,9 @@ export interface TripCard {
   cost: number
   profit: number
   owner_balance: number
+  customer_paid: number
+  customer_due: number
+  payment_status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID'
 }
 
 export interface TripReceipt {
@@ -68,6 +72,9 @@ export interface TripMoney {
   owner_paid: number
   owner_balance: number
   profit: number
+  customer_paid: number
+  customer_due: number
+  payment_status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID'
   bill_id: number | null
   bill_number: string | null
   bill_status: string | null
@@ -133,6 +140,7 @@ export interface TripDocument {
 export interface Trip {
   id: number
   trip_no: number
+  lr_numbers?: string[]
   from_city: string | null
   to_city: string | null
   goods: string | null

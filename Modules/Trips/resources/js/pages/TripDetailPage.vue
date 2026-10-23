@@ -362,11 +362,34 @@ function backToBoard(): void {
               ← Trips
             </button>
             <h1 class="text-xl font-semibold text-heading">
-              Trip #{{ trip.trip_no }} · {{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}
+              Trip #{{ trip.trip_no }}
+              <span v-if="trip.lr_numbers && trip.lr_numbers.length" class="text-base font-normal text-muted">
+                [{{ trip.lr_numbers.join(', ') }}]
+              </span>
+              · {{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}
             </h1>
           </div>
 
           <div class="flex items-center gap-2">
+            <span
+              v-if="trip.money?.payment_status === 'PAID'"
+              class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-500/20"
+            >
+              ● Payment Received
+            </span>
+            <span
+              v-else-if="trip.money?.payment_status === 'PARTIALLY_PAID'"
+              class="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 ring-1 ring-inset ring-amber-500/20"
+            >
+              ◐ Partially Paid
+            </span>
+            <span
+              v-else-if="trip.money?.payment_status"
+              class="rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-500/20"
+            >
+              ○ Payment Pending
+            </span>
+
             <span
               v-if="trip.cancelled_at"
               class="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white"
@@ -666,7 +689,7 @@ function backToBoard(): void {
             <div class="mt-4 border-t border-line-light pt-3">
               <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">The Money</p>
 
-              <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                 <div class="rounded-lg bg-surface-secondary p-3">
                   <p class="text-xs text-muted">Revenue</p>
                   <p class="text-lg font-semibold text-heading">{{ formatMoney(trip.money.revenue) }}</p>
@@ -682,6 +705,15 @@ function backToBoard(): void {
                     :class="trip.money.profit >= 0 ? 'text-status-green' : 'text-status-red'"
                   >
                     {{ formatMoney(trip.money.profit) }}
+                  </p>
+                </div>
+                <div class="rounded-lg bg-surface-secondary p-3">
+                  <p class="text-xs text-muted">Customer Paid</p>
+                  <p class="text-lg font-semibold text-status-green">
+                    {{ formatMoney(trip.money.customer_paid ?? 0) }}
+                  </p>
+                  <p v-if="(trip.money.customer_due ?? 0) > 0" class="mt-0.5 text-[10px] text-muted">
+                    Due: {{ formatMoney(trip.money.customer_due) }}
                   </p>
                 </div>
               </div>
