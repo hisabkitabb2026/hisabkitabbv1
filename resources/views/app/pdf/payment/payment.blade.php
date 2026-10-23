@@ -98,7 +98,8 @@
 
         .content-wrapper {
             display: block;
-            height: 200px;
+            min-height: 200px;
+            height: auto;
         }
 
         .main-content {
@@ -179,7 +180,7 @@
             display: inline;
             position: absolute;
             width: 40%;
-            height: 120px;
+            min-height: 120px;
             left: 440px;
             padding: 5px 10px 0 0;
         }
@@ -202,10 +203,11 @@
         .notes {
             font-size: 12px;
             color: #595959;
-            margin-top: 100px;
+            margin-top: 40px;
             margin-left: 30px;
             width: 90%;
             text-align: left;
+            clear: both;
             page-break-before: avoid;
         }
 
@@ -350,10 +352,25 @@
                                 <td class="attribute-label">@lang('pdf_invoice_label')</td>
                                 <td class="attribute-value"> &nbsp;{{ $allocation->invoice->invoice_number }}</td>
                             </tr>
-                            <tr>
-                                <td class="attribute-label">@lang('customers.applied')</td>
-                                <td class="attribute-value"> &nbsp;{!! format_money_pdf($allocation->amount, $allocation->invoice->currency) !!}</td>
-                            </tr>
+                            @if (($allocation->tds_amount ?? 0) > 0)
+                                <tr>
+                                    <td class="attribute-label">@lang('customers.applied') (Bank)</td>
+                                    <td class="attribute-value"> &nbsp;{!! format_money_pdf($allocation->amount, $allocation->invoice->currency) !!}</td>
+                                </tr>
+                                <tr>
+                                    <td class="attribute-label">TDS Deducted (Sec 194C)</td>
+                                    <td class="attribute-value" style="color: #4338ca;"> &nbsp;{!! format_money_pdf($allocation->tds_amount, $allocation->invoice->currency) !!}</td>
+                                </tr>
+                                <tr>
+                                    <td class="attribute-label" style="font-weight: bold;">Total Settled</td>
+                                    <td class="attribute-value" style="font-weight: bold;"> &nbsp;{!! format_money_pdf($allocation->amount + $allocation->tds_amount, $allocation->invoice->currency) !!}</td>
+                                </tr>
+                            @else
+                                <tr>
+                                    <td class="attribute-label">@lang('customers.applied')</td>
+                                    <td class="attribute-value"> &nbsp;{!! format_money_pdf($allocation->amount, $allocation->invoice->currency) !!}</td>
+                                </tr>
+                            @endif
                         @endif
                     @endforeach
                     @php($unallocatedAmount = (int) $payment->amount - (int) $payment->allocations->sum('amount'))
@@ -368,9 +385,26 @@
         </div>
         <div style="clear: both;"></div>
     </div>
-    <div class="total-display-box">
-        <p class="total-display-label">@lang('pdf_payment_amount_received_label')</p>
-        <span class="amount">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</span>
+    <div class="total-display-box" style="min-width: 330px;">
+        @if (($payment->tds_amount ?? 0) > 0)
+            <table width="100%" style="border-collapse: collapse;">
+                <tr>
+                    <td class="total-display-label" style="font-size: 13px; font-weight: normal; color: #595959; padding-bottom: 4px;">@lang('pdf_payment_amount_received_label') (Bank):</td>
+                    <td style="text-align: right; font-size: 13px; font-weight: bold; color: #111827; padding-bottom: 4px;">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</td>
+                </tr>
+                <tr>
+                    <td class="total-display-label" style="font-size: 13px; font-weight: normal; color: #4338ca; padding-bottom: 6px;">TDS Deducted (Sec 194C):</td>
+                    <td style="text-align: right; font-size: 13px; font-weight: bold; color: #4338ca; padding-bottom: 6px;">+ {!! format_money_pdf($payment->tds_amount, $payment->customer->currency) !!}</td>
+                </tr>
+                <tr style="border-top: 1px solid #D1D5DB;">
+                    <td class="total-display-label" style="font-size: 14px; font-weight: bold; color: #111827; padding-top: 6px;">Total Settled:</td>
+                    <td style="text-align: right; font-size: 15px; font-weight: bold; color: #059669; padding-top: 6px;">{!! format_money_pdf($payment->amount + $payment->tds_amount, $payment->customer->currency) !!}</td>
+                </tr>
+            </table>
+        @else
+            <p class="total-display-label">@lang('pdf_payment_amount_received_label')</p>
+            <span class="amount">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</span>
+        @endif
     </div>
     <div class="notes">
         @if ($notes)
