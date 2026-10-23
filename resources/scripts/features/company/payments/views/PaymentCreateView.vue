@@ -49,45 +49,6 @@
             />
           </BaseInputGroup>
 
-          <BaseInputGroup label="TDS Deducted (Sec 194C / Tax Credit)" :content-loading="isLoadingContent">
-            <div class="space-y-1.5">
-              <BaseMoney
-                :key="'tds-' + String(paymentStore.currentPayment.currency)"
-                v-model="tdsAmount"
-                :currency="paymentStore.currentPayment.currency"
-                :content-loading="isLoadingContent"
-              />
-              <div class="flex items-center gap-1.5 text-xs">
-                <span class="text-muted">Auto Calculate:</span>
-                <button
-                  type="button"
-                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-colors"
-                  title="Calculate 1% TDS on invoice total"
-                  @click="calculateTdsPercentage(1)"
-                >
-                  1%
-                </button>
-                <button
-                  type="button"
-                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-colors"
-                  title="Calculate 2% TDS on invoice total"
-                  @click="calculateTdsPercentage(2)"
-                >
-                  2%
-                </button>
-                <button
-                  v-if="tdsAmount > 0"
-                  type="button"
-                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-muted hover:text-status-red transition-colors"
-                  title="Clear TDS"
-                  @click="tdsAmount = 0"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          </BaseInputGroup>
-
           <ExchangeRateConverter
             :store="exchangeRateStore"
             store-prop="currentPayment"
@@ -147,7 +108,7 @@
           </div>
 
           <div v-else class="space-y-3">
-            <div v-for="(allocation, index) in paymentStore.currentPayment.allocations" :key="`${allocation.invoice_id}-${index}`" class="grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1.5fr)_11rem_11rem_8rem_auto]">
+            <div v-for="(allocation, index) in paymentStore.currentPayment.allocations" :key="`${allocation.invoice_id}-${index}`" class="grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1.5fr)_11rem_12rem_8rem_auto]">
               <BaseInputGroup :label="$t('payments.invoice')">
                 <BaseMultiselect
                   v-model="allocation.invoice_id"
@@ -165,7 +126,37 @@
                 <BaseMoney :model-value="allocation.amount / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationAmount(index, $event)" />
               </BaseInputGroup>
               <BaseInputGroup label="TDS Deducted">
-                <BaseMoney :model-value="(allocation.tds_amount ?? 0) / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationTds(index, $event)" />
+                <div class="space-y-1">
+                  <BaseMoney :model-value="(allocation.tds_amount ?? 0) / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationTds(index, $event)" />
+                  <div class="flex items-center gap-1 text-[11px]">
+                    <span class="text-muted">Auto:</span>
+                    <button
+                      type="button"
+                      class="px-1.5 py-0.5 rounded border border-line-light bg-surface text-primary-600 hover:bg-primary-50 transition-colors"
+                      title="Set 1% TDS on invoice total"
+                      @click="applyRowTdsPercentage(index, 1)"
+                    >
+                      1%
+                    </button>
+                    <button
+                      type="button"
+                      class="px-1.5 py-0.5 rounded border border-line-light bg-surface text-primary-600 hover:bg-primary-50 transition-colors"
+                      title="Set 2% TDS on invoice total"
+                      @click="applyRowTdsPercentage(index, 2)"
+                    >
+                      2%
+                    </button>
+                    <button
+                      v-if="allocation.tds_amount"
+                      type="button"
+                      class="px-1.5 py-0.5 rounded border border-line-light bg-surface text-muted hover:text-status-red transition-colors"
+                      title="Clear TDS"
+                      @click="setAllocationTds(index, 0)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
               </BaseInputGroup>
               <div class="flex flex-col justify-end pb-2">
                 <span class="text-xs text-muted mb-1">Total Settled</span>
@@ -183,9 +174,10 @@
 
           <div class="flex flex-wrap justify-between items-center gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs md:text-sm text-muted">
-              <span>Bank: <strong class="text-heading"><BaseFormatMoney :amount="paymentStore.currentPayment.amount" :currency="paymentStore.currentPayment.currency" /></strong></span>
-              <span v-if="paymentStore.currentPayment.tds_amount">| TDS: <strong class="text-primary-600"><BaseFormatMoney :amount="paymentStore.currentPayment.tds_amount" :currency="paymentStore.currentPayment.currency" /></strong></span>
-              <span>| Total Settled: <strong class="text-emerald-600 dark:text-emerald-400 font-semibold"><BaseFormatMoney :amount="totalSettlementAmount" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span>Receipt Amount: <strong class="text-heading"><BaseFormatMoney :amount="paymentStore.currentPayment.amount" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span>| Bank: <strong class="text-heading"><BaseFormatMoney :amount="totalAllocatedBank" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span v-if="totalAllocatedTds">| TDS: <strong class="text-primary-600"><BaseFormatMoney :amount="totalAllocatedTds" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span>| Total Settled: <strong class="text-emerald-600 dark:text-emerald-400 font-semibold"><BaseFormatMoney :amount="allocatedAmount" :currency="paymentStore.currentPayment.currency" /></strong></span>
             </div>
             <div class="flex items-center gap-6">
               <span class="text-muted">{{ $t('payments.allocated') }}: <BaseFormatMoney :amount="allocatedAmount" :currency="paymentStore.currentPayment.currency" /></span>
@@ -237,30 +229,17 @@ const amount = computed<number>({
   set: (value) => { paymentStore.currentPayment.amount = Math.round(value * 100) },
 })
 
-const tdsAmount = computed<number>({
-  get: () => (paymentStore.currentPayment.tds_amount ?? 0) / 100,
-  set: (value) => {
-    paymentStore.currentPayment.tds_amount = Math.round(value * 100)
-    if (paymentStore.currentPayment.allocations.length === 1) {
-      paymentStore.currentPayment.allocations[0].tds_amount = paymentStore.currentPayment.tds_amount
-    }
-  },
-})
-
-const totalSettlementAmount = computed(() => {
-  return paymentStore.currentPayment.amount + (paymentStore.currentPayment.tds_amount ?? 0)
-})
-
-const allocatedAmount = computed(() =>
-  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + allocation.amount, 0),
+const totalAllocatedBank = computed(() =>
+  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + (allocation.amount || 0), 0),
 )
 
-const allocatedTds = computed(() =>
-  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + (allocation.tds_amount ?? 0), 0),
+const totalAllocatedTds = computed(() =>
+  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + (allocation.tds_amount || 0), 0),
 )
+
+const allocatedAmount = computed(() => totalAllocatedBank.value + totalAllocatedTds.value)
 
 const unallocatedAmount = computed(() => paymentStore.currentPayment.amount - allocatedAmount.value)
-const unallocatedTds = computed(() => (paymentStore.currentPayment.tds_amount ?? 0) - allocatedTds.value)
 const isLoadingContent = computed(() => paymentStore.isFetchingInitialData)
 const isEdit = computed(() => route.name === 'payments.edit')
 
@@ -294,39 +273,26 @@ watch(
   { immediate: true },
 )
 
-function calculateTdsPercentage(percentage: number): void {
-  let targetPaise = 0
+function applyRowTdsPercentage(index: number, percent: number): void {
+  const allocation = paymentStore.currentPayment.allocations[index]
+  if (!allocation) return
 
-  if (paymentStore.currentPayment.allocations.length > 0) {
-    const firstAlloc = paymentStore.currentPayment.allocations[0]
-    const invoice = invoiceList.value.find((inv) => inv.id === firstAlloc.invoice_id)
-    if (invoice) {
-      targetPaise = invoice.due_amount || invoice.total
-    }
+  const invoice = invoiceList.value.find((inv) => inv.id === allocation.invoice_id)
+  let targetTotal = invoice ? (invoice.due_amount || invoice.total) : 0
+  if (!targetTotal) {
+    targetTotal = allocation.amount + (allocation.tds_amount ?? 0)
   }
-
-  if (!targetPaise && eligibleInvoices.value.length === 1) {
-    targetPaise = eligibleInvoices.value[0].due_amount || eligibleInvoices.value[0].total
+  if (!targetTotal && paymentStore.currentPayment.amount > 0) {
+    targetTotal = paymentStore.currentPayment.amount
   }
+  if (targetTotal <= 0) return
 
-  if (!targetPaise && paymentStore.currentPayment.amount > 0) {
-    targetPaise = Math.round(paymentStore.currentPayment.amount / (1 - (percentage / 100)))
-  }
+  const calculatedTds = Math.round(targetTotal * (percent / 100))
+  allocation.tds_amount = calculatedTds
+  allocation.amount = targetTotal - calculatedTds
 
-  if (targetPaise <= 0) return
-
-  const calculatedTds = Math.round(targetPaise * (percentage / 100))
-  const netReceived = targetPaise - calculatedTds
-
-  paymentStore.currentPayment.tds_amount = calculatedTds
-
-  if (paymentStore.currentPayment.amount === 0 || paymentStore.currentPayment.amount === targetPaise) {
-    paymentStore.currentPayment.amount = netReceived
-  }
-
-  if (paymentStore.currentPayment.allocations.length === 1) {
-    paymentStore.currentPayment.allocations[0].amount = paymentStore.currentPayment.amount
-    paymentStore.currentPayment.allocations[0].tds_amount = calculatedTds
+  if (paymentStore.currentPayment.amount === 0) {
+    paymentStore.currentPayment.amount = targetTotal
   }
 }
 
@@ -424,10 +390,8 @@ function onInvoiceSelect(index: number, invoiceId: number | null): void {
       : selectedInvoice.due_amount
   }
 
-  if (!allocation.tds_amount && (paymentStore.currentPayment.tds_amount ?? 0) > 0) {
-    const remainingTds = Math.max(0, (paymentStore.currentPayment.tds_amount ?? 0) - allocatedTds.value)
-    const neededForInvoice = Math.max(0, selectedInvoice.due_amount - allocation.amount)
-    allocation.tds_amount = Math.min(remainingTds, neededForInvoice)
+  if (paymentStore.currentPayment.amount === 0) {
+    paymentStore.currentPayment.amount = selectedInvoice.due_amount
   }
 }
 
@@ -448,42 +412,46 @@ function removeAllocation(index: number): void {
 
 function setAllocationAmount(index: number, value: number): void {
   const allocation = paymentStore.currentPayment.allocations[index]
-  if (allocation) allocation.amount = Math.round(value * 100)
+  if (!allocation) return
+
+  const newBankPaise = Math.round(value * 100)
+  allocation.amount = newBankPaise
+
+  const invoice = invoiceList.value.find((inv) => inv.id === allocation.invoice_id)
+  const targetTotal = invoice?.due_amount || (paymentStore.currentPayment.allocations.length === 1 ? paymentStore.currentPayment.amount : 0)
+
+  if ((!allocation.tds_amount || allocation.tds_amount === 0) && targetTotal > newBankPaise) {
+    const diff = targetTotal - newBankPaise
+    if (diff > 0 && diff <= targetTotal * 0.15) {
+      allocation.tds_amount = diff
+    }
+  }
 }
 
 function setAllocationTds(index: number, value: number): void {
   const allocation = paymentStore.currentPayment.allocations[index]
   if (allocation) {
     allocation.tds_amount = Math.round(value * 100)
-    const sumTds = paymentStore.currentPayment.allocations.reduce((t, a) => t + (a.tds_amount ?? 0), 0)
-    if ((paymentStore.currentPayment.tds_amount ?? 0) < sumTds) {
-      paymentStore.currentPayment.tds_amount = sumTds
-    }
   }
 }
 
 function allocateOldestFirst(): void {
-  let remainingBank = paymentStore.currentPayment.amount
-  let remainingTds = paymentStore.currentPayment.tds_amount ?? 0
+  let remaining = paymentStore.currentPayment.amount
   const allocations: Array<{ invoice_id: number; amount: number; tds_amount: number }> = []
 
   for (const invoice of [...invoiceList.value]
     .filter(isEligibleInvoice)
     .sort((a, b) => (a.due_date ?? '9999-12-31').localeCompare(b.due_date ?? '9999-12-31') || a.id - b.id)) {
-    if (remainingBank <= 0 && remainingTds <= 0) break
+    if (remaining <= 0) break
 
-    const allocatedBank = Math.min(remainingBank, invoice.due_amount)
-    remainingBank -= allocatedBank
+    const allocated = Math.min(remaining, invoice.due_amount)
+    remaining -= allocated
 
-    const remainingInvoiceDue = invoice.due_amount - allocatedBank
-    const allocatedTds = Math.min(remainingTds, remainingInvoiceDue)
-    remainingTds -= allocatedTds
-
-    if (allocatedBank > 0 || allocatedTds > 0) {
+    if (allocated > 0) {
       allocations.push({
         invoice_id: invoice.id,
-        amount: allocatedBank,
-        tds_amount: allocatedTds,
+        amount: allocated,
+        tds_amount: 0,
       })
     }
   }
@@ -495,10 +463,6 @@ async function submitPaymentData(): Promise<void> {
     notificationStore.showNotification({ type: 'error', message: t('payments.allocation_exceeds_amount') })
     return
   }
-  if (unallocatedTds.value < 0) {
-    notificationStore.showNotification({ type: 'error', message: 'Allocated TDS exceeds total TDS deducted' })
-    return
-  }
 
   isSaving.value = true
   const current = paymentStore.currentPayment
@@ -508,7 +472,7 @@ async function submitPaymentData(): Promise<void> {
     payment_number: current.payment_number,
     customer_id: current.customer_id,
     amount: current.amount,
-    tds_amount: current.tds_amount ?? 0,
+    tds_amount: totalAllocatedTds.value,
     payment_method_id: current.payment_method_id,
     notes: current.notes,
     currency_id: current.currency_id,

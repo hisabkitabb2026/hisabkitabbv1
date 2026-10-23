@@ -373,7 +373,7 @@
                             @endif
                         @endif
                     @endforeach
-                    @php($unallocatedAmount = (int) $payment->amount - (int) $payment->allocations->sum('amount'))
+                    @php($unallocatedAmount = (int) $payment->amount - (int) $payment->allocations->sum(fn ($a) => (int) $a->amount + (int) ($a->tds_amount ?? 0)))
                     @if ($unallocatedAmount > 0)
                         <tr>
                             <td class="attribute-label">@lang('unapplied_credit')</td>
@@ -390,7 +390,7 @@
             <table width="100%" style="border-collapse: collapse;">
                 <tr>
                     <td class="total-display-label" style="font-size: 13px; font-weight: normal; color: #595959; padding-bottom: 4px;">@lang('pdf_payment_amount_received_label') (Bank):</td>
-                    <td style="text-align: right; font-size: 13px; font-weight: bold; color: #111827; padding-bottom: 4px;">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</td>
+                    <td style="text-align: right; font-size: 13px; font-weight: bold; color: #111827; padding-bottom: 4px;">{!! format_money_pdf($payment->amount - $payment->tds_amount, $payment->customer->currency) !!}</td>
                 </tr>
                 <tr>
                     <td class="total-display-label" style="font-size: 13px; font-weight: normal; color: #4338ca; padding-bottom: 6px;">TDS Deducted (Sec 194C):</td>
@@ -398,7 +398,7 @@
                 </tr>
                 <tr style="border-top: 1px solid #D1D5DB;">
                     <td class="total-display-label" style="font-size: 14px; font-weight: bold; color: #111827; padding-top: 6px;">Total Settled:</td>
-                    <td style="text-align: right; font-size: 15px; font-weight: bold; color: #059669; padding-top: 6px;">{!! format_money_pdf($payment->amount + $payment->tds_amount, $payment->customer->currency) !!}</td>
+                    <td style="text-align: right; font-size: 15px; font-weight: bold; color: #059669; padding-top: 6px;">{!! format_money_pdf($payment->amount, $payment->customer->currency) !!}</td>
                 </tr>
             </table>
         @else

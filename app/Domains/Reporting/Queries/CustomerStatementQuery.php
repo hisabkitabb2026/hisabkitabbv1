@@ -54,8 +54,8 @@ class CustomerStatementQuery
 
         $allocationTotals = PaymentAllocation::query()
             ->select('payment_id')
-            ->selectRaw('COALESCE(SUM(amount), 0) as allocated_amount')
-            ->selectRaw('COALESCE(SUM(base_amount), 0) as base_allocated_amount')
+            ->selectRaw('COALESCE(SUM(amount + COALESCE(tds_amount, 0)), 0) as allocated_amount')
+            ->selectRaw('COALESCE(SUM(base_amount + COALESCE(base_tds_amount, 0)), 0) as base_allocated_amount')
             ->groupBy('payment_id');
 
         $paymentTotals = Payment::query()
@@ -301,8 +301,8 @@ class CustomerStatementQuery
             ->where('payment_date', '<', $from->toDateString());
 
         return [
-            'amount' => (int) $documents->sum('total') - (int) $payments->selectRaw('COALESCE(SUM(amount + COALESCE(tds_amount, 0)), 0) as total')->value('total'),
-            'base_amount' => (int) $documents->sum('base_total') - (int) $payments->selectRaw('COALESCE(SUM(base_amount + COALESCE(base_tds_amount, 0)), 0) as total')->value('total'),
+            'amount' => (int) $documents->sum('total') - (int) $payments->sum('amount'),
+            'base_amount' => (int) $documents->sum('base_total') - (int) $payments->sum('base_amount'),
         ];
     }
 
@@ -348,7 +348,7 @@ class CustomerStatementQuery
 
         $query = PaymentAllocation::query()
             ->whereIn('payment_id', $paymentIds)
-            ->selectRaw('payment_id, SUM(amount) as amount, SUM(base_amount) as base_amount')
+            ->selectRaw('payment_id, SUM(amount + COALESCE(tds_amount, 0)) as amount, SUM(base_amount + COALESCE(base_tds_amount, 0)) as base_amount')
             ->groupBy('payment_id');
 
         if ($asOf) {

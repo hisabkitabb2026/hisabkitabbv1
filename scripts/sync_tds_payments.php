@@ -77,12 +77,11 @@ try {
         $oldInvDue = $inv->due_amount;
         $oldInvStatus = $inv->paid_status;
 
-        $shouldAdjustPaymentAmount = false;
-        if ((int) $p->amount === ((int) $alloc->amount + $tdsPaise)) {
-            $shouldAdjustPaymentAmount = true;
-        } elseif ($inv && (int) $p->amount === (int) $inv->total && (int) $alloc->amount < (int) $p->amount) {
-            $shouldAdjustPaymentAmount = true;
+        $grossReceiptPaise = (int) $inv->total;
+        if ($grossReceiptPaise <= 0 || $grossReceiptPaise < $tdsPaise) {
+            $grossReceiptPaise = (int) $alloc->amount + $tdsPaise;
         }
+        $bankReceivedPaise = $grossReceiptPaise - $tdsPaise;
 
         echo "[+] Payment #{$p->id} ({$p->payment_number}) | Customer: {$custName}\n";
         echo "    Note: \"{$notes}\"\n";
@@ -90,17 +89,16 @@ try {
         echo "    Invoice: {$inv->invoice_number} | Total: Rs. ".number_format($inv->total / 100, 2).' | Due: Rs. '.number_format($oldInvDue / 100, 2)." | Status: {$oldInvStatus}\n";
 
         if (! $isDryRun) {
-            if ($shouldAdjustPaymentAmount) {
-                $p->amount = (int) $alloc->amount;
-                $p->base_amount = (int) ($alloc->base_amount ?? $alloc->amount);
-            }
-
-            // Update payment TDS
+            // Restore Gross Receipt Amount on Payment
+            $p->amount = $grossReceiptPaise;
+            $p->base_amount = $grossReceiptPaise;
             $p->tds_amount = $tdsPaise;
             $p->base_tds_amount = $tdsPaise;
             $p->save();
 
-            // Update allocation TDS
+            // Set Net Bank Received and TDS on Allocation
+            $alloc->amount = $bankReceivedPaise;
+            $alloc->base_amount = $bankReceivedPaise;
             $alloc->tds_amount = $tdsPaise;
             $alloc->base_tds_amount = $tdsPaise;
             $alloc->save();
@@ -109,18 +107,14 @@ try {
             $balanceService->recalculate($inv);
             $inv->refresh();
 
-            echo '    -> UPDATED: Payment TDS = Rs. '.number_format($tdsNumber, 2).' | Allocation TDS = Rs. '.number_format($tdsNumber, 2)."\n";
-            if ($shouldAdjustPaymentAmount) {
-                echo '    -> ADJUSTED: Payment Bank Received = Rs. '.number_format($p->amount / 100, 2)." (Net after TDS, eliminating unapplied credit)\n";
-            }
+            echo '    -> UPDATED: Gross Receipt Amount = Rs. '.number_format($p->amount / 100, 2)."\n";
+            echo '    -> UPDATED: Allocation Bank Received = Rs. '.number_format($alloc->amount / 100, 2).' | Allocation TDS = Rs. '.number_format($tdsNumber, 2)."\n";
             echo "    -> RECALCULATED: Invoice {$inv->invoice_number} New Due: Rs. ".number_format($inv->due_amount / 100, 2)." | New Status: {$inv->paid_status} ({$inv->status})\n";
         } else {
             $simulatedDue = max(0, $inv->due_amount - $tdsPaise);
             $simulatedStatus = $simulatedDue === 0 ? 'PAID (COMPLETED)' : 'PARTIALLY_PAID';
-            $adjustMsg = $shouldAdjustPaymentAmount
-                ? ' | Will adjust Payment Bank Amount to Rs. '.number_format($alloc->amount / 100, 2)
-                : '';
-            echo '    [Dry Run] Will set Payment & Allocation TDS = Rs. '.number_format($tdsNumber, 2).$adjustMsg."\n";
+            echo '    [Dry Run] Will set Gross Receipt Amount = Rs. '.number_format($grossReceiptPaise / 100, 2)."\n";
+            echo '    [Dry Run] Will set Allocation Bank = Rs. '.number_format($bankReceivedPaise / 100, 2).' | TDS = Rs. '.number_format($tdsNumber, 2)."\n";
             echo "    [Dry Run] Invoice {$inv->invoice_number} will become Due: Rs. ".number_format($simulatedDue / 100, 2)." | Status: {$simulatedStatus}\n";
         }
 

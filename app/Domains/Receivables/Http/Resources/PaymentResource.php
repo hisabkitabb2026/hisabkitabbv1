@@ -50,9 +50,13 @@ class PaymentResource extends JsonResource
             ? $payment->allocations
             : $payment->allocations()->with('invoice')->get();
 
-        $allocated = (int) $allocations->sum('amount');
-        $baseAllocated = (int) $allocations->sum('base_amount');
+        $allocatedBank = (int) $allocations->sum('amount');
+        $baseAllocatedBank = (int) $allocations->sum('base_amount');
         $allocatedTds = (int) $allocations->sum('tds_amount');
+        $baseAllocatedTds = (int) $allocations->sum('base_tds_amount');
+        $totalSettledAllocated = $allocatedBank + $allocatedTds;
+        $baseTotalSettledAllocated = $baseAllocatedBank + $baseAllocatedTds;
+
         $baseAmount = $this->baseAmount();
         $tdsAmount = (int) ($payment->tds_amount ?? 0);
         $baseTdsAmount = (int) ($payment->base_tds_amount ?? 0);
@@ -63,9 +67,10 @@ class PaymentResource extends JsonResource
             'payment_date' => $payment->payment_date,
             'notes' => $payment->getNotes(),
             'amount' => $payment->amount,
+            'bank_amount' => max(0, (int) $payment->amount - $tdsAmount),
             'tds_amount' => $tdsAmount,
             'base_tds_amount' => $baseTdsAmount,
-            'total_settlement_amount' => (int) $payment->amount + $tdsAmount,
+            'total_settlement_amount' => (int) $payment->amount,
             'unique_hash' => $payment->unique_hash,
             'company_id' => $payment->company_id,
             'payment_method_id' => $payment->payment_method_id,
@@ -74,12 +79,13 @@ class PaymentResource extends JsonResource
             'exchange_rate' => $payment->exchange_rate,
             'base_amount' => $baseAmount,
             'allocations' => $this->allocationRows($allocations),
-            'allocated_amount' => $allocated,
-            'unallocated_amount' => (int) $payment->amount - $allocated,
+            'allocated_amount' => $totalSettledAllocated,
+            'unallocated_amount' => max(0, (int) $payment->amount - $totalSettledAllocated),
+            'allocated_bank_amount' => $allocatedBank,
             'allocated_tds_amount' => $allocatedTds,
             'unallocated_tds_amount' => max(0, $tdsAmount - $allocatedTds),
-            'base_allocated_amount' => $baseAllocated,
-            'base_unallocated_amount' => $baseAmount - $baseAllocated,
+            'base_allocated_amount' => $baseTotalSettledAllocated,
+            'base_unallocated_amount' => max(0, $baseAmount - $baseTotalSettledAllocated),
             'currency_id' => $payment->currency_id,
             'transaction_id' => $payment->transaction_id,
             'sequence_number' => $payment->sequence_number,

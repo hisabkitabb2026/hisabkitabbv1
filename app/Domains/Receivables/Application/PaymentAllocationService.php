@@ -204,14 +204,19 @@ class PaymentAllocationService
             ]);
         }
 
-        if (collect($allocations)->sum('amount') > (int) $payment->amount) {
+        $totalSettledAllocations = (int) collect($allocations)->sum(function ($a) {
+            return (int) $a['amount'] + (int) ($a['tds_amount'] ?? 0);
+        });
+
+        if ($totalSettledAllocations > (int) $payment->amount) {
             throw ValidationException::withMessages([
                 'allocations' => ['payment_allocation_exceeds_payment_amount'],
             ]);
         }
 
         $paymentTds = (int) ($payment->tds_amount ?? 0);
-        if (collect($allocations)->sum('tds_amount') > $paymentTds) {
+        $totalAllocatedTds = (int) collect($allocations)->sum('tds_amount');
+        if ($paymentTds > 0 && $totalAllocatedTds > $paymentTds) {
             throw ValidationException::withMessages([
                 'allocations' => ['payment_allocation_exceeds_tds_amount'],
             ]);

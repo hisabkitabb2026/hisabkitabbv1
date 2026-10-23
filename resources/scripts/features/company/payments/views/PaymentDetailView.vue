@@ -36,8 +36,8 @@
         <BaseStat :label="$t('payments.amount')" emphasis>
           <BaseFormatMoney :amount="currentPayment.amount" :currency="paymentCurrency" />
           <div v-if="currentPayment.tds_amount" class="text-xs font-normal text-muted mt-0.5">
-            + TDS: <BaseFormatMoney :amount="currentPayment.tds_amount" :currency="paymentCurrency" />
-            (Total: <BaseFormatMoney :amount="currentPayment.amount + currentPayment.tds_amount" :currency="paymentCurrency" />)
+            Bank: <BaseFormatMoney :amount="currentPayment.amount - currentPayment.tds_amount" :currency="paymentCurrency" />
+            | TDS: <BaseFormatMoney :amount="currentPayment.tds_amount" :currency="paymentCurrency" />
           </div>
         </BaseStat>
         <BaseStat :label="$t('payments.date')">
@@ -84,10 +84,12 @@
               <span v-if="allocation.invoice?.formatted_invoice_date" class="block mt-0.5 text-xs text-muted">{{ allocation.invoice.formatted_invoice_date }}</span>
             </div>
             <div class="text-right">
-              <BaseFormatMoney :amount="allocation.amount" :currency="currentPayment.customer?.currency" class="font-medium text-heading" />
+              <span class="font-medium text-heading">
+                <BaseFormatMoney :amount="allocation.amount + (allocation.tds_amount ?? 0)" :currency="currentPayment.customer?.currency" />
+              </span>
               <div v-if="allocation.tds_amount" class="text-xs text-muted">
-                + TDS: <BaseFormatMoney :amount="allocation.tds_amount" :currency="currentPayment.customer?.currency" />
-                (Total: <BaseFormatMoney :amount="allocation.amount + allocation.tds_amount" :currency="currentPayment.customer?.currency" />)
+                Bank: <BaseFormatMoney :amount="allocation.amount" :currency="currentPayment.customer?.currency" />
+                | TDS: <BaseFormatMoney :amount="allocation.tds_amount" :currency="currentPayment.customer?.currency" />
               </div>
             </div>
           </div>
@@ -128,7 +130,7 @@
         <template #amount>
           <BaseFormatMoney :amount="payment.amount" :currency="payment.customer?.currency" />
           <div v-if="payment.tds_amount" class="text-[11px] text-muted">
-            + TDS: <BaseFormatMoney :amount="payment.tds_amount" :currency="payment.customer?.currency" />
+            Bank: <BaseFormatMoney :amount="payment.amount - payment.tds_amount" :currency="payment.customer?.currency" /> | TDS: <BaseFormatMoney :amount="payment.tds_amount" :currency="payment.customer?.currency" />
           </div>
         </template>
       </RecordListItem>

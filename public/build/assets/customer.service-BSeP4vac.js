@@ -1,0 +1,1 @@
+import{t as e}from"./customer.service-DJ2wz-ad.js";export{e as customerService};

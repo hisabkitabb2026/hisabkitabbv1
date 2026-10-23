@@ -195,7 +195,7 @@
             :currency="row.data.customer?.currency"
           />
           <div v-if="row.data.tds_amount" class="text-xs text-muted">
-            + TDS: <BaseFormatMoney :amount="row.data.tds_amount" :currency="row.data.customer?.currency" />
+            Bank: <BaseFormatMoney :amount="row.data.amount - row.data.tds_amount" :currency="row.data.customer?.currency" /> | TDS: <BaseFormatMoney :amount="row.data.tds_amount" :currency="row.data.customer?.currency" />
           </div>
         </template>
 
