@@ -117,7 +117,7 @@ function openTrip(trip: TripCardModel): void {
               {{ trip.actual_revenue > 0 ? formatMoney(trip.actual_revenue) : (trip.revenue > 0 ? formatMoney(0) : '—') }}
             </td>
             <td class="p-3 text-end font-medium text-indigo-600">
-              {{ trip.tds_amount > 0 ? formatMoney(trip.tds_amount) : '—' }}
+              {{ trip.tds_amount > 0 ? formatMoney(trip.tds_amount) : (trip.revenue > 0 || trip.actual_revenue > 0 ? formatMoney(0) : '—') }}
             </td>
             <td class="p-3 text-end text-body">{{ formatMoney(trip.cost) }}</td>
             <td

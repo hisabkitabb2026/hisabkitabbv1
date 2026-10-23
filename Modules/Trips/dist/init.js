@@ -3084,7 +3084,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 			}, b(u(e.status_id)), 5)]),
 			a("td", oo, b(e.revenue > 0 ? x(L)(e.revenue) : "—"), 1),
 			a("td", so, b(e.actual_revenue > 0 ? x(L)(e.actual_revenue) : e.revenue > 0 ? x(L)(0) : "—"), 1),
-			a("td", co, b(e.tds_amount > 0 ? x(L)(e.tds_amount) : "—"), 1),
+			a("td", co, b(e.tds_amount > 0 ? x(L)(e.tds_amount) : e.revenue > 0 || e.actual_revenue > 0 ? x(L)(0) : "—"), 1),
 			a("td", lo, b(x(L)(e.cost)), 1),
 			a("td", { class: d(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(e.profit)), 3)
 		], 10, eo))), 128))])])]))]));

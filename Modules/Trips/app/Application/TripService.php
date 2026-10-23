@@ -626,9 +626,16 @@ final class TripService
      */
     private function receivable(Trip $trip): array
     {
+        // Check linked Invoice Receipts first, then LR Receipts if not invoiced yet
         $invoiceIds = $trip->receipts
             ->where('type', TripReceipt::TYPE_INVOICE)
             ->pluck('invoice_id');
+
+        if ($invoiceIds->isEmpty()) {
+            $invoiceIds = $trip->receipts
+                ->where('type', TripReceipt::TYPE_LR)
+                ->pluck('invoice_id');
+        }
 
         if ($invoiceIds->isEmpty()) {
             return [];
@@ -637,18 +644,20 @@ final class TripService
         $invoices = Invoice::query()
             ->where('company_id', (int) $trip->company_id)
             ->whereIn('id', $invoiceIds)
-            ->with(['customer', 'payments.paymentMethod'])
+            ->with(['customer', 'allocations.payment.paymentMethod'])
             ->get();
 
         return $invoices->map(function (Invoice $invoice): array {
             $bankSum = 0;
             $tdsSum = 0;
 
-            $payments = $invoice->payments
-                ->sortBy('payment_date')
-                ->map(function ($payment) use (&$bankSum, &$tdsSum): array {
-                    $b = (int) ($payment->pivot->amount ?? 0);
-                    $t = (int) ($payment->pivot->tds_amount ?? 0);
+            $payments = $invoice->allocations
+                ->filter(fn ($alloc) => $alloc->payment !== null)
+                ->sortBy(fn ($alloc) => $alloc->payment->payment_date)
+                ->map(function ($alloc) use (&$bankSum, &$tdsSum): array {
+                    $payment = $alloc->payment;
+                    $b = (int) ($alloc->amount ?? 0);
+                    $t = (int) ($alloc->tds_amount ?: ($payment->tds_amount ?? 0));
                     $bankSum += $b;
                     $tdsSum += $t;
 
