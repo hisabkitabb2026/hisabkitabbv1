@@ -3130,7 +3130,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 }, _o = {
 	key: 2,
 	class: "rounded-2xl border border-line-default bg-surface overflow-hidden"
-}, vo = { class: "overflow-x-auto" }, yo = { class: "w-full text-sm" }, bo = ["onClick"], xo = { class: "p-3 font-medium text-heading" }, So = { class: "p-3 text-body" }, Co = { class: "p-3 text-body" }, wo = { class: "p-3 text-body" }, To = { class: "p-3 text-body" }, Eo = { class: "p-3 text-end text-body font-medium" }, Do = { class: "p-3 text-end font-medium text-emerald-600" }, Oo = { class: "p-3 text-end font-medium text-indigo-600" }, ko = { class: "p-3 text-end text-body" }, Ao = /* @__PURE__ */ c({
+}, vo = { class: "overflow-x-auto" }, yo = { class: "w-full text-sm" }, bo = { class: "border-b border-line-default text-start text-xs uppercase text-muted" }, xo = ["onClick"], So = { class: "p-3 font-medium text-heading" }, Co = { class: "p-3 text-body" }, wo = { class: "p-3 text-body" }, To = { class: "p-3 text-body" }, Eo = { class: "p-3 text-body" }, Do = { class: "p-3 text-end text-body font-medium" }, Oo = { class: "p-3 text-end font-medium text-emerald-600" }, ko = { class: "p-3 text-end font-medium text-indigo-600" }, Ao = { class: "p-3 text-end text-body" }, jo = /* @__PURE__ */ c({
 	__name: "TripsListView",
 	props: {
 		client: { type: [Function, Object] },
@@ -3140,98 +3140,236 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 		statuses: {},
 		loading: { type: Boolean }
 	},
-	setup(n) {
-		let r = n, o = _([]), c = _(!0), l = _(1), u = _(10), p = t(() => !c.value && o.value.length === 0), h = t(() => [...o.value].sort((e, t) => t.trip_no - e.trip_no)), y = t(() => h.value.length), S = t(() => Math.max(1, Math.ceil(y.value / u.value))), w = t(() => {
-			let e = (l.value - 1) * u.value;
-			return h.value.slice(e, e + u.value);
-		}), T = t(() => ({
-			currentPage: l.value,
-			totalPages: S.value,
-			totalCount: y.value,
-			count: w.value.length,
-			limit: u.value
+	setup(o) {
+		let c = o, l = _([]), u = _(!0), p = _(1), h = _(10), S = _("trip_no"), w = _("desc");
+		function T(e) {
+			S.value === e ? w.value = w.value === "asc" ? "desc" : "asc" : (S.value = e, w.value = [
+				"revenue",
+				"actual_revenue",
+				"tds_amount",
+				"cost",
+				"profit",
+				"trip_no"
+			].includes(e) ? "desc" : "asc"), p.value = 1;
+		}
+		let E = t(() => !u.value && l.value.length === 0), D = t(() => {
+			let e = [...l.value], t = S.value, n = w.value === "asc" ? 1 : -1;
+			return e.sort((e, r) => {
+				let i = 0;
+				switch (t) {
+					case "trip_no":
+						i = e.trip_no - r.trip_no;
+						break;
+					case "route": {
+						let t = `${e.from_city ?? ""} ${e.to_city ?? ""}`.trim().toLowerCase(), n = `${r.from_city ?? ""} ${r.to_city ?? ""}`.trim().toLowerCase();
+						i = t.localeCompare(n);
+						break;
+					}
+					case "customer": {
+						let t = (e.customers[0]?.name ?? "").toLowerCase(), n = (r.customers[0]?.name ?? "").toLowerCase();
+						i = t.localeCompare(n);
+						break;
+					}
+					case "lorry": {
+						let t = (e.lorry_no ?? "").toLowerCase(), n = (r.lorry_no ?? "").toLowerCase();
+						i = t.localeCompare(n);
+						break;
+					}
+					case "status":
+						i = e.status_id - r.status_id;
+						break;
+					case "revenue":
+						i = e.revenue - r.revenue;
+						break;
+					case "actual_revenue":
+						i = e.actual_revenue - r.actual_revenue;
+						break;
+					case "tds_amount":
+						i = e.tds_amount - r.tds_amount;
+						break;
+					case "cost":
+						i = e.cost - r.cost;
+						break;
+					case "profit":
+						i = e.profit - r.profit;
+						break;
+				}
+				return i === 0 ? r.trip_no - e.trip_no : i * n;
+			});
+		}), O = t(() => D.value.length), k = t(() => Math.max(1, Math.ceil(O.value / h.value))), j = t(() => {
+			let e = (p.value - 1) * h.value;
+			return D.value.slice(e, e + h.value);
+		}), M = t(() => ({
+			currentPage: p.value,
+			totalPages: k.value,
+			totalCount: O.value,
+			count: j.value.length,
+			limit: h.value
 		}));
-		function E(e) {
-			l.value = e, typeof window < "u" && window.scrollTo({
+		function N(e) {
+			p.value = e, typeof window < "u" && window.scrollTo({
 				top: 0,
 				behavior: "smooth"
 			});
 		}
-		let D = (e) => r.statuses.find((t) => t.id === e)?.name ?? "—", O = (e) => r.statuses.find((t) => t.id === e)?.colour ?? "#6366f1";
-		async function k() {
-			c.value = !0;
+		let ee = (e) => c.statuses.find((t) => t.id === e)?.name ?? "—", P = (e) => c.statuses.find((t) => t.id === e)?.colour ?? "#6366f1";
+		async function te() {
+			u.value = !0;
 			try {
-				o.value = await Ae(r.client, ya(r.filters));
+				l.value = await Ae(c.client, ya(c.filters));
 			} catch (e) {
-				r.notify("error", I(e, "Unable to load trips."));
+				c.notify("error", I(e, "Unable to load trips."));
 			} finally {
-				c.value = !1;
+				u.value = !1;
 			}
 		}
 		m(() => {
-			k();
-		}), C(() => ga(r.filters), () => {
-			l.value = 1, k();
-		}), C(S, (e) => {
-			l.value > e && (l.value = e);
+			te();
+		}), C(() => ga(c.filters), () => {
+			p.value = 1, te();
+		}), C(k, (e) => {
+			p.value > e && (p.value = e);
 		});
-		function j(e) {
-			r.router?.push(A.trip(e.id));
+		function ne(e) {
+			c.router?.push(A.trip(e.id));
 		}
-		return (t, n) => (g(), i("div", null, [c.value ? (g(), i("div", ho, "Loading trips…")) : p.value ? (g(), i("div", go, [...n[0] ||= [
-			a("p", { class: "text-4xl" }, "🚛", -1),
-			a("h2", { class: "mt-3 text-lg font-semibold text-heading" }, "No trips found", -1),
-			a("p", { class: "mt-1 text-sm text-muted" }, "Try adjusting your filters, or create a new trip.", -1)
-		]])) : (g(), i("div", _o, [a("div", vo, [a("table", yo, [n[1] ||= a("thead", null, [a("tr", { class: "border-b border-line-default text-start text-xs uppercase text-muted" }, [
-			a("th", { class: "p-3 text-start font-medium" }, "#"),
-			a("th", { class: "p-3 text-start font-medium" }, "Route"),
-			a("th", { class: "p-3 text-start font-medium" }, "Customer"),
-			a("th", { class: "p-3 text-start font-medium" }, "Lorry"),
-			a("th", { class: "p-3 text-start font-medium" }, "Status"),
-			a("th", { class: "p-3 text-end font-medium" }, "Billed Rev"),
-			a("th", { class: "p-3 text-end font-medium" }, "Actual Rev (Bank)"),
-			a("th", { class: "p-3 text-end font-medium" }, "TDS"),
-			a("th", { class: "p-3 text-end font-medium" }, "Cost"),
-			a("th", { class: "p-3 text-end font-medium" }, "Profit")
-		])], -1), a("tbody", null, [(g(!0), i(e, null, v(w.value, (e) => (g(), i("tr", {
-			key: e.id,
-			class: d(["cursor-pointer border-b border-line-light hover:bg-hover", { "opacity-50": e.cancelled_at }]),
-			onClick: (t) => j(e)
-		}, [
-			a("td", xo, "#" + b(e.trip_no), 1),
-			a("td", So, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1),
-			a("td", Co, b(e.customers.map((e) => e.name).filter(Boolean).join(", ") || "—"), 1),
-			a("td", wo, b(e.lorry_no ?? "—"), 1),
-			a("td", To, [a("span", {
-				class: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-				style: f({
-					backgroundColor: O(e.status_id) + "20",
-					color: O(e.status_id)
-				})
-			}, b(D(e.status_id)), 5)]),
-			a("td", Eo, b(e.revenue > 0 ? x(L)(e.revenue) : "—"), 1),
-			a("td", Do, b(e.actual_revenue > 0 ? x(L)(e.actual_revenue) : e.revenue > 0 ? x(L)(0) : "—"), 1),
-			a("td", Oo, b(e.tds_amount > 0 ? x(L)(e.tds_amount) : e.revenue > 0 || e.actual_revenue > 0 ? x(L)(0) : "—"), 1),
-			a("td", ko, b(x(L)(e.cost)), 1),
-			a("td", { class: d(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(e.profit)), 3)
-		], 10, bo))), 128))])])]), s(mo, {
-			pagination: T.value,
-			onPageChange: E
-		}, null, 8, ["pagination"])]))]));
+		return (t, o) => {
+			let c = y("BaseIcon");
+			return g(), i("div", null, [u.value ? (g(), i("div", ho, "Loading trips…")) : E.value ? (g(), i("div", go, [...o[10] ||= [
+				a("p", { class: "text-4xl" }, "🚛", -1),
+				a("h2", { class: "mt-3 text-lg font-semibold text-heading" }, "No trips found", -1),
+				a("p", { class: "mt-1 text-sm text-muted" }, "Try adjusting your filters, or create a new trip.", -1)
+			]])) : (g(), i("div", _o, [a("div", vo, [a("table", yo, [a("thead", null, [a("tr", bo, [
+				a("th", { class: d(["p-3 text-start font-medium", { "text-heading font-semibold": S.value === "trip_no" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none",
+					onClick: o[0] ||= (e) => T("trip_no")
+				}, [o[11] ||= a("span", null, "#", -1), S.value === "trip_no" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-start font-medium", { "text-heading font-semibold": S.value === "route" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none",
+					onClick: o[1] ||= (e) => T("route")
+				}, [o[12] ||= a("span", null, "Route", -1), S.value === "route" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-start font-medium", { "text-heading font-semibold": S.value === "customer" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none",
+					onClick: o[2] ||= (e) => T("customer")
+				}, [o[13] ||= a("span", null, "Customer", -1), S.value === "customer" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-start font-medium", { "text-heading font-semibold": S.value === "lorry" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none",
+					onClick: o[3] ||= (e) => T("lorry")
+				}, [o[14] ||= a("span", null, "Lorry", -1), S.value === "lorry" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-start font-medium", { "text-heading font-semibold": S.value === "status" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none",
+					onClick: o[4] ||= (e) => T("status")
+				}, [o[15] ||= a("span", null, "Status", -1), S.value === "status" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-end font-medium", { "text-heading font-semibold": S.value === "revenue" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto",
+					onClick: o[5] ||= (e) => T("revenue")
+				}, [o[16] ||= a("span", null, "Billed Rev", -1), S.value === "revenue" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-end font-medium", { "text-heading font-semibold": S.value === "actual_revenue" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto",
+					onClick: o[6] ||= (e) => T("actual_revenue")
+				}, [o[17] ||= a("span", null, "Actual Rev (Bank)", -1), S.value === "actual_revenue" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-end font-medium", { "text-heading font-semibold": S.value === "tds_amount" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto",
+					onClick: o[7] ||= (e) => T("tds_amount")
+				}, [o[18] ||= a("span", null, "TDS", -1), S.value === "tds_amount" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-end font-medium", { "text-heading font-semibold": S.value === "cost" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto",
+					onClick: o[8] ||= (e) => T("cost")
+				}, [o[19] ||= a("span", null, "Cost", -1), S.value === "cost" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2),
+				a("th", { class: d(["p-3 text-end font-medium", { "text-heading font-semibold": S.value === "profit" }]) }, [a("button", {
+					type: "button",
+					class: "inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto",
+					onClick: o[9] ||= (e) => T("profit")
+				}, [o[20] ||= a("span", null, "Profit", -1), S.value === "profit" ? (g(), n(c, {
+					key: 0,
+					name: w.value === "asc" ? "ChevronUpIcon" : "ChevronDownIcon",
+					class: "w-3.5 h-3.5 text-primary-600"
+				}, null, 8, ["name"])) : r("", !0)])], 2)
+			])]), a("tbody", null, [(g(!0), i(e, null, v(j.value, (e) => (g(), i("tr", {
+				key: e.id,
+				class: d(["cursor-pointer border-b border-line-light hover:bg-hover", { "opacity-50": e.cancelled_at }]),
+				onClick: (t) => ne(e)
+			}, [
+				a("td", So, "#" + b(e.trip_no), 1),
+				a("td", Co, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1),
+				a("td", wo, b(e.customers.map((e) => e.name).filter(Boolean).join(", ") || "—"), 1),
+				a("td", To, b(e.lorry_no ?? "—"), 1),
+				a("td", Eo, [a("span", {
+					class: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+					style: f({
+						backgroundColor: P(e.status_id) + "20",
+						color: P(e.status_id)
+					})
+				}, b(ee(e.status_id)), 5)]),
+				a("td", Do, b(e.revenue > 0 ? x(L)(e.revenue) : "—"), 1),
+				a("td", Oo, b(e.actual_revenue > 0 ? x(L)(e.actual_revenue) : e.revenue > 0 ? x(L)(0) : "—"), 1),
+				a("td", ko, b(e.tds_amount > 0 ? x(L)(e.tds_amount) : e.revenue > 0 || e.actual_revenue > 0 ? x(L)(0) : "—"), 1),
+				a("td", Ao, b(x(L)(e.cost)), 1),
+				a("td", { class: d(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, b(x(L)(e.profit)), 3)
+			], 10, xo))), 128))])])]), s(mo, {
+				pagination: M.value,
+				onPageChange: N
+			}, null, 8, ["pagination"])]))]);
+		};
 	}
-}), jo = { class: "mb-4 flex items-center justify-between gap-3" }, Mo = { class: "flex items-center gap-2" }, No = { class: "text-sm font-semibold text-heading" }, Po = { class: "text-sm text-muted" }, Fo = {
+}), Mo = { class: "mb-4 flex items-center justify-between gap-3" }, No = { class: "flex items-center gap-2" }, Po = { class: "text-sm font-semibold text-heading" }, Fo = { class: "text-sm text-muted" }, Io = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, Io = { class: "grid grid-cols-1 gap-3 md:grid-cols-7" }, Lo = { class: "mb-2 flex items-center justify-between" }, Ro = { class: "text-xs font-medium text-muted" }, zo = {
+}, Lo = { class: "grid grid-cols-1 gap-3 md:grid-cols-7" }, Ro = { class: "mb-2 flex items-center justify-between" }, zo = { class: "text-xs font-medium text-muted" }, Bo = {
 	key: 0,
 	class: "rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-muted"
-}, Bo = { class: "flex-1 space-y-2" }, Vo = ["onClick"], Ho = { class: "truncate text-xs font-medium text-heading" }, Uo = { class: "mt-0.5 text-xs text-muted" }, Wo = {
+}, Vo = { class: "flex-1 space-y-2" }, Ho = ["onClick"], Uo = { class: "truncate text-xs font-medium text-heading" }, Wo = { class: "mt-0.5 text-xs text-muted" }, Go = {
 	key: 0,
 	class: "mt-2 border-t border-line-light pt-1 text-xs text-muted"
-}, Go = {
+}, Ko = {
 	key: 0,
 	class: "mt-4"
-}, Ko = { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, qo = { class: "flex flex-wrap gap-2" }, Jo = ["onClick"], Yo = { class: "text-xs font-medium text-heading" }, Xo = { class: "text-xs text-muted" }, Zo = /* @__PURE__ */ c({
+}, qo = { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, Jo = { class: "flex flex-wrap gap-2" }, Yo = ["onClick"], Xo = { class: "text-xs font-medium text-heading" }, Zo = { class: "text-xs text-muted" }, Qo = /* @__PURE__ */ c({
 	__name: "TripsWeekView",
 	props: {
 		client: { type: [Function, Object] },
@@ -3307,7 +3445,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 		}
 		return (t, n) => {
 			let c = y("BaseButton");
-			return g(), i("div", null, [a("div", jo, [a("div", Mo, [
+			return g(), i("div", null, [a("div", Mo, [a("div", No, [
 				s(c, {
 					size: "sm",
 					variant: "white",
@@ -3316,7 +3454,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 					default: w(() => [...n[0] ||= [o("←", -1)]]),
 					_: 1
 				}),
-				a("span", No, b(T.value), 1),
+				a("span", Po, b(T.value), 1),
 				s(c, {
 					size: "sm",
 					variant: "white",
@@ -3333,25 +3471,25 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 					default: w(() => [...n[2] ||= [o("Today", -1)]]),
 					_: 1
 				})
-			]), a("span", Po, b(l.value.length) + " trips this week", 1)]), u.value ? (g(), i("div", Fo, "Loading the week…")) : (g(), i(e, { key: 1 }, [a("div", Io, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("div", {
+			]), a("span", Fo, b(l.value.length) + " trips this week", 1)]), u.value ? (g(), i("div", Io, "Loading the week…")) : (g(), i(e, { key: 1 }, [a("div", Lo, [(g(!0), i(e, null, v(h.value, (t) => (g(), i("div", {
 				key: t.dateStr,
 				class: d(["flex min-h-48 flex-col rounded-xl border bg-surface p-2", t.isToday ? "border-primary-400" : "border-line-default"])
 			}, [
-				a("div", Lo, [a("div", null, [a("p", Ro, b(t.name), 1), a("p", { class: d(["text-lg font-semibold", t.isToday ? "text-primary-500" : "text-heading"]) }, b(t.date.getDate()), 3)]), t.trips.length > 0 ? (g(), i("span", zo, b(t.trips.length), 1)) : r("", !0)]),
-				a("div", Bo, [(g(!0), i(e, null, v(t.trips, (e) => (g(), i("div", {
+				a("div", Ro, [a("div", null, [a("p", zo, b(t.name), 1), a("p", { class: d(["text-lg font-semibold", t.isToday ? "text-primary-500" : "text-heading"]) }, b(t.date.getDate()), 3)]), t.trips.length > 0 ? (g(), i("span", Bo, b(t.trips.length), 1)) : r("", !0)]),
+				a("div", Vo, [(g(!0), i(e, null, v(t.trips, (e) => (g(), i("div", {
 					key: e.id,
 					class: "cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover",
 					onClick: (t) => j(e)
-				}, [a("p", Ho, "#" + b(e.trip_no) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("p", Uo, b(e.lorry_no ?? "No lorry") + " · " + b(x(L)(e.revenue)), 1)], 8, Vo))), 128))]),
-				t.trips.length > 0 ? (g(), i("p", Wo, b(x(L)(t.revenue)), 1)) : r("", !0)
-			], 2))), 128))]), S.value.length > 0 ? (g(), i("div", Go, [a("p", Ko, " Unscheduled (" + b(S.value.length) + ") ", 1), a("div", qo, [(g(!0), i(e, null, v(S.value, (e) => (g(), i("div", {
+				}, [a("p", Uo, "#" + b(e.trip_no) + " · " + b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1), a("p", Wo, b(e.lorry_no ?? "No lorry") + " · " + b(x(L)(e.revenue)), 1)], 8, Ho))), 128))]),
+				t.trips.length > 0 ? (g(), i("p", Go, b(x(L)(t.revenue)), 1)) : r("", !0)
+			], 2))), 128))]), S.value.length > 0 ? (g(), i("div", Ko, [a("p", qo, " Unscheduled (" + b(S.value.length) + ") ", 1), a("div", Jo, [(g(!0), i(e, null, v(S.value, (e) => (g(), i("div", {
 				key: e.id,
 				class: "cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover",
 				onClick: (t) => j(e)
-			}, [a("p", Yo, "#" + b(e.trip_no), 1), a("p", Xo, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1)], 8, Jo))), 128))])])) : r("", !0)], 64))]);
+			}, [a("p", Xo, "#" + b(e.trip_no), 1), a("p", Zo, b(e.from_city ?? "—") + " → " + b(e.to_city ?? "—"), 1)], 8, Yo))), 128))])])) : r("", !0)], 64))]);
 		};
 	}
-}), Qo = { class: "mt-4 flex flex-wrap items-end gap-3" }, $o = { class: "min-w-44 flex-1" }, es = { class: "min-w-44 flex-1" }, ts = { class: "min-w-44 flex-1" }, ns = { class: "flex items-center gap-1.5 pb-2.5 text-sm text-body" }, rs = ["checked"], is = 350, as = /* @__PURE__ */ c({
+}), $o = { class: "mt-4 flex flex-wrap items-end gap-3" }, es = { class: "min-w-44 flex-1" }, ts = { class: "min-w-44 flex-1" }, ns = { class: "min-w-44 flex-1" }, rs = { class: "flex items-center gap-1.5 pb-2.5 text-sm text-body" }, is = ["checked"], as = 350, os = /* @__PURE__ */ c({
 	__name: "TripFilters",
 	props: {
 		modelValue: {},
@@ -3372,7 +3510,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 		C(() => c.modelValue.search, (e) => {
 			e !== u.value && (u.value = e);
 		}), C(u, (e) => {
-			clearTimeout(d), d = setTimeout(() => b({ search: e.trim() }), is);
+			clearTimeout(d), d = setTimeout(() => b({ search: e.trim() }), as);
 		}), p(() => clearTimeout(d));
 		function v(e, t) {
 			return e.find((e) => e.id === t) ?? e[0];
@@ -3391,20 +3529,20 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 		}
 		return (t, n) => {
 			let c = y("BaseSelectInput"), l = y("BaseCustomerSelectInput"), d = y("BaseInput");
-			return g(), i("div", Qo, [
-				a("label", $o, [n[3] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Status", -1), s(c, {
+			return g(), i("div", $o, [
+				a("label", es, [n[3] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Status", -1), s(c, {
 					modelValue: m.value,
 					"onUpdate:modelValue": n[0] ||= (e) => m.value = e,
 					options: f.value,
 					"label-key": "label"
 				}, null, 8, ["modelValue", "options"])]),
-				a("label", es, [n[4] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Customer", -1), s(l, {
+				a("label", ts, [n[4] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Customer", -1), s(l, {
 					"model-value": e.modelValue.customer ? Number(e.modelValue.customer) : null,
 					"can-deselect": "",
 					placeholder: "All customers",
 					"onUpdate:modelValue": n[1] ||= (e) => b({ customer: e ? String(e) : "" })
 				}, null, 8, ["model-value"])]),
-				a("label", ts, [n[5] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Search", -1), s(d, {
+				a("label", ns, [n[5] ||= a("span", { class: "mb-1 block text-xs font-medium text-muted" }, "Search", -1), s(d, {
 					modelValue: u.value,
 					"onUpdate:modelValue": n[2] ||= (e) => u.value = e,
 					type: "text",
@@ -3412,12 +3550,12 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 					autocomplete: "off",
 					placeholder: "Search route, lorry, goods..."
 				}, null, 8, ["modelValue"])]),
-				a("label", ns, [a("input", {
+				a("label", rs, [a("input", {
 					type: "checkbox",
 					class: "accent-primary-600",
 					checked: e.modelValue.unbilled === "1",
 					onChange: x
-				}, null, 40, rs), n[6] ||= o(" Unbilled only ", -1)]),
+				}, null, 40, is), n[6] ||= o(" Unbilled only ", -1)]),
 				h.value ? (g(), i("button", {
 					key: 0,
 					type: "button",
@@ -3427,10 +3565,10 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 			]);
 		};
 	}
-}), os = {
+}), ss = {
 	class: "inline-flex overflow-hidden rounded-lg border border-line-default",
 	"aria-label": "Trip views"
-}, ss = ["aria-current", "onClick"], cs = { class: "max-sm:sr-only" }, ls = /* @__PURE__ */ c({
+}, cs = ["aria-current", "onClick"], ls = { class: "max-sm:sr-only" }, us = /* @__PURE__ */ c({
 	__name: "TripViewSwitcher",
 	props: {
 		active: {},
@@ -3469,7 +3607,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 		}
 		return (t, n) => {
 			let r = y("BaseIcon");
-			return g(), i("nav", os, [(g(), i(e, null, v(c, (e) => a("button", {
+			return g(), i("nav", ss, [(g(), i(e, null, v(c, (e) => a("button", {
 				key: e.id,
 				type: "button",
 				class: d(["flex items-center gap-1.5 border-e border-line-default px-3 py-1.5 text-sm font-medium last:border-e-0", l(e) ? "bg-primary-50 text-primary-500" : "bg-surface text-muted hover:bg-hover hover:text-heading"]),
@@ -3478,10 +3616,10 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 			}, [s(r, {
 				name: e.icon,
 				class: "h-4 w-4"
-			}, null, 8, ["name"]), a("span", cs, b(e.label), 1)], 10, ss)), 64))]);
+			}, null, 8, ["name"]), a("span", ls, b(e.label), 1)], 10, cs)), 64))]);
 		};
 	}
-}), us = { class: "flex flex-wrap items-center justify-end gap-3" }, ds = /* @__PURE__ */ c({
+}), ds = { class: "flex flex-wrap items-center justify-end gap-3" }, fs = /* @__PURE__ */ c({
 	__name: "TripsPage",
 	props: {
 		client: { type: [Function, Object] },
@@ -3526,8 +3664,8 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 			return g(), n(C, null, {
 				default: w(() => [
 					s(v, { title: "Trips" }, {
-						actions: w(() => [a("div", us, [
-							s(ls, {
+						actions: w(() => [a("div", ds, [
+							s(us, {
 								active: h.value,
 								query: p.value,
 								onSelect: T
@@ -3568,7 +3706,7 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 						})]),
 						_: 1
 					}),
-					s(as, {
+					s(os, {
 						"model-value": f.value,
 						statuses: c.value,
 						"onUpdate:modelValue": S
@@ -3587,15 +3725,15 @@ var Sa = { class: "flex items-start justify-between gap-2" }, Ca = { class: "tex
 			});
 		};
 	}
-}), fs = `${O}:view-trip`;
-function ps(e) {
+}), ps = `${O}:view-trip`;
+function ms(e) {
 	e.registerPage({
 		id: "trips",
 		module: O,
 		path: "",
-		component: M(e, ds),
+		component: M(e, fs),
 		meta: {
-			ability: fs,
+			ability: ps,
 			title: "trips.title"
 		},
 		children: [
@@ -3605,7 +3743,7 @@ function ps(e) {
 				path: "",
 				component: M(e, Ya),
 				meta: {
-					ability: fs,
+					ability: ps,
 					title: "trips.title"
 				}
 			},
@@ -3613,9 +3751,9 @@ function ps(e) {
 				id: "list",
 				module: O,
 				path: "list",
-				component: M(e, Ao),
+				component: M(e, jo),
 				meta: {
-					ability: fs,
+					ability: ps,
 					title: "trips.title"
 				}
 			},
@@ -3623,9 +3761,9 @@ function ps(e) {
 				id: "week",
 				module: O,
 				path: "week",
-				component: M(e, Zo),
+				component: M(e, Qo),
 				meta: {
-					ability: fs,
+					ability: ps,
 					title: "trips.title"
 				}
 			}
@@ -3636,7 +3774,7 @@ function ps(e) {
 		path: "new",
 		component: M(e, it),
 		meta: {
-			ability: fs,
+			ability: ps,
 			title: "trips.title"
 		}
 	}), e.registerPage({
@@ -3645,7 +3783,7 @@ function ps(e) {
 		path: ":id(\\d+)",
 		component: M(e, cr),
 		meta: {
-			ability: fs,
+			ability: ps,
 			title: "trips.title"
 		}
 	});
@@ -3653,6 +3791,6 @@ function ps(e) {
 //#endregion
 //#region resources/js/init.ts
 window.InvoiceShelf.booting((e, t, n) => {
-	n.addMessages(D), ps(n), ke(n);
+	n.addMessages(D), ms(n), ke(n);
 });
 //#endregion

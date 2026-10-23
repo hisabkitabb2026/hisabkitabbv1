@@ -30,9 +30,101 @@ const loading = ref(true)
 const currentPage = ref(1)
 const perPage = ref(10)
 
+type SortField =
+  | 'trip_no'
+  | 'route'
+  | 'customer'
+  | 'lorry'
+  | 'status'
+  | 'revenue'
+  | 'actual_revenue'
+  | 'tds_amount'
+  | 'cost'
+  | 'profit'
+
+const sortField = ref<SortField>('trip_no')
+const sortOrder = ref<'asc' | 'desc'>('desc')
+
+function toggleSort(field: SortField): void {
+  if (sortField.value === field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortOrder.value = ['revenue', 'actual_revenue', 'tds_amount', 'cost', 'profit', 'trip_no'].includes(field)
+      ? 'desc'
+      : 'asc'
+  }
+  currentPage.value = 1
+}
+
 const isEmpty = computed<boolean>(() => !loading.value && trips.value.length === 0)
 
-const sortedTrips = computed(() => [...trips.value].sort((a, b) => b.trip_no - a.trip_no))
+const sortedTrips = computed(() => {
+  const list = [...trips.value]
+  const field = sortField.value
+  const order = sortOrder.value === 'asc' ? 1 : -1
+
+  return list.sort((a, b) => {
+    let comparison = 0
+
+    switch (field) {
+      case 'trip_no':
+        comparison = a.trip_no - b.trip_no
+        break
+
+      case 'route': {
+        const routeA = `${a.from_city ?? ''} ${a.to_city ?? ''}`.trim().toLowerCase()
+        const routeB = `${b.from_city ?? ''} ${b.to_city ?? ''}`.trim().toLowerCase()
+        comparison = routeA.localeCompare(routeB)
+        break
+      }
+
+      case 'customer': {
+        const custA = (a.customers[0]?.name ?? '').toLowerCase()
+        const custB = (b.customers[0]?.name ?? '').toLowerCase()
+        comparison = custA.localeCompare(custB)
+        break
+      }
+
+      case 'lorry': {
+        const lorryA = (a.lorry_no ?? '').toLowerCase()
+        const lorryB = (b.lorry_no ?? '').toLowerCase()
+        comparison = lorryA.localeCompare(lorryB)
+        break
+      }
+
+      case 'status':
+        comparison = a.status_id - b.status_id
+        break
+
+      case 'revenue':
+        comparison = a.revenue - b.revenue
+        break
+
+      case 'actual_revenue':
+        comparison = a.actual_revenue - b.actual_revenue
+        break
+
+      case 'tds_amount':
+        comparison = a.tds_amount - b.tds_amount
+        break
+
+      case 'cost':
+        comparison = a.cost - b.cost
+        break
+
+      case 'profit':
+        comparison = a.profit - b.profit
+        break
+    }
+
+    if (comparison === 0) {
+      return b.trip_no - a.trip_no
+    }
+
+    return comparison * order
+  })
+})
 
 const totalCount = computed(() => sortedTrips.value.length)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / perPage.value)))
@@ -113,16 +205,146 @@ function openTrip(trip: TripCardModel): void {
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-line-default text-start text-xs uppercase text-muted">
-              <th class="p-3 text-start font-medium">#</th>
-              <th class="p-3 text-start font-medium">Route</th>
-              <th class="p-3 text-start font-medium">Customer</th>
-              <th class="p-3 text-start font-medium">Lorry</th>
-              <th class="p-3 text-start font-medium">Status</th>
-              <th class="p-3 text-end font-medium">Billed Rev</th>
-              <th class="p-3 text-end font-medium">Actual Rev (Bank)</th>
-              <th class="p-3 text-end font-medium">TDS</th>
-              <th class="p-3 text-end font-medium">Cost</th>
-              <th class="p-3 text-end font-medium">Profit</th>
+              <th class="p-3 text-start font-medium" :class="{ 'text-heading font-semibold': sortField === 'trip_no' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none"
+                  @click="toggleSort('trip_no')"
+                >
+                  <span>#</span>
+                  <BaseIcon
+                    v-if="sortField === 'trip_no'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-start font-medium" :class="{ 'text-heading font-semibold': sortField === 'route' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none"
+                  @click="toggleSort('route')"
+                >
+                  <span>Route</span>
+                  <BaseIcon
+                    v-if="sortField === 'route'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-start font-medium" :class="{ 'text-heading font-semibold': sortField === 'customer' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none"
+                  @click="toggleSort('customer')"
+                >
+                  <span>Customer</span>
+                  <BaseIcon
+                    v-if="sortField === 'customer'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-start font-medium" :class="{ 'text-heading font-semibold': sortField === 'lorry' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none"
+                  @click="toggleSort('lorry')"
+                >
+                  <span>Lorry</span>
+                  <BaseIcon
+                    v-if="sortField === 'lorry'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-start font-medium" :class="{ 'text-heading font-semibold': sortField === 'status' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none"
+                  @click="toggleSort('status')"
+                >
+                  <span>Status</span>
+                  <BaseIcon
+                    v-if="sortField === 'status'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-end font-medium" :class="{ 'text-heading font-semibold': sortField === 'revenue' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto"
+                  @click="toggleSort('revenue')"
+                >
+                  <span>Billed Rev</span>
+                  <BaseIcon
+                    v-if="sortField === 'revenue'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-end font-medium" :class="{ 'text-heading font-semibold': sortField === 'actual_revenue' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto"
+                  @click="toggleSort('actual_revenue')"
+                >
+                  <span>Actual Rev (Bank)</span>
+                  <BaseIcon
+                    v-if="sortField === 'actual_revenue'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-end font-medium" :class="{ 'text-heading font-semibold': sortField === 'tds_amount' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto"
+                  @click="toggleSort('tds_amount')"
+                >
+                  <span>TDS</span>
+                  <BaseIcon
+                    v-if="sortField === 'tds_amount'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-end font-medium" :class="{ 'text-heading font-semibold': sortField === 'cost' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto"
+                  @click="toggleSort('cost')"
+                >
+                  <span>Cost</span>
+                  <BaseIcon
+                    v-if="sortField === 'cost'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
+              <th class="p-3 text-end font-medium" :class="{ 'text-heading font-semibold': sortField === 'profit' }">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-end gap-1 -mx-1 px-1 py-0.5 rounded-md font-medium hover:text-heading hover:bg-hover transition-colors select-none ms-auto"
+                  @click="toggleSort('profit')"
+                >
+                  <span>Profit</span>
+                  <BaseIcon
+                    v-if="sortField === 'profit'"
+                    :name="sortOrder === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                    class="w-3.5 h-3.5 text-primary-600"
+                  />
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
