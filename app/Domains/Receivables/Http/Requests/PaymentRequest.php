@@ -45,12 +45,14 @@ class PaymentRequest extends FormRequest
                 ? ['required', 'numeric', 'gt:0']
                 : ['nullable', 'numeric', 'gt:0'],
             'amount' => ['required', 'integer', 'min:1'],
+            'tds_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'payment_number' => ['required', $this->uniqueNumber()],
             // Row-level shape only. What the rows are allowed to add up to, and
             // which invoices they may name, is the allocation engine's call.
             'allocations' => ['sometimes', 'array'],
             'allocations.*.invoice_id' => ['required', 'integer', 'distinct'],
-            'allocations.*.amount' => ['required', 'integer', 'min:1'],
+            'allocations.*.amount' => ['required', 'integer', 'min:0'],
+            'allocations.*.tds_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'payment_method_id' => ['nullable'],
             'notes' => ['nullable'],
             ...$this->customFieldRules(),

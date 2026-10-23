@@ -27,11 +27,16 @@ final class PaymentAttributes
         $homeCurrency = CompanySetting::getSetting('currency', $companyId);
         $rate = (string) $homeCurrency !== (string) $currencyId ? (float) ($validated['exchange_rate'] ?? null) : 1;
 
+        $tdsAmount = (int) ($validated['tds_amount'] ?? 0);
+
         return array_merge(Arr::except($validated, ['allocations', 'customFields']), [
             'creator_id' => $creatorId,
             'company_id' => $companyId,
             'exchange_rate' => $rate,
+            'amount' => (int) ($validated['amount'] ?? 0),
             'base_amount' => MoneyConversion::toBaseMinor(($validated['amount'] ?? 0), $rate),
+            'tds_amount' => $tdsAmount,
+            'base_tds_amount' => $tdsAmount > 0 ? MoneyConversion::toBaseMinor($tdsAmount, $rate) : 0,
             'currency_id' => $currencyId,
         ]);
     }

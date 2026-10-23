@@ -9,7 +9,9 @@ class InvoiceBalanceService
 {
     public function allocatedTotal(Invoice $invoice): int
     {
-        return (int) $invoice->allocations()->sum('amount');
+        return (int) $invoice->allocations()
+            ->selectRaw('COALESCE(SUM(amount + COALESCE(tds_amount, 0)), 0) as total')
+            ->value('total');
     }
 
     public function creditedTotal(Invoice $invoice): int

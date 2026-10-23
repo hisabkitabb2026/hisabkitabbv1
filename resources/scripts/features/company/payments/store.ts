@@ -27,8 +27,9 @@ export interface PaymentFormData {
   customer_id: number | null
   customer: Customer | null
   selectedCustomer: Customer | null
-  allocations: Array<{ invoice_id: number; amount: number }>
+  allocations: Array<{ invoice_id: number; amount: number; tds_amount?: number }>
   amount: number
+  tds_amount?: number
   payment_method_id: number | null
   notes: string | null
   currency: Currency | Record<string, unknown> | null
@@ -50,6 +51,7 @@ function createPaymentStub(): PaymentFormData {
     selectedCustomer: null,
     allocations: [],
     amount: 0,
+    tds_amount: 0,
     payment_method_id: null,
     notes: '',
     currency: null,
@@ -297,7 +299,7 @@ export const usePaymentStore = defineStore('payment', {
         if (isEdit) {
           const paymentRes = editRes as { data: { data: Payment } } | undefined
           this.currentPayment.allocations = paymentRes?.data?.data?.allocations?.map(
-            ({ invoice_id, amount }) => ({ invoice_id, amount }),
+            ({ invoice_id, amount, tds_amount }) => ({ invoice_id, amount, tds_amount: tds_amount ?? 0 }),
           ) ?? []
         } else if (!isEdit && nextNumRes) {
           const now = new Date()

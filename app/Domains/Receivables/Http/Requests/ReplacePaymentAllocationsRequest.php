@@ -25,7 +25,8 @@ class ReplacePaymentAllocationsRequest extends FormRequest
         return [
             'allocations' => ['present', 'array'],
             'allocations.*.invoice_id' => ['required', 'integer', 'distinct'],
-            'allocations.*.amount' => ['required', 'integer', 'min:1'],
+            'allocations.*.amount' => ['required', 'integer', 'min:0'],
+            'allocations.*.tds_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ];
     }
 }

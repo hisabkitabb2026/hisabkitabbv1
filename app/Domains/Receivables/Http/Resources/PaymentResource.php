@@ -52,7 +52,10 @@ class PaymentResource extends JsonResource
 
         $allocated = (int) $allocations->sum('amount');
         $baseAllocated = (int) $allocations->sum('base_amount');
+        $allocatedTds = (int) $allocations->sum('tds_amount');
         $baseAmount = $this->baseAmount();
+        $tdsAmount = (int) ($payment->tds_amount ?? 0);
+        $baseTdsAmount = (int) ($payment->base_tds_amount ?? 0);
 
         return [
             'id' => $payment->id,
@@ -60,6 +63,9 @@ class PaymentResource extends JsonResource
             'payment_date' => $payment->payment_date,
             'notes' => $payment->getNotes(),
             'amount' => $payment->amount,
+            'tds_amount' => $tdsAmount,
+            'base_tds_amount' => $baseTdsAmount,
+            'total_settlement_amount' => (int) $payment->amount + $tdsAmount,
             'unique_hash' => $payment->unique_hash,
             'company_id' => $payment->company_id,
             'payment_method_id' => $payment->payment_method_id,
@@ -70,6 +76,8 @@ class PaymentResource extends JsonResource
             'allocations' => $this->allocationRows($allocations),
             'allocated_amount' => $allocated,
             'unallocated_amount' => (int) $payment->amount - $allocated,
+            'allocated_tds_amount' => $allocatedTds,
+            'unallocated_tds_amount' => max(0, $tdsAmount - $allocatedTds),
             'base_allocated_amount' => $baseAllocated,
             'base_unallocated_amount' => $baseAmount - $baseAllocated,
             'currency_id' => $payment->currency_id,
@@ -137,6 +145,9 @@ class PaymentResource extends JsonResource
             'invoice_id' => $allocation->invoice_id,
             'amount' => $allocation->amount,
             'base_amount' => $allocation->base_amount,
+            'tds_amount' => (int) ($allocation->tds_amount ?? 0),
+            'base_tds_amount' => (int) ($allocation->base_tds_amount ?? 0),
+            'total_amount' => (int) $allocation->amount + (int) ($allocation->tds_amount ?? 0),
             'invoice' => $allocation->invoice ? new InvoiceResource($allocation->invoice) : null,
         ]);
     }

@@ -1,0 +1,1 @@
+import{t as e}from"./router-BYOLhF__.js";export{e as default};

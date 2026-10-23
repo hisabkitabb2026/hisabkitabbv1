@@ -20,6 +20,8 @@ class PaymentAllocation extends Model
         return [
             'amount' => 'integer',
             'base_amount' => 'integer',
+            'tds_amount' => 'integer',
+            'base_tds_amount' => 'integer',
         ];
     }
 

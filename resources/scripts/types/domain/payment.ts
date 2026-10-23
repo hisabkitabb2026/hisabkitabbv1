@@ -30,6 +30,8 @@ export interface Payment {
   payment_date: string
   notes: string | null
   amount: number
+  tds_amount?: number
+  base_tds_amount?: number
   unique_hash: string
   company_id: number
   payment_method_id: number | null
@@ -61,6 +63,8 @@ export interface PaymentAllocation {
   invoice_id: number
   amount: number
   base_amount?: number
+  tds_amount?: number
+  base_tds_amount?: number
   invoice?: Invoice
 }
 
@@ -69,7 +73,8 @@ export interface CreatePaymentPayload {
   payment_number: string
   customer_id: number
   amount: number
-  allocations?: Array<Pick<PaymentAllocation, 'invoice_id' | 'amount'>>
+  tds_amount?: number
+  allocations?: Array<Pick<PaymentAllocation, 'invoice_id' | 'amount' | 'tds_amount'>>
   payment_method_id?: number | null
   notes?: string | null
   exchange_rate?: number

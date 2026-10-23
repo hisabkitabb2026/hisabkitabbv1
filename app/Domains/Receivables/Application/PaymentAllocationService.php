@@ -133,7 +133,7 @@ class PaymentAllocationService
 
         foreach ($allocations as $allocation) {
             $invoice = $invoices->get($allocation['invoice_id']);
-            $this->assertInvoiceCanReceiveAllocation($payment, $invoice, $allocation['amount']);
+            $this->assertInvoiceCanReceiveAllocation($payment, $invoice, $allocation['amount'], (int) ($allocation['tds_amount'] ?? 0));
         }
 
         $payment->allocations()->delete();
@@ -171,9 +171,14 @@ class PaymentAllocationService
                     ]);
                 }
 
+                $tdsAmount = isset($allocation['tds_amount']) && $this->isInteger($allocation['tds_amount'])
+                    ? (int) $allocation['tds_amount']
+                    : 0;
+
                 return [
                     'invoice_id' => (int) $allocation['invoice_id'],
                     'amount' => (int) $allocation['amount'],
+                    'tds_amount' => $tdsAmount,
                 ];
             })
             ->sortBy('invoice_id')
@@ -181,7 +186,7 @@ class PaymentAllocationService
             ->all();
 
         foreach ($normalised as $allocation) {
-            if ($allocation['invoice_id'] < 1 || $allocation['amount'] < 1) {
+            if ($allocation['invoice_id'] < 1 || $allocation['amount'] < 0 || $allocation['tds_amount'] < 0 || ($allocation['amount'] + $allocation['tds_amount']) < 1) {
                 throw ValidationException::withMessages([
                     'allocations' => ['payment_allocation_invalid'],
                 ]);
@@ -204,9 +209,16 @@ class PaymentAllocationService
                 'allocations' => ['payment_allocation_exceeds_payment_amount'],
             ]);
         }
+
+        $paymentTds = (int) ($payment->tds_amount ?? 0);
+        if (collect($allocations)->sum('tds_amount') > $paymentTds) {
+            throw ValidationException::withMessages([
+                'allocations' => ['payment_allocation_exceeds_tds_amount'],
+            ]);
+        }
     }
 
-    private function assertInvoiceCanReceiveAllocation(Payment $payment, Invoice $invoice, int $amount): void
+    private function assertInvoiceCanReceiveAllocation(Payment $payment, Invoice $invoice, int $amount, int $tdsAmount = 0): void
     {
         if (
             (int) $invoice->company_id !== (int) $payment->company_id
@@ -235,10 +247,11 @@ class PaymentAllocationService
         $allocatedByOtherPayments = (int) PaymentAllocation::query()
             ->where('invoice_id', $invoice->id)
             ->where('payment_id', '!=', $payment->id)
-            ->sum('amount');
+            ->selectRaw('COALESCE(SUM(amount + COALESCE(tds_amount, 0)), 0) as total')
+            ->value('total');
         $available = max(0, (int) $invoice->total - $this->invoiceBalanceUpdater->creditedTotal($invoice) - $allocatedByOtherPayments);
 
-        if ($amount > $available) {
+        if (($amount + $tdsAmount) > $available) {
             throw ValidationException::withMessages([
                 'allocations' => ['payment_allocation_exceeds_invoice_balance'],
             ]);
@@ -254,7 +267,7 @@ class PaymentAllocationService
         $allocatedAmount = (int) collect($allocations)->sum('amount');
         $allocatedBaseAmount = 0;
 
-        return collect($allocations)->values()->map(function (array $allocation, int $index) use ($paymentAmount, $paymentBaseAmount, $allocatedAmount, &$allocatedBaseAmount, $allocations): array {
+        return collect($allocations)->values()->map(function (array $allocation, int $index) use ($paymentAmount, $paymentBaseAmount, $allocatedAmount, &$allocatedBaseAmount, $allocations, $payment): array {
             $isLastFullyAllocatedRow = $allocatedAmount === $paymentAmount && $index === count($allocations) - 1;
             $baseAmount = $isLastFullyAllocatedRow
                 ? $paymentBaseAmount - $allocatedBaseAmount
@@ -262,10 +275,17 @@ class PaymentAllocationService
 
             $allocatedBaseAmount += $baseAmount;
 
+            $tdsAmount = (int) ($allocation['tds_amount'] ?? 0);
+            $baseTdsAmount = $tdsAmount > 0
+                ? MoneyConversion::toBaseMinor($tdsAmount, (float) $payment->exchange_rate ?: 1)
+                : 0;
+
             return [
                 'invoice_id' => $allocation['invoice_id'],
                 'amount' => $allocation['amount'],
                 'base_amount' => $baseAmount,
+                'tds_amount' => $tdsAmount,
+                'base_tds_amount' => $baseTdsAmount,
             ];
         })->all();
     }

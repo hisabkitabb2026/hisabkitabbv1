@@ -90,6 +90,8 @@ class Payment extends Model implements HasMedia
         return [
             'notes' => 'string',
             'exchange_rate' => 'float',
+            'tds_amount' => 'integer',
+            'base_tds_amount' => 'integer',
         ];
     }
 

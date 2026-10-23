@@ -35,6 +35,10 @@
       <BaseStatStrip v-if="currentPayment.id" :columns="allocatedInvoices.length ? 5 : 4">
         <BaseStat :label="$t('payments.amount')" emphasis>
           <BaseFormatMoney :amount="currentPayment.amount" :currency="paymentCurrency" />
+          <div v-if="currentPayment.tds_amount" class="text-xs font-normal text-muted mt-0.5">
+            + TDS: <BaseFormatMoney :amount="currentPayment.tds_amount" :currency="paymentCurrency" />
+            (Total: <BaseFormatMoney :amount="currentPayment.amount + currentPayment.tds_amount" :currency="paymentCurrency" />)
+          </div>
         </BaseStat>
         <BaseStat :label="$t('payments.date')">
           {{ currentPayment.formatted_payment_date }}
@@ -79,7 +83,13 @@
               <span v-else class="font-medium text-heading">{{ $t('payments.invoice') }}</span>
               <span v-if="allocation.invoice?.formatted_invoice_date" class="block mt-0.5 text-xs text-muted">{{ allocation.invoice.formatted_invoice_date }}</span>
             </div>
-            <BaseFormatMoney :amount="allocation.amount" :currency="currentPayment.customer?.currency" class="font-medium text-heading" />
+            <div class="text-right">
+              <BaseFormatMoney :amount="allocation.amount" :currency="currentPayment.customer?.currency" class="font-medium text-heading" />
+              <div v-if="allocation.tds_amount" class="text-xs text-muted">
+                + TDS: <BaseFormatMoney :amount="allocation.tds_amount" :currency="currentPayment.customer?.currency" />
+                (Total: <BaseFormatMoney :amount="allocation.amount + allocation.tds_amount" :currency="currentPayment.customer?.currency" />)
+              </div>
+            </div>
           </div>
         </div>
         <p v-else class="py-2 text-sm text-muted">{{ $t('payments.no_allocations') }}</p>
@@ -117,6 +127,9 @@
       >
         <template #amount>
           <BaseFormatMoney :amount="payment.amount" :currency="payment.customer?.currency" />
+          <div v-if="payment.tds_amount" class="text-[11px] text-muted">
+            + TDS: <BaseFormatMoney :amount="payment.tds_amount" :currency="payment.customer?.currency" />
+          </div>
         </template>
       </RecordListItem>
     </RecordListPane>

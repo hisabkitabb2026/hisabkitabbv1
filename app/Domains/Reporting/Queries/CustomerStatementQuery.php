@@ -143,9 +143,11 @@ class CustomerStatementQuery
             ->where('company_id', $customer->company_id)
             ->where('customer_id', $customer->id)
             ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
-            ->get(['id', 'payment_date', 'payment_number', 'amount', 'base_amount']);
+            ->get(['id', 'payment_date', 'payment_number', 'amount', 'base_amount', 'tds_amount', 'base_tds_amount']);
 
         foreach ($payments as $payment) {
+            $totalCredit = (int) $payment->amount + (int) ($payment->tds_amount ?? 0);
+            $totalBaseCredit = (int) $payment->base_amount + (int) ($payment->base_tds_amount ?? 0);
             $entries->push([
                 'id' => $payment->id,
                 'date' => Carbon::parse($payment->payment_date)->toDateString(),
@@ -153,9 +155,9 @@ class CustomerStatementQuery
                 'reference' => $payment->payment_number,
                 'description' => __('Payment'),
                 'debit_amount' => 0,
-                'credit_amount' => (int) $payment->amount,
+                'credit_amount' => $totalCredit,
                 'base_debit_amount' => 0,
-                'base_credit_amount' => (int) $payment->base_amount,
+                'base_credit_amount' => $totalBaseCredit,
                 'sort_order' => 2,
             ]);
         }
@@ -299,8 +301,8 @@ class CustomerStatementQuery
             ->where('payment_date', '<', $from->toDateString());
 
         return [
-            'amount' => (int) $documents->sum('total') - (int) $payments->sum('amount'),
-            'base_amount' => (int) $documents->sum('base_total') - (int) $payments->sum('base_amount'),
+            'amount' => (int) $documents->sum('total') - (int) $payments->selectRaw('COALESCE(SUM(amount + COALESCE(tds_amount, 0)), 0) as total')->value('total'),
+            'base_amount' => (int) $documents->sum('base_total') - (int) $payments->selectRaw('COALESCE(SUM(base_amount + COALESCE(base_tds_amount, 0)), 0) as total')->value('total'),
         ];
     }
 
@@ -329,7 +331,7 @@ class CustomerStatementQuery
             ->whereIn('customer_payment_allocations.invoice_id', $invoiceIds)
             ->where('customer_payments.payment_date', '<=', $asOf->toDateString())
             ->where('customer_payment_allocations.created_at', '<=', $asOf->copy()->endOfDay())
-            ->selectRaw('customer_payment_allocations.invoice_id, SUM(customer_payment_allocations.amount) as amount, SUM(customer_payment_allocations.base_amount) as base_amount')
+            ->selectRaw('customer_payment_allocations.invoice_id, SUM(customer_payment_allocations.amount + COALESCE(customer_payment_allocations.tds_amount, 0)) as amount, SUM(customer_payment_allocations.base_amount + COALESCE(customer_payment_allocations.base_tds_amount, 0)) as base_amount')
             ->groupBy('customer_payment_allocations.invoice_id')
             ->get()
             ->mapWithKeys(fn (PaymentAllocation $allocation) => [$allocation->invoice_id => [

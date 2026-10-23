@@ -49,6 +49,45 @@
             />
           </BaseInputGroup>
 
+          <BaseInputGroup label="TDS Deducted (Sec 194C / Tax Credit)" :content-loading="isLoadingContent">
+            <div class="space-y-1.5">
+              <BaseMoney
+                :key="'tds-' + String(paymentStore.currentPayment.currency)"
+                v-model="tdsAmount"
+                :currency="paymentStore.currentPayment.currency"
+                :content-loading="isLoadingContent"
+              />
+              <div class="flex items-center gap-1.5 text-xs">
+                <span class="text-muted">Auto Calculate:</span>
+                <button
+                  type="button"
+                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-colors"
+                  title="Calculate 1% TDS on invoice total"
+                  @click="calculateTdsPercentage(1)"
+                >
+                  1%
+                </button>
+                <button
+                  type="button"
+                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-colors"
+                  title="Calculate 2% TDS on invoice total"
+                  @click="calculateTdsPercentage(2)"
+                >
+                  2%
+                </button>
+                <button
+                  v-if="tdsAmount > 0"
+                  type="button"
+                  class="px-2 py-0.5 font-medium rounded border border-line-light bg-surface-secondary text-muted hover:text-status-red transition-colors"
+                  title="Clear TDS"
+                  @click="tdsAmount = 0"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </BaseInputGroup>
+
           <ExchangeRateConverter
             :store="exchangeRateStore"
             store-prop="currentPayment"
@@ -108,22 +147,33 @@
           </div>
 
           <div v-else class="space-y-3">
-            <div v-for="(allocation, index) in paymentStore.currentPayment.allocations" :key="`${allocation.invoice_id}-${index}`" class="grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1fr)_12rem_auto]">
+            <div v-for="(allocation, index) in paymentStore.currentPayment.allocations" :key="`${allocation.invoice_id}-${index}`" class="grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1.5fr)_11rem_11rem_8rem_auto]">
               <BaseInputGroup :label="$t('payments.invoice')">
                 <BaseMultiselect
                   v-model="allocation.invoice_id"
                   value-prop="id"
                   track-by="invoice_number"
-                  label="invoice_number"
+                  label="display_label"
                   :options="availableInvoices(allocation.invoice_id)"
                   :loading="isLoadingInvoices"
                   :placeholder="$t('invoices.select_invoice')"
+                  searchable
+                  @update:model-value="onInvoiceSelect(index, $event)"
                 />
               </BaseInputGroup>
-              <BaseInputGroup :label="$t('payments.amount')">
+              <BaseInputGroup :label="$t('payments.amount') + ' (Bank)'">
                 <BaseMoney :model-value="allocation.amount / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationAmount(index, $event)" />
               </BaseInputGroup>
-              <div class="justify-self-end">
+              <BaseInputGroup label="TDS Deducted">
+                <BaseMoney :model-value="(allocation.tds_amount ?? 0) / 100" :currency="paymentStore.currentPayment.currency" @update:model-value="setAllocationTds(index, $event)" />
+              </BaseInputGroup>
+              <div class="flex flex-col justify-end pb-2">
+                <span class="text-xs text-muted mb-1">Total Settled</span>
+                <span class="text-sm font-semibold text-heading whitespace-nowrap">
+                  <BaseFormatMoney :amount="allocation.amount + (allocation.tds_amount ?? 0)" :currency="paymentStore.currentPayment.currency" />
+                </span>
+              </div>
+              <div class="justify-self-end pb-1">
                 <BaseButton type="button" size="sm" variant="gray" :aria-label="$t('payments.remove_allocation')" @click="removeAllocation(index)">
                   <BaseIcon name="TrashIcon" />
                 </BaseButton>
@@ -131,9 +181,16 @@
             </div>
           </div>
 
-          <div class="flex flex-wrap justify-end gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light">
-            <span class="text-muted">{{ $t('payments.allocated') }}: <BaseFormatMoney :amount="allocatedAmount" :currency="paymentStore.currentPayment.currency" /></span>
-            <span :class="unallocatedAmount < 0 ? 'text-status-red' : 'text-heading'">{{ $t('payments.unapplied_credit') }}: <BaseFormatMoney :amount="Math.max(unallocatedAmount, 0)" :currency="paymentStore.currentPayment.currency" /></span>
+          <div class="flex flex-wrap justify-between items-center gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs md:text-sm text-muted">
+              <span>Bank: <strong class="text-heading"><BaseFormatMoney :amount="paymentStore.currentPayment.amount" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span v-if="paymentStore.currentPayment.tds_amount">| TDS: <strong class="text-primary-600"><BaseFormatMoney :amount="paymentStore.currentPayment.tds_amount" :currency="paymentStore.currentPayment.currency" /></strong></span>
+              <span>| Total Settled: <strong class="text-emerald-600 dark:text-emerald-400 font-semibold"><BaseFormatMoney :amount="totalSettlementAmount" :currency="paymentStore.currentPayment.currency" /></strong></span>
+            </div>
+            <div class="flex items-center gap-6">
+              <span class="text-muted">{{ $t('payments.allocated') }}: <BaseFormatMoney :amount="allocatedAmount" :currency="paymentStore.currentPayment.currency" /></span>
+              <span :class="unallocatedAmount < 0 ? 'text-status-red' : 'text-heading'">{{ $t('payments.unapplied_credit') }}: <BaseFormatMoney :amount="Math.max(unallocatedAmount, 0)" :currency="paymentStore.currentPayment.currency" /></span>
+            </div>
           </div>
         </section>
 
@@ -180,8 +237,30 @@ const amount = computed<number>({
   set: (value) => { paymentStore.currentPayment.amount = Math.round(value * 100) },
 })
 
-const allocatedAmount = computed(() => paymentStore.currentPayment.allocations.reduce((total, allocation) => total + allocation.amount, 0))
+const tdsAmount = computed<number>({
+  get: () => (paymentStore.currentPayment.tds_amount ?? 0) / 100,
+  set: (value) => {
+    paymentStore.currentPayment.tds_amount = Math.round(value * 100)
+    if (paymentStore.currentPayment.allocations.length === 1) {
+      paymentStore.currentPayment.allocations[0].tds_amount = paymentStore.currentPayment.tds_amount
+    }
+  },
+})
+
+const totalSettlementAmount = computed(() => {
+  return paymentStore.currentPayment.amount + (paymentStore.currentPayment.tds_amount ?? 0)
+})
+
+const allocatedAmount = computed(() =>
+  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + allocation.amount, 0),
+)
+
+const allocatedTds = computed(() =>
+  paymentStore.currentPayment.allocations.reduce((total, allocation) => total + (allocation.tds_amount ?? 0), 0),
+)
+
 const unallocatedAmount = computed(() => paymentStore.currentPayment.amount - allocatedAmount.value)
+const unallocatedTds = computed(() => (paymentStore.currentPayment.tds_amount ?? 0) - allocatedTds.value)
 const isLoadingContent = computed(() => paymentStore.isFetchingInitialData)
 const isEdit = computed(() => route.name === 'payments.edit')
 
@@ -215,11 +294,51 @@ watch(
   { immediate: true },
 )
 
+function calculateTdsPercentage(percentage: number): void {
+  let targetPaise = 0
+
+  if (paymentStore.currentPayment.allocations.length > 0) {
+    const firstAlloc = paymentStore.currentPayment.allocations[0]
+    const invoice = invoiceList.value.find((inv) => inv.id === firstAlloc.invoice_id)
+    if (invoice) {
+      targetPaise = invoice.due_amount || invoice.total
+    }
+  }
+
+  if (!targetPaise && eligibleInvoices.value.length === 1) {
+    targetPaise = eligibleInvoices.value[0].due_amount || eligibleInvoices.value[0].total
+  }
+
+  if (!targetPaise && paymentStore.currentPayment.amount > 0) {
+    targetPaise = Math.round(paymentStore.currentPayment.amount / (1 - (percentage / 100)))
+  }
+
+  if (targetPaise <= 0) return
+
+  const calculatedTds = Math.round(targetPaise * (percentage / 100))
+  const netReceived = targetPaise - calculatedTds
+
+  paymentStore.currentPayment.tds_amount = calculatedTds
+
+  if (paymentStore.currentPayment.amount === 0 || paymentStore.currentPayment.amount === targetPaise) {
+    paymentStore.currentPayment.amount = netReceived
+  }
+
+  if (paymentStore.currentPayment.allocations.length === 1) {
+    paymentStore.currentPayment.allocations[0].amount = paymentStore.currentPayment.amount
+    paymentStore.currentPayment.allocations[0].tds_amount = calculatedTds
+  }
+}
+
 async function setInvoiceFromUrl(): Promise<void> {
   try {
     const invoice = (await invoiceService.get(Number(route.params.id))).data
     paymentStore.currentPayment.customer_id = invoice.customer_id
-    paymentStore.currentPayment.allocations = [{ invoice_id: invoice.id, amount: invoice.due_amount }]
+    paymentStore.currentPayment.allocations = [{
+      invoice_id: invoice.id,
+      amount: invoice.due_amount,
+      tds_amount: 0,
+    }]
     if (paymentStore.currentPayment.amount === 0) paymentStore.currentPayment.amount = invoice.due_amount
   } catch {
     // The normal form remains usable if the originating invoice no longer exists.
@@ -248,13 +367,23 @@ async function onCustomerChange(customerId: number): Promise<void> {
   }
 }
 
-function availableInvoices(selectedInvoiceId: number): Invoice[] {
+function availableInvoices(selectedInvoiceId: number): Array<Invoice & { display_label: string }> {
   const chosenInvoiceIds = paymentStore.currentPayment.allocations
     .map(({ invoice_id }) => invoice_id)
     .filter((id) => id !== selectedInvoiceId)
   return invoiceList.value
     .filter((invoice) => isEligibleInvoice(invoice) || (selectedInvoiceId > 0 && invoice.id === selectedInvoiceId))
     .filter((invoice) => !chosenInvoiceIds.includes(invoice.id))
+    .map((invoice) => {
+      const dueFormatted = (invoice.due_amount / 100).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      return {
+        ...invoice,
+        display_label: `${invoice.invoice_number} (Due: ₹${dueFormatted})`,
+      }
+    })
 }
 
 // Invoices this payment can still be applied to
@@ -275,14 +404,42 @@ function isEligibleInvoice(invoice: Invoice): boolean {
 function onManualCustomerSelect(): void {
   paymentStore.currentPayment.allocations = []
   paymentStore.currentPayment.amount = 0
+  paymentStore.currentPayment.tds_amount = 0
   const params: Record<string, unknown> = { userId: paymentStore.currentPayment.customer_id }
   if (route.params.id) params.model_id = route.params.id
   void paymentStore.getNextNumber(params, true)
 }
 
+function onInvoiceSelect(index: number, invoiceId: number | null): void {
+  const allocation = paymentStore.currentPayment.allocations[index]
+  if (!allocation || !invoiceId) return
+
+  const selectedInvoice = invoiceList.value.find((inv) => inv.id === invoiceId)
+  if (!selectedInvoice) return
+
+  if (!allocation.amount) {
+    const remainingToAllocate = Math.max(0, paymentStore.currentPayment.amount - allocatedAmount.value)
+    allocation.amount = remainingToAllocate > 0
+      ? Math.min(remainingToAllocate, selectedInvoice.due_amount)
+      : selectedInvoice.due_amount
+  }
+
+  if (!allocation.tds_amount && (paymentStore.currentPayment.tds_amount ?? 0) > 0) {
+    const remainingTds = Math.max(0, (paymentStore.currentPayment.tds_amount ?? 0) - allocatedTds.value)
+    const neededForInvoice = Math.max(0, selectedInvoice.due_amount - allocation.amount)
+    allocation.tds_amount = Math.min(remainingTds, neededForInvoice)
+  }
+}
+
 function addAllocation(): void {
   const firstInvoice = availableInvoices(0)[0]
-  if (firstInvoice) paymentStore.currentPayment.allocations.push({ invoice_id: firstInvoice.id, amount: 0 })
+  if (firstInvoice) {
+    paymentStore.currentPayment.allocations.push({
+      invoice_id: firstInvoice.id,
+      amount: 0,
+      tds_amount: 0,
+    })
+  }
 }
 
 function removeAllocation(index: number): void {
@@ -294,16 +451,41 @@ function setAllocationAmount(index: number, value: number): void {
   if (allocation) allocation.amount = Math.round(value * 100)
 }
 
+function setAllocationTds(index: number, value: number): void {
+  const allocation = paymentStore.currentPayment.allocations[index]
+  if (allocation) {
+    allocation.tds_amount = Math.round(value * 100)
+    const sumTds = paymentStore.currentPayment.allocations.reduce((t, a) => t + (a.tds_amount ?? 0), 0)
+    if ((paymentStore.currentPayment.tds_amount ?? 0) < sumTds) {
+      paymentStore.currentPayment.tds_amount = sumTds
+    }
+  }
+}
+
 function allocateOldestFirst(): void {
-  let remaining = paymentStore.currentPayment.amount
-  const allocations: Array<{ invoice_id: number; amount: number }> = []
+  let remainingBank = paymentStore.currentPayment.amount
+  let remainingTds = paymentStore.currentPayment.tds_amount ?? 0
+  const allocations: Array<{ invoice_id: number; amount: number; tds_amount: number }> = []
+
   for (const invoice of [...invoiceList.value]
     .filter(isEligibleInvoice)
     .sort((a, b) => (a.due_date ?? '9999-12-31').localeCompare(b.due_date ?? '9999-12-31') || a.id - b.id)) {
-    if (remaining <= 0) break
-    const allocated = Math.min(remaining, invoice.due_amount)
-    allocations.push({ invoice_id: invoice.id, amount: allocated })
-    remaining -= allocated
+    if (remainingBank <= 0 && remainingTds <= 0) break
+
+    const allocatedBank = Math.min(remainingBank, invoice.due_amount)
+    remainingBank -= allocatedBank
+
+    const remainingInvoiceDue = invoice.due_amount - allocatedBank
+    const allocatedTds = Math.min(remainingTds, remainingInvoiceDue)
+    remainingTds -= allocatedTds
+
+    if (allocatedBank > 0 || allocatedTds > 0) {
+      allocations.push({
+        invoice_id: invoice.id,
+        amount: allocatedBank,
+        tds_amount: allocatedTds,
+      })
+    }
   }
   paymentStore.currentPayment.allocations = allocations
 }
@@ -311,6 +493,10 @@ function allocateOldestFirst(): void {
 async function submitPaymentData(): Promise<void> {
   if (unallocatedAmount.value < 0) {
     notificationStore.showNotification({ type: 'error', message: t('payments.allocation_exceeds_amount') })
+    return
+  }
+  if (unallocatedTds.value < 0) {
+    notificationStore.showNotification({ type: 'error', message: 'Allocated TDS exceeds total TDS deducted' })
     return
   }
 
@@ -322,13 +508,20 @@ async function submitPaymentData(): Promise<void> {
     payment_number: current.payment_number,
     customer_id: current.customer_id,
     amount: current.amount,
+    tds_amount: current.tds_amount ?? 0,
     payment_method_id: current.payment_method_id,
     notes: current.notes,
     currency_id: current.currency_id,
     exchange_rate: current.exchange_rate,
     customFields: current.customFields,
     fields: current.fields,
-    allocations: current.allocations.filter(({ invoice_id, amount }) => invoice_id && amount > 0),
+    allocations: current.allocations
+      .filter(({ invoice_id, amount, tds_amount }) => invoice_id && (amount > 0 || (tds_amount ?? 0) > 0))
+      .map(({ invoice_id, amount, tds_amount }) => ({
+        invoice_id,
+        amount,
+        tds_amount: tds_amount ?? 0,
+      })),
   }
 
   try {

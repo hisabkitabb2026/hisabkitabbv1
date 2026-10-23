@@ -192,8 +192,11 @@
         <template #cell-amount="{ row }">
           <BaseFormatMoney
             :amount="row.data.amount"
-            :currency="row.data.customer.currency"
+            :currency="row.data.customer?.currency"
           />
+          <div v-if="row.data.tds_amount" class="text-xs text-muted">
+            + TDS: <BaseFormatMoney :amount="row.data.tds_amount" :currency="row.data.customer?.currency" />
+          </div>
         </template>
 
         <template v-if="hasAtLeastOneAbility" #cell-actions="{ row }">
