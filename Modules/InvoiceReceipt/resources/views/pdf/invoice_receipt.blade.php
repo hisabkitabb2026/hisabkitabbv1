@@ -542,7 +542,10 @@
                     || $candidates->contains('CUSTOM_CUSTOMER_'.$key)
                     || $candidates->contains('CUSTOM_COMPANY_'.$key)
                 ) {
-                    return $field->defaultAnswer;
+                    $ans = $field->defaultAnswer ?: ($field->string_answer ?? '');
+                    if ($ans !== null && $ans !== '') {
+                        return $ans;
+                    }
                 }
             }
         }
@@ -664,12 +667,22 @@
     };
 
     $companyField = function ($keys) use ($invoice, $fieldValue) {
-        if (! $invoice->company) {
+        if (! $invoice->company_id) {
             return '';
         }
-        $fields = $invoice->company->relationLoaded('fields')
-            ? $invoice->company->fields
-            : $invoice->company->fields()->with('customField')->get();
+        $fields = \App\Domains\Metadata\Models\CustomFieldValue::with('customField')
+            ->where(function ($q) use ($invoice) {
+                $q->where(function ($sq) use ($invoice) {
+                    $sq->whereIn('custom_field_valuable_type', ['company', 'Company', \App\Domains\Accounts\Models\Company::class])
+                       ->where('custom_field_valuable_id', $invoice->company_id);
+                })->orWhere(function ($sq) use ($invoice) {
+                    $sq->where('company_id', $invoice->company_id)
+                       ->whereHas('customField', function ($cfq) {
+                           $cfq->where('model_type', 'Company');
+                       });
+                });
+            })
+            ->get();
 
         return $fieldValue($fields ?? [], $keys);
     };
