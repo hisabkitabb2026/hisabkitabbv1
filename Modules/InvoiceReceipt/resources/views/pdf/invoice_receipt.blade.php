@@ -540,6 +540,7 @@
                     || $candidates->contains('CUSTOM_INVOICE_'.$key)
                     || $candidates->contains('CUSTOM_ITEM_'.$key)
                     || $candidates->contains('CUSTOM_CUSTOMER_'.$key)
+                    || $candidates->contains('CUSTOM_COMPANY_'.$key)
                 ) {
                     return $field->defaultAnswer;
                 }
@@ -662,6 +663,17 @@
         return $invoice->customer ? $fieldValue($invoice->customer->fields ?? [], $keys) : '';
     };
 
+    $companyField = function ($keys) use ($invoice, $fieldValue) {
+        if (! $invoice->company) {
+            return '';
+        }
+        $fields = $invoice->company->relationLoaded('fields')
+            ? $invoice->company->fields
+            : $invoice->company->fields()->with('customField')->get();
+
+        return $fieldValue($fields ?? [], $keys);
+    };
+
     $itemField = function ($item, $keys) use ($fieldValue, $normalize) {
         $aliases = [
             'from' => ['tr_from_name', 'tr_from_code', 'from_name', 'from_code'],
@@ -730,10 +742,11 @@
         ->implode('');
     $logo = $logo ?? ($invoice->company?->logo_path ?? null);
     // Billing Branch: dynamically read from Address 2nd box (address_street_2),
-    // or company billing_branch, or custom invoice field
+    // or company custom field (billing_br_name_address), or company billing_branch, or custom invoice field
     $billingBranch = $invoice->company?->address?->address_street_2
-        ?: ($invoice->company?->billing_branch
-            ?: ($invoiceField(['billing_branch_name_address', 'billing_branch_address', 'billing_branch']) ?: ''));
+        ?: ($companyField(['billing_br_name_address', 'billing_branch_name_address', 'billing_branch_address', 'billing_branch', 'branch_address', 'billing_branch_name'])
+            ?: ($invoice->company?->billing_branch
+                ?: ($invoiceField(['billing_br_name_address', 'billing_branch_name_address', 'billing_branch_address', 'billing_branch', 'branch_address', 'billing_branch_name']) ?: '')));
     $billingBranchHtml = preg_replace('/<br\s*\/?>/i', "\n", (string) $billingBranch);
     $billingBranchHtml = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n", $billingBranchHtml);
     $billingBranchHtml = preg_replace('/<\/?p[^>]*>/i', "\n", $billingBranchHtml);
@@ -744,17 +757,21 @@
         ->values()
         ->map(fn ($line) => $toUpper($line));
     $companyTagline = $invoice->company?->tagline ?: '';
-    // GSTIN: read from VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
-    $companyGstin = $invoiceField(['company_gstin', 'gstin', 'gst_no'])
-        ?: ($invoice->company?->vat_id
-            ?: ($invoice->company?->gstin ?: ''));
-    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
+    // GSTIN: read from company custom field, or VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
+    $companyGstin = $companyField(['gstin', 'gst_no', 'gstin_no', 'company_gstin'])
+        ?: ($invoiceField(['company_gstin', 'gstin', 'gst_no', 'gstin_no'])
+            ?: ($invoice->company?->vat_id
+                ?: ($invoice->company?->gstin ?: '')));
+    $companyEnrollmentNo = $companyField(['enrollment_no', 'enrollment', 'enrollment_number', 'company_enrollment_no'])
+        ?: ($invoice->company?->enrollment_no
+            ?: ($invoiceField(['enrollment_no', 'enrollment', 'enrollment_number', 'company_enrollment_no']) ?: ''));
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
     $companyTaxIdentityValue = $toUpper($companyEnrollmentNo ?: $companyGstin);
-    // PAN No: read from Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
-    $panNo = $toUpper($invoiceField(['company_pan', 'pan_no', 'pan'])
-        ?: ($invoice->company?->tax_id
-            ?: ($invoice->company?->pan_no ?: '')));
+    // PAN No: read from company custom field, or Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
+    $panNo = $toUpper($companyField(['pan_no', 'pan', 'company_pan', 'pan_number'])
+        ?: ($invoiceField(['company_pan', 'pan_no', 'pan', 'pan_number'])
+            ?: ($invoice->company?->tax_id
+                ?: ($invoice->company?->pan_no ?: ''))));
     $partyGstin = $toUpper($invoice->customer?->tax_id ?: ($invoiceField(['party_gstin', 'consignor_gst', 'consignor_gst_no', 'gstin', 'gst_no']) ?: $customerField(['gstin', 'gst_no'])));
     $partyCode = $toUpper($invoiceField(['party_code', 'customer_code', 'consignor_code']) ?: ($invoice->customer?->prefix ?: ''));
     $branchCode = $toUpper($invoiceField(['branch_code']));

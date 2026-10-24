@@ -519,6 +519,8 @@
                     || $candidates->contains('CUSTOM_Item_'.$key)
                     || $candidates->contains('CUSTOM_CUSTOMER_'.$key)
                     || $candidates->contains('CUSTOM_Customer_'.$key)
+                    || $candidates->contains('CUSTOM_COMPANY_'.$key)
+                    || $candidates->contains('CUSTOM_Company_'.$key)
                 ) {
                     return $field->defaultAnswer;
                 }
@@ -697,11 +699,30 @@
         return mb_strtoupper((string) $value, 'UTF-8');
     };
 
+    $companyField = function ($keys) use ($invoice, $fieldValue) {
+        if (! $invoice->company) {
+            return '';
+        }
+        $fields = $invoice->company->relationLoaded('fields')
+            ? $invoice->company->fields
+            : $invoice->company->fields()->with('customField')->get();
+
+        return $fieldValue($fields ?? [], $keys);
+    };
+
     // PAN No: Tax Identification Number (tax_id) from /admin/settings/company-info, or custom field, or company pan_no
-    $panNo = $toUpper($invoiceField(['pan_no', 'pan']) ?: ($invoice->company?->tax_id ?: ($invoice->company?->pan_no ?: '')));
+    $panNo = $toUpper($companyField(['pan_no', 'pan', 'company_pan', 'pan_number'])
+        ?: ($invoiceField(['pan_no', 'pan', 'company_pan', 'pan_number'])
+            ?: ($invoice->company?->tax_id
+                ?: ($invoice->company?->pan_no ?: ''))));
     // GSTIN: VAT Identification Number (vat_id) from /admin/settings/company-info, or custom field, or company gstin
-    $companyGstin = $toUpper($invoiceField(['gstin', 'gst_no']) ?: ($invoice->company?->vat_id ?: ($invoice->company?->gstin ?: '')));
-    $companyEnrollmentNo = $invoice->company?->enrollment_no ?: $invoiceField(['enrollment_no', 'enrollment']);
+    $companyGstin = $toUpper($companyField(['gstin', 'gst_no', 'gstin_no', 'company_gstin'])
+        ?: ($invoiceField(['gstin', 'gst_no', 'gstin_no', 'company_gstin'])
+            ?: ($invoice->company?->vat_id
+                ?: ($invoice->company?->gstin ?: ''))));
+    $companyEnrollmentNo = $companyField(['enrollment_no', 'enrollment', 'enrollment_number', 'company_enrollment_no'])
+        ?: ($invoice->company?->enrollment_no
+            ?: ($invoiceField(['enrollment_no', 'enrollment', 'enrollment_number', 'company_enrollment_no']) ?: ''));
     $companyTaxIdentityLabel = $companyEnrollmentNo ? 'Enrollment No' : 'GSTIN';
     $companyTaxIdentityValue = $toUpper($companyEnrollmentNo ?: $companyGstin);
 
