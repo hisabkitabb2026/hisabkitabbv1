@@ -14,12 +14,13 @@ import {
   unlinkReceipt,
   uploadPod,
 } from '@/api/trips'
-import type { Trip, TripDocument, TripStatus } from '@/types/trip'
+import type { Trip, TripDocument, TripPayablePayment, TripStatus } from '@/types/trip'
 import { errorMessage } from '@/support/http'
 import { formatMoney } from '@/support/format'
 import { PATHS } from '@/support/page'
 import type { Notify } from '@/support/page'
 import LrPickerModal from '@/components/LrPickerModal.vue'
+import TripPaymentVoucherModal from '@/components/TripPaymentVoucherModal.vue'
 
 /** The host router, handed in by injectedPage. */
 interface RouterLike {
@@ -63,8 +64,29 @@ const lrReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 
 const lorryReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 'lorry') ?? [])
 const invoiceReceipts = computed(() => trip.value?.receipts.filter((r) => r.type === 'invoice') ?? [])
 
+const voucherModalOpen = ref(false)
+const selectedVoucherPayment = ref<TripPayablePayment | null>(null)
+
+function openPaymentVoucher(pay: TripPayablePayment): void {
+  selectedVoucherPayment.value = pay
+  voucherModalOpen.value = true
+}
+
+function openCustomerReceipt(uniqueHash?: string | null): void {
+  if (uniqueHash) {
+    window.open('/payments/pdf/' + uniqueHash, '_blank')
+  }
+}
+
 /** Document slots grouped by role. */
 const DOCUMENT_SLOTS: Array<{ role: string; label: string; slots: Array<{ key: string; label: string }> }> = [
+  {
+    role: 'consignment',
+    label: 'Consignment & Proof of Delivery',
+    slots: [
+      { key: 'pod', label: 'Signed Delivery Copy / POD' },
+    ],
+  },
   {
     role: 'driver',
     label: 'Driver Documents',
@@ -685,54 +707,73 @@ function backToBoard(): void {
               </div>
             </div>
 
-            <!-- The Money — directly below the documents -->
+            <!-- Financial Summary & Payments -->
             <div class="mt-4 border-t border-line-light pt-3">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">The Money</p>
+              <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Trip Financial Summary & Payments</p>
 
-              <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-5">
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Billed Revenue</p>
-                  <p class="text-lg font-semibold text-heading">{{ trip.money.revenue > 0 ? formatMoney(trip.money.revenue) : '—' }}</p>
+              <!-- 4 Clean Financial Cards -->
+              <div class="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+                <!-- 1. Customer Invoiced (Revenue) -->
+                <div class="rounded-xl border border-line-light bg-surface-secondary p-3">
+                  <p class="text-xs font-medium text-muted">Customer Billed (Revenue)</p>
+                  <p class="mt-1 text-lg font-bold text-heading">
+                    {{ trip.money.revenue > 0 ? formatMoney(trip.money.revenue) : '—' }}
+                  </p>
+                  <div class="mt-1 flex flex-wrap items-center justify-center gap-1 text-[11px]">
+                    <span class="font-medium text-status-green">Recv: {{ formatMoney(trip.money.actual_revenue ?? 0) }}</span>
+                    <span v-if="(trip.money.tds_amount ?? 0) > 0" class="font-medium text-indigo-600">| TDS: {{ formatMoney(trip.money.tds_amount) }}</span>
+                    <span v-if="(trip.money.customer_due ?? 0) > 0" class="font-medium text-status-red">| Due: {{ formatMoney(trip.money.customer_due) }}</span>
+                  </div>
                 </div>
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Actual Rev (Bank)</p>
-                  <p class="text-lg font-semibold text-status-green">{{ formatMoney(trip.money.actual_revenue ?? 0) }}</p>
-                  <p v-if="(trip.money.customer_due ?? 0) > 0" class="mt-0.5 text-[10px] text-muted">
-                    Due: {{ formatMoney(trip.money.customer_due) }}
+
+                <!-- 2. Truck Hire & Costs -->
+                <div class="rounded-xl border border-line-light bg-surface-secondary p-3">
+                  <p class="text-xs font-medium text-muted">Truck Hire & Costs</p>
+                  <p class="mt-1 text-lg font-bold text-heading">{{ formatMoney(trip.money.cost) }}</p>
+                  <p class="mt-1 text-[11px] text-muted">
+                    Hire: {{ formatMoney(trip.money.cost - trip.expenses.reduce((s, e) => s + e.amount, 0)) }}
+                    <span v-if="trip.expenses.length > 0">· Exp: {{ formatMoney(trip.expenses.reduce((s, e) => s + e.amount, 0)) }}</span>
                   </p>
                 </div>
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">TDS Deducted</p>
-                  <p class="text-lg font-semibold text-indigo-600">
-                    {{ (trip.money.tds_amount ?? 0) > 0 ? formatMoney(trip.money.tds_amount) : '—' }}
-                  </p>
-                </div>
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Cost</p>
-                  <p class="text-lg font-semibold text-heading">{{ formatMoney(trip.money.cost) }}</p>
-                </div>
-                <div class="rounded-lg bg-surface-secondary p-3">
-                  <p class="text-xs text-muted">Profit</p>
+
+                <!-- 3. Owner Payment Status -->
+                <div class="rounded-xl border border-line-light bg-surface-secondary p-3">
+                  <p class="text-xs font-medium text-muted">Paid to Truck Owner</p>
+                  <p class="mt-1 text-lg font-bold text-heading">{{ formatMoney(trip.money.owner_paid) }}</p>
                   <p
-                    class="text-lg font-semibold"
+                    class="mt-1 text-[11px] font-semibold"
+                    :class="trip.money.owner_balance > 0 ? 'text-amber-600' : 'text-status-green'"
+                  >
+                    {{ trip.money.owner_balance > 0 ? `Balance Due: ${formatMoney(trip.money.owner_balance)}` : '✓ All Settled' }}
+                  </p>
+                </div>
+
+                <!-- 4. Net Trip Profit -->
+                <div class="rounded-xl border border-line-light bg-surface-secondary p-3">
+                  <p class="text-xs font-medium text-muted">Net Trip Profit</p>
+                  <p
+                    class="mt-1 text-lg font-extrabold"
                     :class="trip.money.profit >= 0 ? 'text-status-green' : 'text-status-red'"
                   >
                     {{ formatMoney(trip.money.profit) }}
                   </p>
+                  <p class="mt-1 text-[11px] font-medium text-muted">
+                    {{ trip.money.revenue > 0 ? 'Margin: ' + ((trip.money.profit / trip.money.revenue) * 100).toFixed(1) + '%' : 'Margin: —' }}
+                  </p>
                 </div>
               </div>
 
-              <!-- From Customer (receivable) -->
-              <div v-if="trip.money.receivable.length > 0" class="mt-3">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">From Customer</p>
+              <!-- From Customer (Collections & Invoices) -->
+              <div v-if="trip.money.receivable.length > 0" class="mt-4">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Customer Collections (Money In)</p>
                 <div
                   v-for="rec in trip.money.receivable"
                   :key="rec.invoice_id"
-                  class="mb-2 rounded-lg border border-line-light p-2.5 text-sm"
+                  class="mb-2 rounded-lg border border-line-light p-3 text-sm"
                 >
                   <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
-                      <p class="font-medium text-heading">🧾 {{ rec.invoice_number }}</p>
+                      <p class="font-medium text-heading">🧾 Invoice #{{ rec.invoice_number }}</p>
                       <p class="truncate text-xs text-muted">
                         {{ rec.customer_name ?? 'No customer' }} · Billed {{ formatMoney(rec.total) }} · Due {{ formatMoney(rec.due_amount) }}
                       </p>
@@ -748,37 +789,52 @@ function backToBoard(): void {
                       {{ rec.paid_status }}
                     </span>
                   </div>
-                  <div v-if="rec.payments.length > 0" class="mt-2 space-y-1">
+
+                  <!-- Customer Payment Receipts list -->
+                  <div v-if="rec.payments.length > 0" class="mt-2.5 space-y-1.5 border-t border-line-light pt-2">
                     <div
                       v-for="pay in rec.payments"
                       :key="pay.id"
-                      class="flex items-center justify-between gap-2 rounded bg-surface-secondary px-2 py-1 text-xs"
+                      class="flex items-center justify-between gap-2 rounded-md bg-surface-secondary px-2.5 py-1.5 text-xs"
                     >
-                      <span class="text-muted">{{ pay.number ?? '—' }} · {{ pay.date ?? '—' }}</span>
-                      <div class="text-right">
-                        <span class="font-medium text-heading">{{ formatMoney(pay.amount + (pay.tds_amount ?? 0)) }}</span>
-                        <span v-if="(pay.tds_amount ?? 0) > 0" class="block text-[10px] text-muted">
-                          Bank: {{ formatMoney(pay.amount) }} | TDS: {{ formatMoney(pay.tds_amount) }}
-                        </span>
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-heading">💰 {{ pay.number ?? 'Payment' }}</span>
+                        <span class="text-muted">{{ pay.date ?? '—' }} · {{ pay.method ?? 'Bank' }}</span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <div class="text-right">
+                          <span class="font-bold text-heading">{{ formatMoney(pay.amount + (pay.tds_amount ?? 0)) }}</span>
+                          <span v-if="(pay.tds_amount ?? 0) > 0" class="block text-[10px] text-muted">
+                            Bank: {{ formatMoney(pay.amount) }} | TDS: {{ formatMoney(pay.tds_amount) }}
+                          </span>
+                        </div>
+                        <button
+                          v-if="pay.unique_hash"
+                          type="button"
+                          class="rounded border border-primary-300 bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700 hover:bg-primary-100"
+                          @click="openCustomerReceipt(pay.unique_hash)"
+                        >
+                          📄 Payment Receipt
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- To Owner (payable) -->
-              <div v-if="trip.money.payable.length > 0" class="mt-3">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">To Owner</p>
+              <!-- To Truck Owner (Disbursements & Hire) -->
+              <div v-if="trip.money.payable.length > 0" class="mt-4">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Truck Owner Hire & Payment Vouchers (Money Out)</p>
                 <div
                   v-for="payable in trip.money.payable"
                   :key="payable.invoice_number"
-                  class="mb-2 rounded-lg border border-line-light p-2.5 text-sm"
+                  class="mb-2 rounded-lg border border-line-light p-3 text-sm"
                 >
                   <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
-                      <p class="font-medium text-heading">🚛 {{ payable.bill_number ?? payable.invoice_number }}</p>
+                      <p class="font-medium text-heading">🚛 Lorry Challan #{{ payable.invoice_number }} <span v-if="payable.bill_number" class="text-xs font-normal text-muted">(Bill #{{ payable.bill_number }})</span></p>
                       <p class="truncate text-xs text-muted">
-                        {{ payable.supplier_name ?? 'Unknown supplier' }}<span v-if="payable.bill_reference"> · {{ payable.bill_reference }}</span>
+                        {{ payable.supplier_name ?? 'Truck Owner / Supplier' }}<span v-if="payable.lorry_no"> · Vehicle: {{ payable.lorry_no }}</span>
                       </p>
                     </div>
                     <span
@@ -794,37 +850,54 @@ function backToBoard(): void {
                     </span>
                   </div>
                   <p v-if="payable.bill_total !== null" class="mt-1 text-xs text-muted">
-                    Total {{ formatMoney(payable.bill_total) }} · Due {{ formatMoney(payable.bill_due ?? 0) }}
+                    Total Hire {{ formatMoney(payable.bill_total) }} · Balance Due <span class="font-semibold text-heading">{{ formatMoney(payable.bill_due ?? 0) }}</span>
                   </p>
-                  <div v-if="payable.payments.length > 0" class="mt-2 space-y-1">
+
+                  <!-- Supplier Payment Vouchers List -->
+                  <div v-if="payable.payments.length > 0" class="mt-2.5 space-y-1.5 border-t border-line-light pt-2">
                     <div
                       v-for="pay in payable.payments"
                       :key="pay.id"
-                      class="flex items-center justify-between gap-2 rounded bg-surface-secondary px-2 py-1 text-xs"
+                      class="flex items-center justify-between gap-2 rounded-md bg-surface-secondary px-2.5 py-1.5 text-xs"
                     >
-                      <span class="text-muted">
-                        {{ pay.type === 'advance' ? 'Advance' : 'Final' }} · {{ pay.date ?? '—' }}<span v-if="pay.reference"> · {{ pay.reference }}</span>
-                      </span>
-                      <span class="font-medium text-heading">{{ formatMoney(pay.amount) }}</span>
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                          :class="pay.type === 'advance' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'"
+                        >
+                          {{ pay.type === 'advance' ? 'Advance' : 'Final Settlement' }}
+                        </span>
+                        <span class="text-muted">{{ pay.date ?? '—' }}<span v-if="pay.reference"> · Ref: {{ pay.reference }}</span></span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="font-bold text-heading">{{ formatMoney(pay.amount) }}</span>
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-1 rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 shadow-sm hover:bg-indigo-100"
+                          @click="openPaymentVoucher(pay)"
+                        >
+                          🎫 View Voucher
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="mt-3 flex items-center justify-between rounded-lg border border-line-light p-2.5 text-sm">
+              <!-- Overall Settlement Bar -->
+              <div class="mt-3 flex items-center justify-between rounded-lg border border-line-light bg-surface-secondary p-2.5 text-xs">
                 <span class="text-muted">
-                  Company paid {{ formatMoney(trip.money.owner_paid) }} · balance
-                  <span class="font-semibold text-heading">{{ formatMoney(trip.money.owner_balance) }}</span>
+                  Total Paid to Owner: <strong class="text-heading">{{ formatMoney(trip.money.owner_paid) }}</strong> · Remaining Balance:
+                  <strong :class="trip.money.owner_balance > 0 ? 'text-amber-600' : 'text-status-green'">{{ formatMoney(trip.money.owner_balance) }}</strong>
                 </span>
                 <span
                   v-if="trip.money.bill_status"
-                  class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                  class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
                   :class="{
                     'bg-status-red/10 text-status-red': trip.money.bill_status === 'UNPAID',
                     'bg-status-yellow/10 text-status-yellow': trip.money.bill_status === 'PARTIAL',
                     'bg-status-green/10 text-status-green': trip.money.bill_status === 'SETTLED',
                   }"
-                  :title="`Bill ${trip.money.bill_number}`"
                 >
                   {{ trip.money.bill_status }}
                 </span>
@@ -855,6 +928,13 @@ function backToBoard(): void {
       :trip-id="trip?.id"
       @close="lorryPickerOpen = false"
       @select="onLinkLorry"
+    />
+
+    <TripPaymentVoucherModal
+      :show="voucherModalOpen"
+      :payment="selectedVoucherPayment"
+      :trip="trip"
+      @close="voucherModalOpen = false"
     />
   </div>
 </template>

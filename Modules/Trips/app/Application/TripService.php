@@ -670,6 +670,7 @@ final class TripService
                         'gross_amount' => $b + $t,
                         'notes' => $payment->notes,
                         'method' => $payment->paymentMethod?->name,
+                        'unique_hash' => $payment->unique_hash,
                     ];
                 })
                 ->values()
@@ -708,7 +709,7 @@ final class TripService
         $invoices = Invoice::query()
             ->where('company_id', (int) $trip->company_id)
             ->whereIn('id', $invoiceIds)
-            ->get(['id', 'invoice_number', 'tr_bill_id', 'tr_advance_payment_id', 'tr_final_payment_id']);
+            ->get(['id', 'invoice_number', 'tr_bill_id', 'tr_advance_payment_id', 'tr_final_payment_id', 'tr_lorry_no', 'tr_owner_name', 'tr_from_name', 'tr_to_name', 'tr_lorry_hire_amount']);
 
         $billIds = $invoices->pluck('tr_bill_id')->filter()->unique()->values();
         $paymentIds = $invoices->pluck('tr_advance_payment_id')
@@ -727,6 +728,7 @@ final class TripService
 
         return $invoices->map(function (Invoice $invoice) use ($bills, $supplierPayments): array {
             $bill = $bills->firstWhere('id', $invoice->tr_bill_id);
+            $supplierName = $bill?->supplier?->name ?: $invoice->tr_owner_name;
 
             $payments = collect();
 
@@ -741,6 +743,11 @@ final class TripService
                     'reference' => $advance->reference,
                     'notes' => $advance->notes,
                     'method' => $advance->paymentMethod?->name,
+                    'pay_to' => $supplierName,
+                    'lorry_no' => $invoice->tr_lorry_no,
+                    'route' => trim(($invoice->tr_from_name ?: '').' → '.($invoice->tr_to_name ?: '')),
+                    'bill_number' => $bill?->number,
+                    'invoice_number' => $invoice->invoice_number,
                 ]);
             }
 
@@ -755,15 +762,21 @@ final class TripService
                     'reference' => $final->reference,
                     'notes' => $final->notes,
                     'method' => $final->paymentMethod?->name,
+                    'pay_to' => $supplierName,
+                    'lorry_no' => $invoice->tr_lorry_no,
+                    'route' => trim(($invoice->tr_from_name ?: '').' → '.($invoice->tr_to_name ?: '')),
+                    'bill_number' => $bill?->number,
+                    'invoice_number' => $invoice->invoice_number,
                 ]);
             }
 
             return [
                 'invoice_number' => $invoice->invoice_number,
+                'lorry_no' => $invoice->tr_lorry_no,
                 'bill_id' => $bill?->id,
                 'bill_number' => $bill?->number,
                 'bill_reference' => $bill?->reference,
-                'supplier_name' => $bill?->supplier?->name,
+                'supplier_name' => $supplierName,
                 'bill_total' => $bill ? (int) $bill->total : null,
                 'bill_due' => $bill ? (int) $bill->due_amount : null,
                 'bill_status' => $bill?->settlement_status,

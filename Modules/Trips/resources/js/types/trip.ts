@@ -94,6 +94,7 @@ export interface TripReceivablePayment {
   gross_amount?: number
   notes: string | null
   method: string | null
+  unique_hash?: string | null
 }
 
 export interface TripReceivable {
@@ -117,10 +118,16 @@ export interface TripPayablePayment {
   reference: string | null
   notes: string | null
   method: string | null
+  pay_to?: string | null
+  lorry_no?: string | null
+  route?: string | null
+  bill_number?: string | null
+  invoice_number?: string | null
 }
 
 export interface TripPayable {
   invoice_number: string
+  lorry_no?: string | null
   bill_id: number | null
   bill_number: string | null
   bill_reference: string | null
