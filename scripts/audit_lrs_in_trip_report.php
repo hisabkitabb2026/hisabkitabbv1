@@ -14,6 +14,21 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
+function safeDate(mixed $date): string
+{
+    if (empty($date)) {
+        return '—';
+    }
+    if ($date instanceof Carbon || $date instanceof DateTimeInterface) {
+        return $date->format('d M Y');
+    }
+    try {
+        return Carbon::parse((string) $date)->format('d M Y');
+    } catch (Throwable) {
+        return (string) $date;
+    }
+}
+
 $companyId = 1;
 $fromDate = Carbon::now()->subYear()->startOfDay();
 $toDate = Carbon::now()->endOfDay();
@@ -76,7 +91,7 @@ foreach ($allLrs as $lr) {
         $unlinked[] = [
             'lr_no' => $num,
             'customer' => $lr->customer?->name ?? '—',
-            'date' => $lr->invoice_date?->format('d M Y') ?? '—',
+            'date' => safeDate($lr->invoice_date),
             'amount' => $lr->total,
             'trip_no' => 'None',
             'status' => 'UNLINKED (No Trip)',
@@ -91,7 +106,7 @@ foreach ($allLrs as $lr) {
         $cancelled[] = [
             'lr_no' => $num,
             'customer' => $lr->customer?->name ?? '—',
-            'date' => $lr->invoice_date?->format('d M Y') ?? '—',
+            'date' => safeDate($lr->invoice_date),
             'amount' => $lr->total,
             'trip_no' => '#'.$trip->trip_no,
             'status' => 'CANCELLED TRIP',
@@ -105,17 +120,17 @@ foreach ($allLrs as $lr) {
         $appearing[] = [
             'lr_no' => $num,
             'customer' => $lr->customer?->name ?? '—',
-            'date' => $lr->invoice_date?->format('d M Y') ?? '—',
+            'date' => safeDate($lr->invoice_date),
             'amount' => $lr->total,
             'trip_no' => '#'.$trip->trip_no,
             'status' => 'IN REPORT',
         ];
     } else {
-        $tripDate = $trip->pickup_date?->format('d M Y') ?? ($trip->created_at?->format('d M Y') ?? '—');
+        $tripDate = safeDate($trip->pickup_date ?? $trip->created_at);
         $outsideRange[] = [
             'lr_no' => $num,
             'customer' => $lr->customer?->name ?? '—',
-            'date' => $lr->invoice_date?->format('d M Y') ?? '—',
+            'date' => safeDate($lr->invoice_date),
             'amount' => $lr->total,
             'trip_no' => '#'.$trip->trip_no,
             'status' => "TRIP DATE OUTSIDE RANGE ({$tripDate})",
@@ -150,7 +165,8 @@ usort($allRows, function ($a, $b) {
 foreach ($allRows as $r) {
     $formattedAmt = 'INR '.number_format($r['amount'] / 100, 2);
     $statusIcon = str_contains($r['status'], 'IN REPORT') ? 'YES' : 'NO ('.$r['status'].')';
-    printf("%-12s | %-12s | %-32s | %-12s | %-10s | %-20s\n",
+    printf(
+        "%-12s | %-12s | %-32s | %-12s | %-10s | %-20s\n",
         $r['lr_no'],
         $r['date'],
         mb_substr($r['customer'], 0, 32),
