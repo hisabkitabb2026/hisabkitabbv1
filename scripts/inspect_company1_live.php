@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-require __DIR__.'/../vendor/autoload.php';
-$app = require_once __DIR__.'/../bootstrap/app.php';
-$kernel = $app->make(Kernel::class);
-$kernel->bootstrap();
-
 use App\Domains\Sales\Models\Invoice;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Request;
@@ -15,6 +10,11 @@ use Modules\Trips\Application\TripService;
 use Modules\Trips\Http\Resources\TripCardResource;
 use Modules\Trips\Models\Trip;
 use Modules\Trips\Models\TripReceipt;
+
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
+$kernel = $app->make(Kernel::class);
+$kernel->bootstrap();
 
 $companyId = 1;
 $companyName = DB::table('companies')->where('id', $companyId)->value('name') ?: 'S S GUJARAT LOGISTICS SERVICES (ID: 1)';
