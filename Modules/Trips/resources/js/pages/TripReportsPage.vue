@@ -11,11 +11,6 @@ import type { PeriodValue } from '@/support/period'
 import { defaultMonthRange } from '@/support/date-range'
 import TripReportPdfPane from '@/components/TripReportPdfPane.vue'
 
-interface ReportTypeOption {
-  label: string
-  value: string
-}
-
 const props = defineProps<{
   client: AxiosInstance
   notify: Notify
@@ -27,14 +22,29 @@ const t = useTranslate()
 const presets = reportPresets(t)
 const period = ref<PeriodValue>(presetValue(presets[2]))
 
-const reportTypes: ReportTypeOption[] = [
-  { label: 'By Customer Name', value: 'customer' },
-  { label: 'By LR No', value: 'lr' },
-  { label: 'By Invoice No', value: 'invoice' },
-  { label: 'By Supplier Name', value: 'supplier' },
-]
+const tabKeys = ['customer', 'lr', 'supplier', 'invoice', 'details'] as const
+type TabKey = (typeof tabKeys)[number]
 
-const selectedType = ref<string>('customer')
+const tabTitles: Record<TabKey, string> = {
+  customer: 'By Customer',
+  lr: 'By LR / Consignment',
+  supplier: 'By Truck Owner',
+  invoice: 'By Invoice Receipt',
+  details: 'All Trip Details',
+}
+
+const selectedType = ref<TabKey>('customer')
+const tabIndex = computed(() => Math.max(0, tabKeys.indexOf(selectedType.value)))
+
+function selectTab(tab: { title: string }): void {
+  const found = (Object.keys(tabTitles) as TabKey[]).find(
+    (k) => tabTitles[k] === tab.title,
+  )
+  if (found && found !== selectedType.value) {
+    selectedType.value = found
+  }
+}
+
 const url = ref<string | null>(null)
 const pdfPane = ref<InstanceType<typeof TripReportPdfPane> | null>(null)
 
@@ -119,39 +129,44 @@ function backToTrips(): void {
       </template>
     </BasePageHeader>
 
-    <div class="grid gap-8 md:grid-cols-12 pt-10">
-      <div class="col-span-8 md:col-span-4">
-        <BaseInputGroup label="Date Range" class="mb-6">
+    <BaseTabGroup
+      :key="selectedType"
+      :default-index="tabIndex"
+      class="p-2"
+      @change="selectTab"
+    >
+      <BaseTab
+        v-for="key in tabKeys"
+        :key="key"
+        :title="tabTitles[key]"
+        tab-panel-container="px-0 py-0"
+      />
+    </BaseTabGroup>
+
+    <div class="grid gap-8 md:grid-cols-12 pt-6">
+      <div class="col-span-12 md:col-span-4 space-y-4">
+        <BaseInputGroup label="Date Range">
           <BasePeriodPicker v-model="period" :presets="presets" block position="bottom-start" />
         </BaseInputGroup>
 
-        <BaseInputGroup label="Report Type" class="col-span-12 md:col-span-8">
-          <BaseMultiselect
-            v-model="selectedType"
-            :options="reportTypes"
-            placeholder="Select report type"
-            class="mt-1"
-            @update:model-value="getReports"
-          />
-        </BaseInputGroup>
-
-        <BaseInputGroup label="Customer Name" class="col-span-12 md:col-span-8 mt-4">
+        <!-- Contextual filter input based on active tab -->
+        <BaseInputGroup v-if="selectedType === 'customer' || selectedType === 'details'" label="Filter Customer">
           <BaseInput v-model="filterCustomer" placeholder="Type customer name..." @update:model-value="getReports" />
         </BaseInputGroup>
 
-        <BaseInputGroup label="LR No" class="col-span-12 md:col-span-8">
+        <BaseInputGroup v-if="selectedType === 'lr' || selectedType === 'details'" label="Filter LR Number">
           <BaseInput v-model="filterLrNo" placeholder="Type LR number..." @update:model-value="getReports" />
         </BaseInputGroup>
 
-        <BaseInputGroup label="Invoice No" class="col-span-12 md:col-span-8">
+        <BaseInputGroup v-if="selectedType === 'supplier' || selectedType === 'details'" label="Filter Truck Owner / Transporter">
+          <BaseInput v-model="filterSupplier" placeholder="Type owner/transporter name..." @update:model-value="getReports" />
+        </BaseInputGroup>
+
+        <BaseInputGroup v-if="selectedType === 'invoice' || selectedType === 'details'" label="Filter Invoice Number">
           <BaseInput v-model="filterInvoiceNo" placeholder="Type invoice number..." @update:model-value="getReports" />
         </BaseInputGroup>
 
-        <BaseInputGroup label="Supplier Name" class="col-span-12 md:col-span-8">
-          <BaseInput v-model="filterSupplier" placeholder="Type supplier name..." @update:model-value="getReports" />
-        </BaseInputGroup>
-
-        <div class="hidden mt-6 md:block">
+        <div class="hidden pt-2 md:block">
           <BaseButton
             variant="primary"
             class="justify-center w-full"
@@ -166,7 +181,7 @@ function backToTrips(): void {
         </div>
       </div>
 
-      <div class="col-span-8">
+      <div class="col-span-12 md:col-span-8">
         <TripReportPdfPane
           ref="pdfPane"
           :client="client"

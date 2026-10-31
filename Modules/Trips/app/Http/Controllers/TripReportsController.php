@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Trips\Http\Controllers;
 
 use App\Domains\Accounts\Models\Company;
+use App\Domains\Accounts\Models\CompanySetting;
+use App\Domains\Money\Models\Currency;
 use App\Platform\Pdf\Facades\Pdf;
 use App\Platform\Pdf\Rendering\PdfPageSetup;
 use Illuminate\Http\JsonResponse;
@@ -92,11 +94,23 @@ final class TripReportsController extends Controller
         );
 
         $company = Company::query()->find($context->companyId);
+        $currencyId = $company ? (int) CompanySetting::getSetting('currency', $company->id) : 0;
+        $currency = $currencyId > 0 ? Currency::find($currencyId) : null;
+        if (! $currency) {
+            $currency = Currency::first();
+        }
+
+        $dateFormat = $company ? (string) CompanySetting::getSetting('carbon_date_format', $company->id) : 'Y-m-d';
+        if (empty($dateFormat)) {
+            $dateFormat = 'd M, Y';
+        }
 
         view()->share([
             'company' => $company,
-            'from_date' => $from->format('M d, Y'),
-            'to_date' => $to->format('M d, Y'),
+            'logo' => $company?->logo_path,
+            'from_date' => $from->translatedFormat($dateFormat),
+            'to_date' => $to->translatedFormat($dateFormat),
+            'currency' => $currency,
             'type' => $type,
             'rows' => $rows,
             'totals' => $summary['totals'],

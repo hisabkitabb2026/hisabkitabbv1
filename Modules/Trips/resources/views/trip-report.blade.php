@@ -1,238 +1,283 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: 'Noto Sans', sans-serif; font-size: 12px; color: #333; margin: 0; padding: 0; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-        .header h1 { font-size: 20px; margin: 0; color: #111; }
-        .header .meta { text-align: right; font-size: 11px; color: #6b7280; }
-        .company-name { font-size: 14px; font-weight: 600; color: #111; }
-        .date-range { font-size: 11px; color: #6b7280; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; font-size: 10px; text-transform: uppercase; color: #6b7280; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; font-size: 11px; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .totals { margin-top: 20px; }
-        .totals table { width: 300px; margin-left: auto; }
-        .totals td { border: none; padding: 4px 8px; }
-        .totals .grand-total { font-weight: 700; font-size: 13px; border-top: 2px solid #e5e7eb; }
-        .section-title { font-size: 14px; font-weight: 600; margin-top: 24px; margin-bottom: 8px; color: #111; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; color: #fff; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div>
-            <h1>Trip Report</h1>
-            @if (isset($company))
-                <div class="company-name">{{ $company->name }}</div>
-            @endif
-        </div>
-        <div class="meta">
-            <div class="date-range">{{ $from_date }} — {{ $to_date }}</div>
-            @if (!empty($filters))
-                <div class="date-range" style="margin-top:4px;">
-                    @foreach ($filters as $key => $val)
-                        <span style="display:inline-block;margin-right:8px;">{{ ucfirst(str_replace('_', ' ', $key)) }}: {{ $val }}</span>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    </div>
+@extends('app.pdf.reports.partials.layout')
 
-    @php
-        $fmt = function ($amount) {
-            return number_format(abs($amount) / 100, 2);
-        };
-    @endphp
+@php
+    $reportTitles = [
+        'customer' => 'TRIP REPORT — BY CUSTOMER',
+        'lr' => 'TRIP REPORT — BY LR / CONSIGNMENT',
+        'supplier' => 'TRIP REPORT — BY TRUCK OWNER / SUPPLIER',
+        'invoice' => 'TRIP REPORT — BY INVOICE RECEIPT',
+        'details' => 'TRIP REPORT — ALL TRIP DETAILS',
+    ];
+    $title = $reportTitles[$type] ?? 'TRIP REPORT';
+@endphp
+
+@section('report-title', $title)
+@section('footer-label', 'NET TRIP PROFIT')
+@section('footer-value'){!! format_money_pdf($totals['profit'] ?? 0, $currency) !!}@endsection
+
+@section('report-body')
+    @if (! empty($filters))
+        <p class="report-muted" style="margin-bottom: 8px;">
+            @foreach ($filters as $key => $val)
+                <span style="display:inline-block; margin-right: 12px;"><strong>{{ ucfirst(str_replace('_', ' ', $key)) }}:</strong> {{ $val }}</span>
+            @endforeach
+        </p>
+    @endif
+
+    {{-- Executive Summary KPI Table --}}
+    <div class="report-section" style="padding-top: 4px;">
+        <table class="report-table" style="background: #F9FBFF; border: 0.62px solid #E8E8E8;">
+            <thead>
+                <tr>
+                    <th style="padding: 8px 12px; text-align: center;">TOTAL TRIPS</th>
+                    <th style="padding: 8px 12px; text-align: right;">TOTAL BILLED REVENUE</th>
+                    <th style="padding: 8px 12px; text-align: right;">TRUCK HIRE &amp; COSTS</th>
+                    <th style="padding: 8px 12px; text-align: right;">NET PROFIT</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 8px 12px; text-align: center; font-size: 14px; font-weight: bold; color: #040405;">
+                        {{ $totals['trip_count'] }}
+                    </td>
+                    <td style="padding: 8px 12px; text-align: right; font-size: 13px; font-weight: bold; color: #040405;">
+                        {!! format_money_pdf($totals['revenue'], $currency) !!}
+                    </td>
+                    <td style="padding: 8px 12px; text-align: right; font-size: 13px; font-weight: bold; color: #dc2626;">
+                        {!! format_money_pdf($totals['cost'], $currency) !!}
+                    </td>
+                    <td style="padding: 8px 12px; text-align: right; font-size: 14px; font-weight: bold; color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                        {!! format_money_pdf($totals['profit'], $currency) !!}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
     @if ($type === 'customer')
-        <div class="section-title">By Customer</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Customer</th>
-                    <th class="text-center">Trips</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Cost</th>
-                    <th class="text-right">Profit</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($rows as $row)
+        <div class="report-section">
+            <p class="report-section-heading">Customer Performance Summary</p>
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <td>{{ $row['customer_name'] }}</td>
-                        <td class="text-center">{{ $row['trip_count'] }}</td>
-                        <td class="text-right">{{ $fmt($row['revenue']) }}</td>
-                        <td class="text-right">{{ $fmt($row['cost']) }}</td>
-                        <td class="text-right">{{ $fmt($row['profit']) }}</td>
+                        <th>Customer</th>
+                        <th style="text-align: center; width: 14%;">Trips</th>
+                        <th class="report-amount report-col-amount">Revenue</th>
+                        <th class="report-amount report-col-amount">Cost</th>
+                        <th class="report-amount report-col-amount">Profit</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($rows as $row)
+                        <tr>
+                            <td style="font-weight: 500;">{{ $row['customer_name'] }}</td>
+                            <td style="text-align: center;">{{ $row['trip_count'] }}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['revenue'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['cost'], $currency) !!}</td>
+                            <td class="report-amount" style="color: {{ $row['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">
+                                {!! format_money_pdf($row['profit'], $currency) !!}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="report-muted">No records found for the selected period.</td>
+                        </tr>
+                    @endforelse
+                    <tr class="report-total-row">
+                        <td class="report-total">Total</td>
+                        <td class="report-total" style="text-align: center;">{{ $totals['trip_count'] }}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['revenue'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['cost'], $currency) !!}</td>
+                        <td class="report-amount report-total" style="color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                            {!! format_money_pdf($totals['profit'], $currency) !!}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     @elseif ($type === 'lr')
-        <div class="section-title">By LR Number</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>LR No</th>
-                    <th>Customer</th>
-                    <th>Route</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Cost</th>
-                    <th class="text-right">Profit</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($rows as $row)
+        <div class="report-section">
+            <p class="report-section-heading">Consignment Performance (By LR)</p>
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <td>{{ $row['lr_no'] ?? '—' }}</td>
-                        <td>{{ $row['customer_name'] ?? '—' }}</td>
-                        <td>{{ ($row['from_city'] ?? '—') . ' → ' . ($row['to_city'] ?? '—') }}</td>
-                        <td class="text-right">{{ $fmt($row['revenue']) }}</td>
-                        <td class="text-right">{{ $fmt($row['cost']) }}</td>
-                        <td class="text-right">{{ $fmt($row['profit']) }}</td>
+                        <th style="width: 14%;">LR No</th>
+                        <th>Customer</th>
+                        <th>Route</th>
+                        <th class="report-amount report-col-amount">Revenue</th>
+                        <th class="report-amount report-col-amount">Cost</th>
+                        <th class="report-amount report-col-amount">Profit</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($rows as $row)
+                        <tr>
+                            <td style="font-weight: 600;">#{{ $row['lr_no'] ?? '—' }}</td>
+                            <td>{{ $row['customer_name'] ?? '—' }}</td>
+                            <td>{{ ($row['from_city'] ?? '—') . ' → ' . ($row['to_city'] ?? '—') }}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['revenue'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['cost'], $currency) !!}</td>
+                            <td class="report-amount" style="color: {{ $row['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">
+                                {!! format_money_pdf($row['profit'], $currency) !!}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="report-muted">No records found for the selected period.</td>
+                        </tr>
+                    @endforelse
+                    <tr class="report-total-row">
+                        <td class="report-total" colspan="3">Total</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['revenue'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['cost'], $currency) !!}</td>
+                        <td class="report-amount report-total" style="color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                            {!! format_money_pdf($totals['profit'], $currency) !!}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     @elseif ($type === 'supplier')
-        <div class="section-title">By Supplier</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Supplier</th>
-                    <th>Bill No</th>
-                    <th>Reference</th>
-                    <th class="text-center">Trips</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Cost</th>
-                    <th class="text-right">Profit</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($rows as $row)
+        <div class="report-section">
+            <p class="report-section-heading">Truck Owner / Transporter Breakdown</p>
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <td>{{ $row['supplier_name'] }}</td>
-                        <td>{{ $row['bill_number'] }}</td>
-                        <td>{{ $row['bill_reference'] }}</td>
-                        <td class="text-center">{{ $row['trip_count'] }}</td>
-                        <td class="text-right">{{ $fmt($row['revenue']) }}</td>
-                        <td class="text-right">{{ $fmt($row['cost']) }}</td>
-                        <td class="text-right">{{ $fmt($row['profit']) }}</td>
+                        <th>Owner / Transporter</th>
+                        <th>Bill No</th>
+                        <th>Reference</th>
+                        <th style="text-align: center; width: 10%;">Trips</th>
+                        <th class="report-amount report-col-amount">Revenue</th>
+                        <th class="report-amount report-col-amount">Cost</th>
+                        <th class="report-amount report-col-amount">Profit</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($rows as $row)
+                        <tr>
+                            <td style="font-weight: 600;">{{ $row['supplier_name'] }}</td>
+                            <td>{{ $row['bill_number'] }}</td>
+                            <td>{{ $row['bill_reference'] }}</td>
+                            <td style="text-align: center;">{{ $row['trip_count'] }}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['revenue'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['cost'], $currency) !!}</td>
+                            <td class="report-amount" style="color: {{ $row['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">
+                                {!! format_money_pdf($row['profit'], $currency) !!}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="report-muted">No records found for the selected period.</td>
+                        </tr>
+                    @endforelse
+                    <tr class="report-total-row">
+                        <td class="report-total" colspan="3">Total</td>
+                        <td class="report-total" style="text-align: center;">{{ $totals['trip_count'] }}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['revenue'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['cost'], $currency) !!}</td>
+                        <td class="report-amount report-total" style="color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                            {!! format_money_pdf($totals['profit'], $currency) !!}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     @elseif ($type === 'invoice')
-        <div class="section-title">By Invoice Receipt</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Invoice No</th>
-                    <th>Customer</th>
-                    <th class="text-right">Total</th>
-                    <th class="text-right">Due</th>
-                    <th>Status</th>
-                    <th class="text-right">Profit</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($rows as $row)
+        <div class="report-section">
+            <p class="report-section-heading">Customer Tax Invoice Breakdown</p>
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <td>{{ $row['invoice_number'] }}</td>
-                        <td>{{ $row['customer_name'] }}</td>
-                        <td class="text-right">{{ $fmt($row['total']) }}</td>
-                        <td class="text-right">{{ $fmt($row['due_amount']) }}</td>
-                        <td>{{ $row['paid_status'] }}</td>
-                        <td class="text-right">{{ $fmt($row['profit']) }}</td>
+                        <th>Invoice No</th>
+                        <th>Customer</th>
+                        <th class="report-amount report-col-amount">Total Billed</th>
+                        <th class="report-amount report-col-amount">Due Amount</th>
+                        <th style="text-align: center;">Status</th>
+                        <th class="report-amount report-col-amount">Profit</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($rows as $row)
+                        <tr>
+                            <td style="font-weight: 600;">{{ $row['invoice_number'] }}</td>
+                            <td>{{ $row['customer_name'] }}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['total'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($row['due_amount'], $currency) !!}</td>
+                            <td style="text-align: center;">{{ $row['paid_status'] }}</td>
+                            <td class="report-amount" style="color: {{ $row['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">
+                                {!! format_money_pdf($row['profit'], $currency) !!}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="report-muted">No records found for the selected period.</td>
+                        </tr>
+                    @endforelse
+                    <tr class="report-total-row">
+                        <td class="report-total" colspan="2">Total</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['revenue'], $currency) !!}</td>
+                        <td class="report-amount report-total" colspan="2"></td>
+                        <td class="report-amount report-total" style="color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                            {!! format_money_pdf($totals['profit'], $currency) !!}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     @endif
 
-    @if (!empty($trip_details))
-        <div class="section-title" style="margin-top: 28px;">Trip Details — The Money</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Trip</th>
-                    <th>Route</th>
-                    <th>LR No</th>
-                    <th>Invoice Receipt No</th>
-                    <th>Lorry Receipt No</th>
-                    <th>Customer</th>
-                    <th>Supplier</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Cost</th>
-                    <th class="text-right">Profit</th>
-                    <th>Bill Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php
-                    $grandRevenue = 0;
-                    $grandCost = 0;
-                    $grandProfit = 0;
-                @endphp
-                @foreach ($trip_details as $td)
-                    @php
-                        $grandRevenue += $td['revenue'];
-                        $grandCost += $td['cost'];
-                        $grandProfit += $td['profit'];
-                        $customerName = $td['receivable'][0]['customer_name'] ?? '—';
-                        $supplierName = $td['payable'][0]['supplier_name'] ?? '—';
-                        $billStatus = $td['payable'][0]['bill_status'] ?? '—';
-                    @endphp
+    {{-- Detailed Trip Ledger --}}
+    @if ($type === 'details' || ! empty($trip_details))
+        <div class="report-section">
+            <p class="report-section-heading">Trip Details &amp; Document Chain</p>
+            <table class="report-table" style="font-size: 11px;">
+                <thead>
                     <tr>
-                        <td>#{{ $td['trip_no'] }}</td>
-                        <td>{{ $td['from_city'] }} → {{ $td['to_city'] }}</td>
-                        <td>{{ $td['lr_numbers'] ?? '—' }}</td>
-                        <td>{{ $td['invoice_numbers'] ?? '—' }}</td>
-                        <td>{{ $td['lorry_receipt_numbers'] ?? '—' }}</td>
-                        <td>{{ $customerName }}</td>
-                        <td>{{ $supplierName }}</td>
-                        <td class="text-right">{{ $fmt($td['revenue']) }}</td>
-                        <td class="text-right">{{ $fmt($td['cost']) }}</td>
-                        <td class="text-right" style="color: {{ $td['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">{{ $fmt($td['profit']) }}</td>
-                        <td>{{ $billStatus }}</td>
+                        <th style="width: 8%;">Trip #</th>
+                        <th>Route</th>
+                        <th>LR(s)</th>
+                        <th>Truck / Challan</th>
+                        <th>Customer</th>
+                        <th>Transporter</th>
+                        <th class="report-amount">Revenue</th>
+                        <th class="report-amount">Cost</th>
+                        <th class="report-amount">Profit</th>
                     </tr>
-                @endforeach
-            </tbody>
-            <tfoot>
-                <tr style="border-top: 2px solid #e5e7eb; font-weight: 700;">
-                    <td colspan="7" style="text-align: right;">Total</td>
-                    <td class="text-right">{{ $fmt($grandRevenue) }}</td>
-                    <td class="text-right">{{ $fmt($grandCost) }}</td>
-                    <td class="text-right" style="color: {{ $grandProfit >= 0 ? '#16a34a' : '#dc2626' }};">{{ $fmt($grandProfit) }}</td>
-                    <td></td>
-                </tr>
-            </tfoot>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse ($trip_details as $td)
+                        @php
+                            $customerName = $td['receivable'][0]['customer_name'] ?? '—';
+                            $supplierName = $td['payable'][0]['supplier_name'] ?? '—';
+                        @endphp
+                        <tr>
+                            <td style="font-weight: 600;">#{{ $td['trip_no'] }}</td>
+                            <td>{{ $td['from_city'] }} &rarr; {{ $td['to_city'] }}</td>
+                            <td>{{ $td['lr_numbers'] ?? '—' }}</td>
+                            <td>{{ $td['lorry_receipt_numbers'] ?? '—' }}</td>
+                            <td>{{ $customerName }}</td>
+                            <td>{{ $supplierName }}</td>
+                            <td class="report-amount">{!! format_money_pdf($td['revenue'], $currency) !!}</td>
+                            <td class="report-amount">{!! format_money_pdf($td['cost'], $currency) !!}</td>
+                            <td class="report-amount" style="color: {{ $td['profit'] >= 0 ? '#16a34a' : '#dc2626' }}; font-weight: 600;">
+                                {!! format_money_pdf($td['profit'], $currency) !!}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="report-muted">No trip details available.</td>
+                        </tr>
+                    @endforelse
+                    <tr class="report-total-row">
+                        <td class="report-total" colspan="6">Total</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['revenue'], $currency) !!}</td>
+                        <td class="report-amount report-total">{!! format_money_pdf($totals['cost'], $currency) !!}</td>
+                        <td class="report-amount report-total" style="color: {{ ($totals['profit'] ?? 0) >= 0 ? '#16a34a' : '#dc2626' }};">
+                            {!! format_money_pdf($totals['profit'], $currency) !!}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     @endif
-
-    <div class="totals">
-        <table>
-            <tr>
-                <td>Total Trips</td>
-                <td class="text-right">{{ $totals['trip_count'] }}</td>
-            </tr>
-            <tr>
-                <td>Total Revenue</td>
-                <td class="text-right">{{ $fmt($totals['revenue']) }}</td>
-            </tr>
-            <tr>
-                <td>Total Cost</td>
-                <td class="text-right">{{ $fmt($totals['cost']) }}</td>
-            </tr>
-            <tr class="grand-total">
-                <td>Total Profit</td>
-                <td class="text-right">{{ $fmt($totals['profit']) }}</td>
-            </tr>
-        </table>
-    </div>
-</body>
-</html>
+@endsection
