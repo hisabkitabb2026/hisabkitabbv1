@@ -356,11 +356,28 @@ final class TripReportService
             $lorryReceipts = $trip->receipts->where('type', TripReceipt::TYPE_LORRY);
             $invoiceReceipts = $trip->receipts->where('type', TripReceipt::TYPE_INVOICE);
 
+            $customerNames = $lrReceipts->pluck('customer_name')->filter()->unique()->values();
+            $customerName = $customerNames->isNotEmpty()
+                ? $customerNames->implode(', ')
+                : ($money['receivable'][0]['customer_name'] ?? 'Direct Customer');
+
+            $payableSuppliers = collect($money['payable'] ?? [])
+                ->pluck('pay_to')
+                ->filter()
+                ->unique()
+                ->values();
+            $ownerName = $payableSuppliers->isNotEmpty() ? $payableSuppliers->implode(', ') : '—';
+            $margin = $money['revenue'] > 0 ? round(($money['profit'] / $money['revenue']) * 100, 1) : 0;
+
             $rows[] = [
                 'trip_no' => $trip->trip_no,
+                'pickup_date' => $trip->pickup_date?->format('d M Y') ?? ($trip->created_at?->format('d M Y') ?? '—'),
                 'from_city' => $trip->from_city ?? '—',
                 'to_city' => $trip->to_city ?? '—',
+                'customer_name' => $customerName,
                 'lorry_no' => $trip->lorry_no ?? '—',
+                'owner_name' => $ownerName,
+                'truck_owner_display' => ($trip->lorry_no ?? '—').($ownerName !== '—' ? ' ('.$ownerName.')' : ''),
                 'lr_numbers' => $lrReceipts->isNotEmpty()
                     ? $lrReceipts->map(fn ($r) => $r->invoice_number)->filter()->implode(', ')
                     : '—',
@@ -373,6 +390,7 @@ final class TripReportService
                 'revenue' => $money['revenue'],
                 'cost' => $money['cost'],
                 'profit' => $money['profit'],
+                'margin' => $margin,
                 'receivable' => $money['receivable'],
                 'payable' => $money['payable'],
             ];

@@ -22,26 +22,6 @@ const t = useTranslate()
 const presets = reportPresets(t)
 const period = ref<PeriodValue>(presetValue(presets[2]))
 
-const tabKeys = ['customer', 'lr'] as const
-type TabKey = (typeof tabKeys)[number]
-
-const tabTitles: Record<TabKey, string> = {
-  customer: 'By Customer',
-  lr: 'By LR',
-}
-
-const selectedType = ref<TabKey>('customer')
-const tabIndex = computed(() => Math.max(0, tabKeys.indexOf(selectedType.value)))
-
-function selectTab(tab: { title: string }): void {
-  const found = (Object.keys(tabTitles) as TabKey[]).find(
-    (k) => tabTitles[k] === tab.title,
-  )
-  if (found && found !== selectedType.value) {
-    selectedType.value = found
-  }
-}
-
 const url = ref<string | null>(null)
 const pdfPane = ref<InstanceType<typeof TripReportPdfPane> | null>(null)
 
@@ -55,7 +35,7 @@ const filterLrNo = ref<string>('')
 const reportUrl = computed<string | null>(() => url.value)
 
 const dateRangeUrl = computed<string>(() => {
-  let u = '/api/v1/trips/reports/pdf?from_date=' + fromDate.value + '&to_date=' + toDate.value + '&type=' + selectedType.value
+  let u = '/api/v1/trips/reports/pdf?from_date=' + fromDate.value + '&to_date=' + toDate.value
   if (filterCustomer.value.trim()) u += '&customer=' + encodeURIComponent(filterCustomer.value.trim())
   if (filterLrNo.value.trim()) u += '&lr_no=' + encodeURIComponent(filterLrNo.value.trim())
   return u
@@ -77,7 +57,7 @@ watch(period, (value) => {
   }
 })
 
-watch([fromDate, toDate, selectedType, filterCustomer, filterLrNo], () => {
+watch([fromDate, toDate, filterCustomer, filterLrNo], () => {
   url.value = dateRangeUrl.value
 })
 
@@ -121,20 +101,6 @@ function backToTrips(): void {
         </BaseButton>
       </template>
     </BasePageHeader>
-
-    <BaseTabGroup
-      :key="selectedType"
-      :default-index="tabIndex"
-      class="p-2"
-      @change="selectTab"
-    >
-      <BaseTab
-        v-for="key in tabKeys"
-        :key="key"
-        :title="tabTitles[key]"
-        tab-panel-container="px-0 py-0"
-      />
-    </BaseTabGroup>
 
     <div class="grid gap-8 md:grid-cols-12 pt-6">
       <div class="col-span-12 md:col-span-4 space-y-4">

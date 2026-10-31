@@ -61,7 +61,6 @@ final class TripReportsController extends Controller
 
         $from = $request->date('from_date') ?? Carbon::now()->startOfMonth();
         $to = $request->date('to_date') ?? Carbon::now();
-        $type = $request->string('type', 'customer')->toString();
 
         $filters = [
             'customer' => $request->string('customer', '')->toString(),
@@ -86,25 +85,6 @@ final class TripReportsController extends Controller
             $filters,
         );
 
-        $tripsByCustomer = [];
-        foreach ($tripDetails as $td) {
-            $cust = $td['receivable'][0]['customer_name'] ?? 'Other / Direct Customer';
-            if (! isset($tripsByCustomer[$cust])) {
-                $tripsByCustomer[$cust] = [
-                    'customer_name' => $cust,
-                    'trips' => [],
-                    'total_revenue' => 0,
-                    'total_cost' => 0,
-                    'total_profit' => 0,
-                ];
-            }
-            $tripsByCustomer[$cust]['trips'][] = $td;
-            $tripsByCustomer[$cust]['total_revenue'] += $td['revenue'];
-            $tripsByCustomer[$cust]['total_cost'] += $td['cost'];
-            $tripsByCustomer[$cust]['total_profit'] += $td['profit'];
-        }
-        ksort($tripsByCustomer);
-
         $company = Company::query()->find($context->companyId);
         $currencyId = $company ? (int) CompanySetting::getSetting('currency', $company->id) : 0;
         $currency = $currencyId > 0 ? Currency::find($currencyId) : null;
@@ -123,8 +103,6 @@ final class TripReportsController extends Controller
             'from_date' => $from->translatedFormat($dateFormat),
             'to_date' => $to->translatedFormat($dateFormat),
             'currency' => $currency,
-            'type' => $type,
-            'trips_by_customer' => $tripsByCustomer,
             'totals' => $summary['totals'],
             'trip_details' => $tripDetails,
             'filters' => $filters,
