@@ -355,7 +355,24 @@ function openTrip(trip: TripCardModel): void {
               :class="{ 'opacity-50': trip.cancelled_at }"
               @click="openTrip(trip)"
             >
-              <td class="p-3 font-medium text-heading">#{{ trip.trip_no }}</td>
+              <td class="p-3 font-medium text-heading">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span>#{{ trip.trip_no }}</span>
+                  <span
+                    v-if="trip.lr_numbers && trip.lr_numbers.length > 1"
+                    class="inline-flex items-center rounded-md bg-primary-50 px-1.5 py-0.5 text-xs font-semibold text-primary-700 ring-1 ring-inset ring-primary-700/20"
+                    title="Consolidated Multi-LR Load"
+                  >
+                    LR: {{ trip.lr_numbers.join(', ') }}
+                  </span>
+                  <span
+                    v-else-if="trip.lr_numbers && trip.lr_numbers.length === 1 && String(trip.trip_no) !== String(trip.lr_numbers[0])"
+                    class="text-xs font-normal text-muted"
+                  >
+                    [LR: {{ trip.lr_numbers[0] }}]
+                  </span>
+                </div>
+              </td>
               <td class="p-3 text-body">{{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}</td>
               <td class="p-3 text-body">
                 {{ trip.customers.map((c) => c.name).filter(Boolean).join(', ') || '—' }}

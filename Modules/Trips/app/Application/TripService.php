@@ -56,7 +56,8 @@ final class TripService
                     ->orWhere('to_city', 'like', "%{$search}%")
                     ->orWhere('lorry_no', 'like', "%{$search}%")
                     ->orWhere('goods', 'like', "%{$search}%")
-                    ->orWhere('trip_no', (int) $search);
+                    ->orWhere('trip_no', (int) $search)
+                    ->orWhereHas('receipts', fn ($rq) => $rq->where('invoice_number', 'like', "%{$search}%"));
             });
         }
 

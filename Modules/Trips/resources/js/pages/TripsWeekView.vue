@@ -156,7 +156,13 @@ function formatDate(d: Date): string {
               class="cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover"
               @click="openTrip(trip)"
             >
-              <p class="truncate text-xs font-medium text-heading">#{{ trip.trip_no }} · {{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}</p>
+              <p class="truncate text-xs font-medium text-heading">
+                #{{ trip.trip_no }}
+                <span v-if="trip.lr_numbers && trip.lr_numbers.length > 1" class="font-normal text-primary-600">
+                  [{{ trip.lr_numbers.join(', ') }}]
+                </span>
+                · {{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}
+              </p>
               <p class="mt-0.5 text-xs text-muted">
                 {{ trip.lorry_no ?? 'No lorry' }} · {{ formatMoney(trip.revenue) }}
               </p>

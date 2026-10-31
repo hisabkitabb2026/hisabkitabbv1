@@ -60,13 +60,24 @@ function onCancel(): void {
     @click="emit('open', trip)"
   >
     <div class="flex items-start justify-between gap-2">
-      <p class="text-sm font-medium text-heading">
-        #{{ trip.trip_no }}
-        <span v-if="trip.lr_numbers && trip.lr_numbers.length" class="text-xs font-normal text-muted">
-          [{{ trip.lr_numbers.join(', ') }}]
-        </span>
-        · {{ route }}
-      </p>
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-heading">
+          #{{ trip.trip_no }}
+          <span
+            v-if="trip.lr_numbers && trip.lr_numbers.length > 1"
+            class="inline-flex items-center rounded bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary-700 ring-1 ring-inset ring-primary-700/20 ml-1"
+          >
+            LR: {{ trip.lr_numbers.join(', ') }}
+          </span>
+          <span
+            v-else-if="trip.lr_numbers && trip.lr_numbers.length === 1 && String(trip.trip_no) !== String(trip.lr_numbers[0])"
+            class="text-xs font-normal text-muted"
+          >
+            [LR: {{ trip.lr_numbers[0] }}]
+          </span>
+          · {{ route }}
+        </p>
+      </div>
       <div class="relative">
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <button

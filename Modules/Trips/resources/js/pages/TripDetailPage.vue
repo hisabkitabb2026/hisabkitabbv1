@@ -385,8 +385,18 @@ function backToBoard(): void {
             </button>
             <h1 class="text-xl font-semibold text-heading">
               Trip #{{ trip.trip_no }}
-              <span v-if="trip.lr_numbers && trip.lr_numbers.length" class="text-base font-normal text-muted">
-                [{{ trip.lr_numbers.join(', ') }}]
+              <span
+                v-if="trip.lr_numbers && trip.lr_numbers.length > 1"
+                class="inline-flex items-center rounded-md bg-primary-50 px-2 py-0.5 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-primary-700/20 align-middle ml-1.5"
+                title="Consolidated Multi-LR Load"
+              >
+                LR: {{ trip.lr_numbers.join(', ') }}
+              </span>
+              <span
+                v-else-if="trip.lr_numbers && trip.lr_numbers.length === 1 && String(trip.trip_no) !== String(trip.lr_numbers[0])"
+                class="text-base font-normal text-muted"
+              >
+                [LR: {{ trip.lr_numbers[0] }}]
               </span>
               · {{ trip.from_city ?? '—' }} → {{ trip.to_city ?? '—' }}
             </h1>
