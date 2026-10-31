@@ -121,90 +121,90 @@ function te(e, t) {
 }
 //#endregion
 //#region resources/js/support/date-range.ts
-var P = (e) => e.getFullYear() + "-" + String(e.getMonth() + 1).padStart(2, "0") + "-" + String(e.getDate()).padStart(2, "0");
-function ne(e) {
+var ne = (e) => e.getFullYear() + "-" + String(e.getMonth() + 1).padStart(2, "0") + "-" + String(e.getDate()).padStart(2, "0");
+function P(e) {
 	let t = new Date(e);
 	return t.setHours(0, 0, 0, 0), t;
 }
-function F(e) {
+function re(e) {
 	let t = new Date(e);
 	return t.setHours(23, 59, 59, 999), t;
 }
-function re(e) {
-	let t = ne(e), n = (t.getDay() + 6) % 7;
+function ie(e) {
+	let t = P(e), n = (t.getDay() + 6) % 7;
 	return t.setDate(t.getDate() - n), t;
 }
-function ie(e) {
-	let t = re(e), n = new Date(t);
-	return n.setDate(t.getDate() + 6), F(n);
-}
 function ae(e) {
-	return ne(new Date(e.getFullYear(), e.getMonth(), 1));
+	let t = ie(e), n = new Date(t);
+	return n.setDate(t.getDate() + 6), re(n);
 }
 function oe(e) {
-	return F(new Date(e.getFullYear(), e.getMonth() + 1, 0));
+	return P(new Date(e.getFullYear(), e.getMonth(), 1));
 }
 function se(e) {
-	let t = Math.floor(e.getMonth() / 3) * 3;
-	return ne(new Date(e.getFullYear(), t, 1));
+	return re(new Date(e.getFullYear(), e.getMonth() + 1, 0));
 }
 function ce(e) {
 	let t = Math.floor(e.getMonth() / 3) * 3;
-	return F(new Date(e.getFullYear(), t + 3, 0));
+	return P(new Date(e.getFullYear(), t, 1));
 }
 function le(e) {
-	return ne(new Date(e.getFullYear(), 0, 1));
+	let t = Math.floor(e.getMonth() / 3) * 3;
+	return re(new Date(e.getFullYear(), t + 3, 0));
 }
 function ue(e) {
-	return F(new Date(e.getFullYear(), 12, 0));
+	return P(new Date(e.getFullYear(), 0, 1));
 }
-var de = {
-	isoWeek: re,
-	month: ae,
-	quarter: se,
-	year: le
-}, fe = {
+function de(e) {
+	return re(new Date(e.getFullYear(), 12, 0));
+}
+var fe = {
 	isoWeek: ie,
 	month: oe,
 	quarter: ce,
 	year: ue
+}, pe = {
+	isoWeek: ae,
+	month: se,
+	quarter: le,
+	year: de
 };
-function pe(e, t) {
+function me(e, t) {
 	return {
-		from: P(de[e](t)),
-		to: P(fe[e](t))
+		from: ne(fe[e](t)),
+		to: ne(pe[e](t))
 	};
 }
-function me(e, t) {
+function he(e, t) {
 	let n = new Date(t);
 	return e === "isoWeek" ? n.setDate(n.getDate() - 7) : e === "month" ? n.setMonth(n.getMonth() - 1) : e === "quarter" ? n.setMonth(n.getMonth() - 3) : n.setFullYear(n.getFullYear() - 1), {
-		from: P(de[e](n)),
-		to: P(fe[e](n))
+		from: ne(fe[e](n)),
+		to: ne(pe[e](n))
 	};
 }
-function he() {
-	return pe("month", /* @__PURE__ */ new Date());
+function ge() {
+	return me("month", /* @__PURE__ */ new Date());
 }
-function ge(e) {
+function _e(e) {
 	let t = /* @__PURE__ */ new Date();
 	switch (e) {
-		case "This Week": return pe("isoWeek", t);
-		case "This Month": return pe("month", t);
-		case "This Quarter": return pe("quarter", t);
-		case "This Year": return pe("year", t);
-		case "Previous Week": return me("isoWeek", t);
-		case "Previous Month": return me("month", t);
-		case "Previous Quarter": return me("quarter", t);
-		case "Previous Year": return me("year", t);
+		case "This Week": return me("isoWeek", t);
+		case "This Month": return me("month", t);
+		case "This Quarter": return me("quarter", t);
+		case "This Year": return me("year", t);
+		case "Previous Week": return he("isoWeek", t);
+		case "Previous Month": return he("month", t);
+		case "Previous Quarter": return he("quarter", t);
+		case "Previous Year": return he("year", t);
 		default: return {
-			from: P(t),
-			to: P(t)
+			from: ne(t),
+			to: ne(t)
 		};
 	}
 }
 //#endregion
 //#region resources/js/support/period.ts
-function _e(e) {
+function ve(e) {
 	return [
 		["Today", "dateRange.today"],
 		["This Week", "dateRange.this_week"],
@@ -218,10 +218,10 @@ function _e(e) {
 	].map(([t, n]) => ({
 		key: t,
 		label: e(n),
-		range: () => ge(t)
+		range: () => _e(t)
 	}));
 }
-function ve(e) {
+function ye(e) {
 	let t = e.range?.();
 	return {
 		preset: e.key,
@@ -231,13 +231,13 @@ function ve(e) {
 }
 //#endregion
 //#region resources/js/components/TripReportPdfPane.vue?vue&type=script&setup=true&lang.ts
-var ye = {
+var be = {
 	key: 0,
 	class: "flex items-center justify-center w-full h-screen border border-line-default border-solid rounded bg-surface"
-}, be = {
+}, xe = {
 	key: 1,
 	class: "flex flex-col items-center justify-center gap-4 w-full h-screen border border-line-default border-solid rounded bg-surface"
-}, xe = ["src"], Se = /* @__PURE__ */ l({
+}, Se = ["src"], Ce = /* @__PURE__ */ l({
 	__name: "TripReportPdfPane",
 	props: {
 		client: { type: [Function, Object] },
@@ -288,7 +288,7 @@ var ye = {
 			d++, f(), r.value = "idle";
 		}, { immediate: !0 }), m(f), t({ view: g }), (e, t) => {
 			let n = b("BaseSpinner"), l = b("BaseIcon"), u = b("BaseButton");
-			return _(), i("div", null, [r.value === "loading" || r.value === "idle" ? (_(), i("div", ye, [c(n, { class: "w-8 h-8 text-primary-400" })])) : r.value === "error" ? (_(), i("div", be, [
+			return _(), i("div", null, [r.value === "loading" || r.value === "idle" ? (_(), i("div", be, [c(n, { class: "w-8 h-8 text-primary-400" })])) : r.value === "error" ? (_(), i("div", xe, [
 				c(l, {
 					name: "ExclamationCircleIcon",
 					class: "w-12 h-12 text-muted"
@@ -307,87 +307,76 @@ var ye = {
 				src: o.value ?? void 0,
 				title: "Trip Report PDF",
 				class: "w-full h-screen border border-line-default border-solid rounded bg-surface"
-			}, null, 8, xe))]);
+			}, null, 8, Se))]);
 		};
 	}
-}), Ce = { class: "grid gap-8 md:grid-cols-12 pt-6" }, we = { class: "col-span-12 md:col-span-4 space-y-4" }, Te = { class: "hidden pt-2 md:block" }, Ee = { class: "col-span-12 md:col-span-8" }, De = /* @__PURE__ */ l({
+}), we = { class: "grid gap-8 md:grid-cols-12 pt-6" }, Te = { class: "col-span-12 md:col-span-4 space-y-4" }, Ee = { class: "hidden pt-2 md:block" }, De = { class: "col-span-12 md:col-span-8" }, Oe = /* @__PURE__ */ l({
 	__name: "TripReportsPage",
 	props: {
 		client: { type: [Function, Object] },
 		notify: { type: Function },
 		router: {}
 	},
-	setup(o) {
-		let l = o, u = _e(ee()), d = v(ve(u[2])), p = [
-			"customer",
-			"lr",
-			"supplier",
-			"invoice",
-			"details"
-		], m = {
+	setup(r) {
+		let o = r, l = ve(ee()), u = v(ye(l[2])), d = ["customer", "lr"], p = {
 			customer: "By Customer",
-			lr: "By LR / Consignment",
-			supplier: "By Truck Owner",
-			invoice: "By Invoice Receipt",
-			details: "All Trip Details"
-		}, g = v("customer"), x = t(() => Math.max(0, p.indexOf(g.value)));
-		function C(e) {
-			let t = Object.keys(m).find((t) => m[t] === e.title);
-			t && t !== g.value && (g.value = t);
+			lr: "By LR"
+		}, m = v("customer"), g = t(() => Math.max(0, d.indexOf(m.value)));
+		function x(e) {
+			let t = Object.keys(p).find((t) => p[t] === e.title);
+			t && t !== m.value && (m.value = t);
 		}
-		let E = v(null), O = v(null), k = he(), A = v(k.from), M = v(k.to), N = v(""), P = v(""), ne = v(""), F = v(""), re = t(() => E.value), ie = t(() => {
-			let e = "/api/v1/trips/reports/pdf?from_date=" + A.value + "&to_date=" + M.value + "&type=" + g.value;
-			return N.value.trim() && (e += "&customer=" + encodeURIComponent(N.value.trim())), P.value.trim() && (e += "&lr_no=" + encodeURIComponent(P.value.trim())), ne.value.trim() && (e += "&invoice_no=" + encodeURIComponent(ne.value.trim())), F.value.trim() && (e += "&supplier=" + encodeURIComponent(F.value.trim())), e;
-		}), ae = te(l.client, () => (E.value = ie.value, E.value));
+		let C = v(null), E = v(null), O = ge(), k = v(O.from), A = v(O.to), M = v(""), N = v(""), ne = t(() => C.value), P = t(() => {
+			let e = "/api/v1/trips/reports/pdf?from_date=" + k.value + "&to_date=" + A.value + "&type=" + m.value;
+			return M.value.trim() && (e += "&customer=" + encodeURIComponent(M.value.trim())), N.value.trim() && (e += "&lr_no=" + encodeURIComponent(N.value.trim())), e;
+		}), re = te(o.client, () => (C.value = P.value, C.value));
 		h(() => {
-			E.value = ie.value;
-		}), w(d, (e) => {
-			e.from && e.to && (A.value = e.from, M.value = e.to);
+			C.value = P.value;
+		}), w(u, (e) => {
+			e.from && e.to && (k.value = e.from, A.value = e.to);
 		}), w([
+			k,
 			A,
+			m,
 			M,
-			g,
-			N,
-			P,
-			ne,
-			F
+			N
 		], () => {
-			E.value = ie.value;
+			C.value = P.value;
 		});
+		function ie() {
+			return C.value = P.value, !0;
+		}
+		function ae() {
+			ie(), E.value?.view(C.value);
+		}
 		function oe() {
-			return E.value = ie.value, !0;
+			o.router.push(j.board);
 		}
-		function se() {
-			oe(), O.value?.view(E.value);
-		}
-		function ce() {
-			l.router.push(j.board);
-		}
-		return (t, l) => {
-			let h = b("BaseBreadcrumbItem"), v = b("BaseBreadcrumb"), w = b("BaseIcon"), E = b("BaseButton"), k = b("BasePageHeader"), A = b("BaseTab"), M = b("BaseTabGroup"), ee = b("BasePeriodPicker"), te = b("BaseInputGroup"), ie = b("BaseInput"), le = b("BasePage");
-			return _(), n(le, null, {
+		return (t, o) => {
+			let h = b("BaseBreadcrumbItem"), v = b("BaseBreadcrumb"), C = b("BaseIcon"), w = b("BaseButton"), O = b("BasePageHeader"), k = b("BaseTab"), A = b("BaseTabGroup"), ee = b("BasePeriodPicker"), te = b("BaseInputGroup"), P = b("BaseInput"), se = b("BasePage");
+			return _(), n(se, null, {
 				default: T(() => [
-					c(k, { title: "Trip Reports" }, {
-						actions: T(() => [c(E, {
+					c(O, { title: "Trip Reports" }, {
+						actions: T(() => [c(w, {
 							variant: "white",
-							onClick: ce
+							onClick: oe
 						}, {
-							left: T((e) => [c(w, {
+							left: T((e) => [c(C, {
 								name: "ArrowLeftIcon",
 								class: f(e.class)
 							}, null, 8, ["class"])]),
-							default: T(() => [l[5] ||= s(" Back to Trips ", -1)]),
+							default: T(() => [o[3] ||= s(" Back to Trips ", -1)]),
 							_: 1
-						}), c(E, {
+						}), c(w, {
 							variant: "primary",
 							class: "ms-4",
-							onClick: S(ae)
+							onClick: S(re)
 						}, {
-							left: T((e) => [c(w, {
+							left: T((e) => [c(C, {
 								name: "ArrowDownTrayIcon",
 								class: f(e.class)
 							}, null, 8, ["class"])]),
-							default: T(() => [l[6] ||= s(" Download PDF ", -1)]),
+							default: T(() => [o[4] ||= s(" Download PDF ", -1)]),
 							_: 1
 						}, 8, ["onClick"])]),
 						default: T(() => [c(v, null, {
@@ -410,158 +399,130 @@ var ye = {
 						})]),
 						_: 1
 					}),
-					(_(), n(M, {
-						key: g.value,
-						"default-index": x.value,
+					(_(), n(A, {
+						key: m.value,
+						"default-index": g.value,
 						class: "p-2",
-						onChange: C
+						onChange: x
 					}, {
-						default: T(() => [(_(), i(e, null, y(p, (e) => c(A, {
+						default: T(() => [(_(), i(e, null, y(d, (e) => c(k, {
 							key: e,
-							title: m[e],
+							title: p[e],
 							"tab-panel-container": "px-0 py-0"
 						}, null, 8, ["title"])), 64))]),
 						_: 1
 					}, 8, ["default-index"])),
-					a("div", Ce, [a("div", we, [
+					a("div", we, [a("div", Te, [
 						c(te, { label: "Date Range" }, {
 							default: T(() => [c(ee, {
-								modelValue: d.value,
-								"onUpdate:modelValue": l[0] ||= (e) => d.value = e,
-								presets: S(u),
+								modelValue: u.value,
+								"onUpdate:modelValue": o[0] ||= (e) => u.value = e,
+								presets: S(l),
 								block: "",
 								position: "bottom-start"
 							}, null, 8, ["modelValue", "presets"])]),
 							_: 1
 						}),
-						g.value === "customer" || g.value === "details" ? (_(), n(te, {
-							key: 0,
-							label: "Filter Customer"
-						}, {
-							default: T(() => [c(ie, {
-								modelValue: N.value,
-								"onUpdate:modelValue": [l[1] ||= (e) => N.value = e, oe],
+						c(te, { label: "Filter By Customer" }, {
+							default: T(() => [c(P, {
+								modelValue: M.value,
+								"onUpdate:modelValue": [o[1] ||= (e) => M.value = e, ie],
 								placeholder: "Type customer name..."
 							}, null, 8, ["modelValue"])]),
 							_: 1
-						})) : r("", !0),
-						g.value === "lr" || g.value === "details" ? (_(), n(te, {
-							key: 1,
-							label: "Filter LR Number"
-						}, {
-							default: T(() => [c(ie, {
-								modelValue: P.value,
-								"onUpdate:modelValue": [l[2] ||= (e) => P.value = e, oe],
+						}),
+						c(te, { label: "Filter By LR No" }, {
+							default: T(() => [c(P, {
+								modelValue: N.value,
+								"onUpdate:modelValue": [o[2] ||= (e) => N.value = e, ie],
 								placeholder: "Type LR number..."
 							}, null, 8, ["modelValue"])]),
 							_: 1
-						})) : r("", !0),
-						g.value === "supplier" || g.value === "details" ? (_(), n(te, {
-							key: 2,
-							label: "Filter Truck Owner / Transporter"
-						}, {
-							default: T(() => [c(ie, {
-								modelValue: F.value,
-								"onUpdate:modelValue": [l[3] ||= (e) => F.value = e, oe],
-								placeholder: "Type owner/transporter name..."
-							}, null, 8, ["modelValue"])]),
-							_: 1
-						})) : r("", !0),
-						g.value === "invoice" || g.value === "details" ? (_(), n(te, {
-							key: 3,
-							label: "Filter Invoice Number"
-						}, {
-							default: T(() => [c(ie, {
-								modelValue: ne.value,
-								"onUpdate:modelValue": [l[4] ||= (e) => ne.value = e, oe],
-								placeholder: "Type invoice number..."
-							}, null, 8, ["modelValue"])]),
-							_: 1
-						})) : r("", !0),
-						a("div", Te, [c(E, {
+						}),
+						a("div", Ee, [c(w, {
 							variant: "primary",
 							class: "justify-center w-full",
 							type: "submit",
-							onClick: D(oe, ["prevent"])
+							onClick: D(ie, ["prevent"])
 						}, {
-							left: T((e) => [c(w, {
+							left: T((e) => [c(C, {
 								name: "ArrowPathIcon",
 								class: f(e.class)
 							}, null, 8, ["class"])]),
-							default: T(() => [l[7] ||= s(" Update Report ", -1)]),
+							default: T(() => [o[5] ||= s(" Update Report ", -1)]),
 							_: 1
 						})])
-					]), a("div", Ee, [c(Se, {
+					]), a("div", De, [c(Ce, {
 						ref_key: "pdfPane",
-						ref: O,
-						client: o.client,
-						path: re.value,
+						ref: E,
+						client: r.client,
+						path: ne.value,
 						class: "hidden md:block"
 					}, null, 8, ["client", "path"]), a("button", {
 						type: "button",
 						class: "flex items-center justify-center w-full gap-2 px-5 text-sm font-medium transition-colors rounded-lg h-11 md:hidden bg-btn-primary text-on-primary hover:bg-btn-primary-hover",
-						onClick: se
-					}, [c(w, {
+						onClick: ae
+					}, [c(C, {
 						name: "DocumentTextIcon",
 						class: "w-5 h-5"
-					}), l[8] ||= s(" View PDF ", -1)])])])
+					}), o[6] ||= s(" View PDF ", -1)])])])
 				]),
 				_: 1
 			});
 		};
 	}
-}), Oe = `${k}:view-trip`;
-function ke(e) {
+}), ke = `${k}:view-trip`;
+function Ae(e) {
 	e.registerPage({
 		id: "reports",
 		module: k,
 		path: "reports",
-		component: N(e, De),
+		component: N(e, Oe),
 		meta: {
-			ability: Oe,
+			ability: ke,
 			title: "Trip Reports"
 		}
 	});
 }
 //#endregion
 //#region resources/js/api/trips.ts
-var I = "/api/v1/trips";
-async function Ae(e, t = {}) {
-	let { data: n } = await e.get(I, { params: t });
+var F = "/api/v1/trips";
+async function je(e, t = {}) {
+	let { data: n } = await e.get(F, { params: t });
 	return n.data;
 }
-async function je(e) {
-	let { data: t } = await e.get(`${I}/statuses`);
+async function Me(e) {
+	let { data: t } = await e.get(`${F}/statuses`);
 	return t.data;
 }
-async function Me(e, t) {
-	let { data: n } = await e.get(`${I}/${t}`);
+async function Ne(e, t) {
+	let { data: n } = await e.get(`${F}/${t}`);
 	return n.data;
 }
-async function Ne(e, t, n) {
-	let { data: r } = await e.post(`${I}/from-lrs`, {
+async function Pe(e, t, n) {
+	let { data: r } = await e.post(`${F}/from-lrs`, {
 		invoice_ids: t,
 		...n
 	});
 	return r.data;
 }
-async function Pe(e, t, n, r) {
-	let { data: i } = await e.post(`${I}/${t}/move`, {
+async function Fe(e, t, n, r) {
+	let { data: i } = await e.post(`${F}/${t}/move`, {
 		status_id: n,
 		position: r
 	});
 	return i.data;
 }
-async function Fe(e, t) {
-	let { data: n } = await e.post(`${I}/${t}/cancel`);
+async function Ie(e, t) {
+	let { data: n } = await e.post(`${F}/${t}/cancel`);
 	return n.data;
 }
-async function Ie(e, t, n) {
-	let { data: r } = await e.patch(`${I}/${t}/status`, { status_id: n });
+async function Le(e, t, n) {
+	let { data: r } = await e.patch(`${F}/${t}/status`, { status_id: n });
 	return r.data;
 }
-async function Le(e, t = "lr", n = null, r = null, i = !1) {
-	let { data: a } = await e.get(`${I}/unlinked-lrs`, { params: {
+async function Re(e, t = "lr", n = null, r = null, i = !1) {
+	let { data: a } = await e.get(`${F}/unlinked-lrs`, { params: {
 		type: t,
 		customer_id: n,
 		trip_id: r,
@@ -569,42 +530,42 @@ async function Le(e, t = "lr", n = null, r = null, i = !1) {
 	} });
 	return a.data;
 }
-async function Re(e, t, n, r) {
-	let { data: i } = await e.post(`${I}/${t}/receipts`, {
+async function ze(e, t, n, r) {
+	let { data: i } = await e.post(`${F}/${t}/receipts`, {
 		invoice_id: n,
 		type: r
 	});
 	return i.data;
 }
-async function ze(e, t) {
-	let { data: n } = await e.post(`${I}/${t}/fetch-lorry-receipt`);
-	return n.data;
-}
 async function Be(e, t) {
-	let { data: n } = await e.post(`${I}/${t}/fetch-invoice-receipt`);
+	let { data: n } = await e.post(`${F}/${t}/fetch-lorry-receipt`);
 	return n.data;
 }
-async function Ve(e, t, n, r) {
+async function Ve(e, t) {
+	let { data: n } = await e.post(`${F}/${t}/fetch-invoice-receipt`);
+	return n.data;
+}
+async function He(e, t, n, r) {
 	let i = new FormData();
 	i.append("file", n), i.append("category", r);
-	let { data: a } = await e.post(`${I}/${t}/pod`, i, { headers: { "Content-Type": "multipart/form-data" } });
+	let { data: a } = await e.post(`${F}/${t}/pod`, i, { headers: { "Content-Type": "multipart/form-data" } });
 	return a.data;
 }
-async function He(e, t, n) {
-	let { data: r } = await e.delete(`${I}/${t}/pod/${n}`);
+async function Ue(e, t, n) {
+	let { data: r } = await e.delete(`${F}/${t}/pod/${n}`);
 	return r.data;
 }
-async function Ue(e, t, n) {
-	let { data: r } = await e.get(`${I}/${t}/pod/${n}`, { responseType: "blob" });
+async function We(e, t, n) {
+	let { data: r } = await e.get(`${F}/${t}/pod/${n}`, { responseType: "blob" });
 	return r;
 }
-async function We(e, t, n) {
-	let { data: r } = await e.delete(`${I}/${t}/receipts/${n}`);
+async function Ge(e, t, n) {
+	let { data: r } = await e.delete(`${F}/${t}/receipts/${n}`);
 	return r.data;
 }
 //#endregion
 //#region resources/js/support/http.ts
-function L(e, t) {
+function I(e, t) {
 	if (typeof e == "object" && e) {
 		let t = e.response?.data;
 		if (typeof t == "object" && t) {
@@ -621,29 +582,29 @@ function L(e, t) {
 }
 //#endregion
 //#region resources/js/support/format.ts
-function R(e) {
+function L(e) {
 	return ((e ?? 0) / 100).toLocaleString(void 0, {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2
 	});
 }
-function Ge() {
+function Ke() {
 	let e = /* @__PURE__ */ new Date();
 	return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}-${String(e.getDate()).padStart(2, "0")}`;
 }
 //#endregion
 //#region resources/js/pages/TripCreatePage.vue?vue&type=script&setup=true&lang.ts
-var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex flex-wrap items-center justify-between gap-3 mb-4" }, Je = { class: "flex gap-2" }, Ye = {
+var qe = { class: "pt-5 mt-5 border-t border-line-light" }, Je = { class: "flex flex-wrap items-center justify-between gap-3 mb-4" }, Ye = { class: "flex gap-2" }, Xe = {
 	key: 0,
 	class: "p-4 text-sm rounded-lg bg-surface-secondary text-muted"
-}, Xe = {
+}, Ze = {
 	key: 1,
 	class: "p-4 text-sm rounded-lg bg-surface-secondary text-muted",
 	role: "status"
-}, Ze = {
+}, Qe = {
 	key: 2,
 	class: "space-y-3"
-}, Qe = { class: "flex h-[38px] items-center rounded-lg bg-surface-tertiary px-3 text-sm font-medium text-heading" }, $e = { class: "justify-self-end" }, et = { class: "flex flex-wrap justify-end gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light" }, tt = { class: "text-muted" }, nt = { class: "font-semibold text-heading" }, rt = { class: "text-heading font-semibold" }, it = /* @__PURE__ */ l({
+}, $e = { class: "flex h-[38px] items-center rounded-lg bg-surface-tertiary px-3 text-sm font-medium text-heading" }, et = { class: "justify-self-end" }, tt = { class: "flex flex-wrap justify-end gap-x-8 gap-y-2 pt-4 mt-4 text-sm border-t border-line-light" }, nt = { class: "text-muted" }, rt = { class: "font-semibold text-heading" }, it = { class: "text-heading font-semibold" }, at = /* @__PURE__ */ l({
 	__name: "TripCreatePage",
 	props: {
 		client: { type: [Function, Object] },
@@ -651,7 +612,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 		router: {}
 	},
 	setup(o) {
-		let l = o, u = v(Ge()), d = v(""), p = v(null), m = v(""), h = v([]), g = v([]), C = v(!1), E = v(!1), O = t(() => h.value);
+		let l = o, u = v(Ke()), d = v(""), p = v(null), m = v(""), h = v([]), g = v([]), C = v(!1), E = v(!1), O = t(() => h.value);
 		async function k(e) {
 			if (g.value = [], !e) {
 				h.value = [];
@@ -659,9 +620,9 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			}
 			C.value = !0;
 			try {
-				h.value = await Le(l.client, "lr", e);
+				h.value = await Re(l.client, "lr", e);
 			} catch (e) {
-				l.notify("error", L(e, "Unable to load LR receipts.")), h.value = [];
+				l.notify("error", I(e, "Unable to load LR receipts.")), h.value = [];
 			} finally {
 				C.value = !1;
 			}
@@ -684,23 +645,23 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			}).filter((e) => e !== null && e !== t);
 			return h.value.filter((e) => !n.includes(e.id)).map((e) => ({
 				id: e.id,
-				label: `${e.invoice_number} · ${e.from_city ?? "—"} → ${e.to_city ?? "—"} (${R(e.amount)})`
+				label: `${e.invoice_number} · ${e.from_city ?? "—"} → ${e.to_city ?? "—"} (${L(e.amount)})`
 			}));
 		}
 		let ee = t(() => g.value.map((e) => {
 			let t = typeof e.receipt_id == "object" && e.receipt_id !== null ? e.receipt_id.id : e.receipt_id;
 			return t ? Number(t) : null;
-		}).filter((e) => e !== null)), te = t(() => g.value.map((e) => A(e.receipt_id)).filter((e) => e !== void 0)), P = t(() => te.value.reduce((e, t) => e + t.amount, 0));
-		function ne() {
+		}).filter((e) => e !== null)), te = t(() => g.value.map((e) => A(e.receipt_id)).filter((e) => e !== void 0)), ne = t(() => te.value.reduce((e, t) => e + t.amount, 0));
+		function P() {
 			g.value.push({ receipt_id: null });
 		}
-		function F(e) {
+		function re(e) {
 			g.value.splice(e, 1);
 		}
-		function re() {
+		function ie() {
 			g.value = [...h.value].sort((e, t) => (e.invoice_date ?? "9999-12-31").localeCompare(t.invoice_date ?? "9999-12-31") || e.id - t.id).map((e) => ({ receipt_id: e.id }));
 		}
-		async function ie() {
+		async function ae() {
 			if (!p.value) {
 				l.notify("warning", "Please select a customer first.");
 				return;
@@ -711,23 +672,23 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			}
 			E.value = !0;
 			try {
-				let e = await Ne(l.client, ee.value, {
+				let e = await Pe(l.client, ee.value, {
 					pickup_date: u.value,
 					notes: m.value
 				});
 				l.notify("success", `Trip #${e.trip_no} created successfully.`), l.router?.push(j.trip(e.id));
 			} catch (e) {
-				l.notify("error", L(e, "Unable to create the trip."));
+				l.notify("error", I(e, "Unable to create the trip."));
 			} finally {
 				E.value = !1;
 			}
 		}
 		return (t, o) => {
-			let l = b("BaseBreadcrumbItem"), h = b("BaseBreadcrumb"), v = b("BaseIcon"), w = b("BaseButton"), A = b("BasePageHeader"), ee = b("BaseDatePicker"), ae = b("BaseInputGroup"), oe = b("BaseInput"), se = b("BaseCustomerSelectInput"), ce = b("BaseInputGrid"), le = b("BaseMultiselect"), ue = b("BaseTextarea"), de = b("BaseCard"), fe = b("BasePage");
-			return _(), n(fe, { class: "relative trip-create" }, {
+			let l = b("BaseBreadcrumbItem"), h = b("BaseBreadcrumb"), v = b("BaseIcon"), w = b("BaseButton"), A = b("BasePageHeader"), ee = b("BaseDatePicker"), oe = b("BaseInputGroup"), se = b("BaseInput"), ce = b("BaseCustomerSelectInput"), le = b("BaseInputGrid"), ue = b("BaseMultiselect"), de = b("BaseTextarea"), fe = b("BaseCard"), pe = b("BasePage");
+			return _(), n(pe, { class: "relative trip-create" }, {
 				default: T(() => [a("form", {
 					class: "flex flex-col gap-4 md:gap-5",
-					onSubmit: D(ie, ["prevent"])
+					onSubmit: D(ae, ["prevent"])
 				}, [c(A, {
 					title: "New Trip",
 					"phone-actions": "bar"
@@ -765,11 +726,11 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 						_: 1
 					})]),
 					_: 1
-				}), c(de, { "container-class": "p-4 md:p-5" }, {
+				}), c(fe, { "container-class": "p-4 md:p-5" }, {
 					default: T(() => [
-						c(ce, null, {
+						c(le, null, {
 							default: T(() => [
-								c(ae, {
+								c(oe, {
 									label: "Date",
 									required: ""
 								}, {
@@ -781,22 +742,22 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									}, null, 8, ["modelValue"])]),
 									_: 1
 								}),
-								c(ae, {
+								c(oe, {
 									label: "Trip Number",
 									required: ""
 								}, {
-									default: T(() => [c(oe, {
+									default: T(() => [c(se, {
 										modelValue: d.value,
 										"onUpdate:modelValue": o[1] ||= (e) => d.value = e,
 										placeholder: "Auto-generated"
 									}, null, 8, ["modelValue"])]),
 									_: 1
 								}),
-								c(ae, {
+								c(oe, {
 									label: "Customer",
 									required: ""
 								}, {
-									default: T(() => [c(se, {
+									default: T(() => [c(ce, {
 										modelValue: p.value,
 										"onUpdate:modelValue": [o[2] ||= (e) => p.value = e, k],
 										placeholder: "Type or click to select",
@@ -807,13 +768,13 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 							]),
 							_: 1
 						}),
-						a("section", Ke, [
-							a("div", qe, [o[7] ||= a("div", null, [a("h2", { class: "font-semibold text-section text-heading" }, "LR Allocations"), a("p", { class: "mt-1 text-sm text-muted" }, "Allocate one or more open LR receipts to this trip.")], -1), a("div", Je, [c(w, {
+						a("section", qe, [
+							a("div", Je, [o[7] ||= a("div", null, [a("h2", { class: "font-semibold text-section text-heading" }, "LR Allocations"), a("p", { class: "mt-1 text-sm text-muted" }, "Allocate one or more open LR receipts to this trip.")], -1), a("div", Ye, [c(w, {
 								type: "button",
 								size: "sm",
 								variant: "primary-outline",
 								disabled: !O.value.length,
-								onClick: re
+								onClick: ie
 							}, {
 								default: T(() => [...o[5] ||= [s(" Allocate Oldest First ", -1)]]),
 								_: 1
@@ -822,7 +783,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 								size: "sm",
 								variant: "primary-outline",
 								disabled: !p.value || !N(null).length,
-								onClick: ne
+								onClick: P
 							}, {
 								left: T((e) => [c(v, {
 									name: "PlusIcon",
@@ -831,12 +792,12 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 								default: T(() => [o[6] ||= s(" Add Allocation ", -1)]),
 								_: 1
 							}, 8, ["disabled"])])]),
-							p.value ? g.value.length ? (_(), i("div", Ze, [(_(!0), i(e, null, y(g.value, (e, t) => (_(), i("div", {
+							p.value ? g.value.length ? (_(), i("div", Qe, [(_(!0), i(e, null, y(g.value, (e, t) => (_(), i("div", {
 								key: `${e.receipt_id}-${t}`,
 								class: "grid items-end gap-3 p-3 rounded-lg bg-surface-secondary md:grid-cols-[minmax(0,1fr)_12rem_auto]"
 							}, [
-								c(ae, { label: "LR Receipt" }, {
-									default: T(() => [c(le, {
+								c(oe, { label: "LR Receipt" }, {
+									default: T(() => [c(ue, {
 										modelValue: e.receipt_id,
 										"onUpdate:modelValue": (t) => e.receipt_id = t,
 										"value-prop": "id",
@@ -854,28 +815,28 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									])]),
 									_: 2
 								}, 1024),
-								c(ae, { label: "Amount" }, {
-									default: T(() => [a("div", Qe, x(e.receipt_id ? S(R)(M(e.receipt_id)) : "—"), 1)]),
+								c(oe, { label: "Amount" }, {
+									default: T(() => [a("div", $e, x(e.receipt_id ? S(L)(M(e.receipt_id)) : "—"), 1)]),
 									_: 2
 								}, 1024),
-								a("div", $e, [c(w, {
+								a("div", et, [c(w, {
 									type: "button",
 									size: "sm",
 									variant: "gray",
 									"aria-label": "Remove allocation",
-									onClick: (e) => F(t)
+									onClick: (e) => re(t)
 								}, {
 									default: T(() => [c(v, { name: "TrashIcon" })]),
 									_: 1
 								}, 8, ["onClick"])])
-							]))), 128))])) : (_(), i("div", Xe, x(!C.value && !O.value.length ? "No open LR receipts for this customer." : "No allocations added yet. Click \"+ Add Allocation\" or \"Allocate Oldest First\"."), 1)) : (_(), i("div", Ye, " Select a customer before allocating this trip. ")),
-							a("div", et, [a("span", tt, [o[8] ||= s("Total LRs: ", -1), a("span", nt, x(te.value.length), 1)]), a("span", rt, "Allocated: " + x(S(R)(P.value)), 1)])
+							]))), 128))])) : (_(), i("div", Ze, x(!C.value && !O.value.length ? "No open LR receipts for this customer." : "No allocations added yet. Click \"+ Add Allocation\" or \"Allocate Oldest First\"."), 1)) : (_(), i("div", Xe, " Select a customer before allocating this trip. ")),
+							a("div", tt, [a("span", nt, [o[8] ||= s("Total LRs: ", -1), a("span", rt, x(te.value.length), 1)]), a("span", it, "Allocated: " + x(S(L)(ne.value)), 1)])
 						]),
-						c(ae, {
+						c(oe, {
 							label: "Notes",
 							class: "mt-5"
 						}, {
-							default: T(() => [c(ue, {
+							default: T(() => [c(de, {
 								modelValue: m.value,
 								"onUpdate:modelValue": o[3] ||= (e) => m.value = e,
 								rows: 4,
@@ -890,28 +851,28 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			});
 		};
 	}
-}), at = { class: "space-y-3" }, ot = {
+}), ot = { class: "space-y-3" }, st = {
 	key: 1,
 	class: "flex items-center justify-between text-xs text-muted"
-}, st = {
+}, ct = {
 	key: 2,
 	class: "flex items-center justify-between text-xs text-muted"
-}, ct = {
+}, lt = {
 	key: 3,
 	class: "py-8 text-center text-sm text-muted"
-}, lt = {
+}, ut = {
 	key: 4,
 	class: "rounded-lg bg-surface-secondary p-4 text-sm text-muted"
-}, ut = { key: 0 }, dt = { key: 1 }, ft = { key: 2 }, pt = {
+}, dt = { key: 0 }, ft = { key: 1 }, pt = { key: 2 }, mt = {
 	key: 5,
 	class: "max-h-72 space-y-1 overflow-y-auto"
-}, mt = ["onClick"], ht = ["checked", "onChange"], gt = { class: "min-w-0 flex-1" }, _t = { class: "block font-medium text-heading" }, vt = { class: "block truncate text-xs text-muted" }, yt = { class: "text-sm font-semibold text-heading" }, bt = {
+}, ht = ["onClick"], gt = ["checked", "onChange"], _t = { class: "min-w-0 flex-1" }, vt = { class: "block font-medium text-heading" }, yt = { class: "block truncate text-xs text-muted" }, bt = { class: "text-sm font-semibold text-heading" }, xt = {
 	key: 6,
 	class: "text-sm text-muted"
-}, xt = {
+}, St = {
 	key: 7,
 	class: "text-sm text-alert-warning-text"
-}, St = { class: "flex justify-end gap-2" }, Ct = /* @__PURE__ */ l({
+}, Ct = { class: "flex justify-end gap-2" }, wt = /* @__PURE__ */ l({
 	__name: "LrPickerModal",
 	props: {
 		show: { type: Boolean },
@@ -928,9 +889,9 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 		async function k() {
 			E.value = !0;
 			try {
-				p.value = await Le(u.client, u.type ?? "lr", g.value, u.tripId ?? null, C.value), m.value = [];
+				p.value = await Re(u.client, u.type ?? "lr", g.value, u.tripId ?? null, C.value), m.value = [];
 			} catch (e) {
-				u.notify("error", L(e, "Unable to load the receipts."));
+				u.notify("error", I(e, "Unable to load the receipts."));
 			} finally {
 				E.value = !1;
 			}
@@ -963,7 +924,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 				onClose: l[6] ||= (e) => d("close")
 			}, {
 				header: T(() => [a("span", null, x(o.type === "lorry" ? "Map Lorry Receipt" : "Map LR Receipts"), 1)]),
-				default: T(() => [a("div", at, [
+				default: T(() => [a("div", ot, [
 					o.customers && o.customers.length > 0 ? (_(), n(h, {
 						key: 0,
 						label: "Customer"
@@ -983,24 +944,24 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 						}, null, 8, ["modelValue", "options"])]),
 						_: 1
 					})) : r("", !0),
-					o.type === "lorry" && o.tripId ? (_(), i("div", ot, [a("span", null, x(C.value ? "Showing all unlinked lorry receipts" : "Showing lorry receipts matching this trip’s LR numbers"), 1), a("button", {
+					o.type === "lorry" && o.tripId ? (_(), i("div", st, [a("span", null, x(C.value ? "Showing all unlinked lorry receipts" : "Showing lorry receipts matching this trip’s LR numbers"), 1), a("button", {
 						type: "button",
 						class: "font-medium text-primary-600 hover:underline",
 						onClick: l[1] ||= (e) => C.value = !C.value
-					}, x(C.value ? "Show matching only" : "Show all unlinked"), 1)])) : o.type === "lr" && o.tripId ? (_(), i("div", st, [a("span", null, x(C.value ? "Showing all unlinked LR receipts" : "Showing unlinked LR receipts for customers on this trip"), 1), a("button", {
+					}, x(C.value ? "Show matching only" : "Show all unlinked"), 1)])) : o.type === "lr" && o.tripId ? (_(), i("div", ct, [a("span", null, x(C.value ? "Showing all unlinked LR receipts" : "Showing unlinked LR receipts for customers on this trip"), 1), a("button", {
 						type: "button",
 						class: "font-medium text-primary-600 hover:underline",
 						onClick: l[2] ||= (e) => C.value = !C.value
 					}, x(C.value ? "Show trip customers only" : "Browse all customers"), 1)])) : r("", !0),
-					E.value ? (_(), i("div", ct, "Loading…")) : p.value.length === 0 ? (_(), i("div", lt, [o.type === "lorry" && o.tripId && !C.value ? (_(), i("p", ut, [l[7] ||= s(" No lorry receipt found with matching bilty numbers for this trip's LRs. ", -1), a("button", {
+					E.value ? (_(), i("div", lt, "Loading…")) : p.value.length === 0 ? (_(), i("div", ut, [o.type === "lorry" && o.tripId && !C.value ? (_(), i("p", dt, [l[7] ||= s(" No lorry receipt found with matching bilty numbers for this trip's LRs. ", -1), a("button", {
 						type: "button",
 						class: "mt-1 block font-medium text-primary-600 hover:underline",
 						onClick: l[3] ||= (e) => C.value = !0
-					}, " Browse all unlinked lorry receipts instead → ")])) : o.type === "lr" && o.tripId && !C.value ? (_(), i("p", dt, [l[8] ||= s(" No more unassigned LR receipts found for the customers on this trip. ", -1), a("button", {
+					}, " Browse all unlinked lorry receipts instead → ")])) : o.type === "lr" && o.tripId && !C.value ? (_(), i("p", ft, [l[8] ||= s(" No more unassigned LR receipts found for the customers on this trip. ", -1), a("button", {
 						type: "button",
 						class: "mt-1 block font-medium text-primary-600 hover:underline",
 						onClick: l[4] ||= (e) => C.value = !0
-					}, " Browse all unlinked LR receipts instead → ")])) : (_(), i("p", ft, " No unlinked receipts. Create one first. "))])) : (_(), i("ul", pt, [(_(!0), i(e, null, y(p.value, (e) => (_(), i("li", { key: e.id }, [a("label", {
+					}, " Browse all unlinked LR receipts instead → ")])) : (_(), i("p", pt, " No unlinked receipts. Create one first. "))])) : (_(), i("ul", mt, [(_(!0), i(e, null, y(p.value, (e) => (_(), i("li", { key: e.id }, [a("label", {
 						class: f(["flex cursor-pointer items-center gap-3 rounded-lg border border-line-default bg-surface p-2.5 text-sm hover:bg-hover", { "border-primary-500": m.value.includes(e.id) }]),
 						onClick: D((t) => A(e.id), ["prevent"])
 					}, [
@@ -1009,14 +970,14 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 							class: "accent-primary-600",
 							checked: m.value.includes(e.id),
 							onChange: (t) => A(e.id)
-						}, null, 40, ht),
-						a("span", gt, [a("span", _t, x(e.invoice_number) + " · " + x(e.from_city ?? "—") + " → " + x(e.to_city ?? "—"), 1), a("span", vt, x(e.customer_name ?? "No customer") + " · " + x(e.goods ?? ""), 1)]),
-						a("span", yt, x(S(R)(e.amount)), 1)
-					], 10, mt)]))), 128))])),
-					m.value.length > 0 ? (_(), i("p", bt, " Selected: " + x(m.value.length) + " · " + x(S(R)(j.value)), 1)) : r("", !0),
-					M.value ? (_(), i("p", xt, " ⚠ Different routes selected — same vehicle? ")) : r("", !0)
+						}, null, 40, gt),
+						a("span", _t, [a("span", vt, x(e.invoice_number) + " · " + x(e.from_city ?? "—") + " → " + x(e.to_city ?? "—"), 1), a("span", yt, x(e.customer_name ?? "No customer") + " · " + x(e.goods ?? ""), 1)]),
+						a("span", bt, x(S(L)(e.amount)), 1)
+					], 10, ht)]))), 128))])),
+					m.value.length > 0 ? (_(), i("p", xt, " Selected: " + x(m.value.length) + " · " + x(S(L)(j.value)), 1)) : r("", !0),
+					M.value ? (_(), i("p", St, " ⚠ Different routes selected — same vehicle? ")) : r("", !0)
 				])]),
-				footer: T(() => [a("div", St, [c(v, {
+				footer: T(() => [a("div", Ct, [c(v, {
 					variant: "primary-outline",
 					size: "sm",
 					onClick: l[5] ||= (e) => d("close")
@@ -1036,16 +997,16 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			}, 8, ["show"]);
 		};
 	}
-}), wt = {
+}), Tt = {
 	key: 0,
 	class: "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 print:p-0 print:bg-white"
-}, Tt = { class: "relative w-full max-w-2xl rounded-xl border border-line-default bg-surface p-6 shadow-2xl print:border-0 print:shadow-none print:max-w-none print:w-full print:p-8" }, Et = { class: "mb-4 flex items-center justify-between border-b border-line-light pb-3 print:hidden" }, Dt = { class: "flex items-center gap-2" }, Ot = { class: "text-xs text-muted" }, kt = { class: "flex items-center gap-2" }, At = { class: "voucher-box border-2 border-slate-800 p-5 font-sans text-slate-900 print:border-2 print:border-slate-800" }, jt = { class: "mt-3 grid grid-cols-2 gap-4 text-xs border-b border-slate-300 pb-3" }, Mt = { class: "font-bold text-slate-900" }, Nt = { class: "mt-1" }, Pt = { class: "mt-1" }, Ft = { class: "font-semibold uppercase text-indigo-700" }, It = { class: "text-right" }, Lt = { class: "font-bold text-slate-900" }, Rt = { class: "mt-1" }, zt = { class: "font-bold uppercase text-slate-900" }, Bt = { class: "mt-1" }, Vt = { class: "mt-4 space-y-2 text-xs" }, Ht = { class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5" }, Ut = { class: "font-bold text-slate-900 text-sm" }, Wt = { class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5" }, Gt = { class: "font-medium text-slate-800" }, Kt = {
+}, Et = { class: "relative w-full max-w-2xl rounded-xl border border-line-default bg-surface p-6 shadow-2xl print:border-0 print:shadow-none print:max-w-none print:w-full print:p-8" }, Dt = { class: "mb-4 flex items-center justify-between border-b border-line-light pb-3 print:hidden" }, Ot = { class: "flex items-center gap-2" }, kt = { class: "text-xs text-muted" }, At = { class: "flex items-center gap-2" }, jt = { class: "voucher-box border-2 border-slate-800 p-5 font-sans text-slate-900 print:border-2 print:border-slate-800" }, Mt = { class: "mt-3 grid grid-cols-2 gap-4 text-xs border-b border-slate-300 pb-3" }, Nt = { class: "font-bold text-slate-900" }, Pt = { class: "mt-1" }, Ft = { class: "mt-1" }, It = { class: "font-semibold uppercase text-indigo-700" }, Lt = { class: "text-right" }, Rt = { class: "font-bold text-slate-900" }, zt = { class: "mt-1" }, Bt = { class: "font-bold uppercase text-slate-900" }, Vt = { class: "mt-1" }, Ht = { class: "mt-4 space-y-2 text-xs" }, Ut = { class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5" }, Wt = { class: "font-bold text-slate-900 text-sm" }, Gt = { class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5" }, Kt = { class: "font-medium text-slate-800" }, qt = {
 	key: 0,
 	class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5"
-}, qt = { class: "font-mono font-medium text-slate-800" }, Jt = {
+}, Jt = { class: "font-mono font-medium text-slate-800" }, Yt = {
 	key: 1,
 	class: "flex items-start justify-between border-b border-dashed border-slate-200 py-1.5"
-}, Yt = { class: "text-slate-800" }, Xt = { class: "my-5 flex items-center justify-between rounded border-2 border-slate-900 bg-slate-50 px-4 py-3" }, Zt = { class: "text-2xl font-extrabold text-slate-900" }, Qt = /* @__PURE__ */ ((e, t) => {
+}, Xt = { class: "text-slate-800" }, Zt = { class: "my-5 flex items-center justify-between rounded border-2 border-slate-900 bg-slate-50 px-4 py-3" }, Qt = { class: "text-2xl font-extrabold text-slate-900" }, $t = /* @__PURE__ */ ((e, t) => {
 	let n = e.__vccOpts || e;
 	for (let [e, r] of t) n[e] = r;
 	return n;
@@ -1062,7 +1023,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 		function d() {
 			window.print();
 		}
-		return (t, n) => e.show && e.payment && e.trip ? (_(), i("div", wt, [a("div", Tt, [a("div", Et, [a("div", Dt, [n[1] ||= a("span", { class: "rounded bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700" }, " Payment Voucher ", -1), a("span", Ot, "Voucher #" + x(e.payment.number ?? "—"), 1)]), a("div", kt, [a("button", {
+		return (t, n) => e.show && e.payment && e.trip ? (_(), i("div", Tt, [a("div", Et, [a("div", Dt, [a("div", Ot, [n[1] ||= a("span", { class: "rounded bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700" }, " Payment Voucher ", -1), a("span", kt, "Voucher #" + x(e.payment.number ?? "—"), 1)]), a("div", At, [a("button", {
 			type: "button",
 			class: "inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700",
 			onClick: d
@@ -1091,123 +1052,123 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 			"stroke-linejoin": "round",
 			"stroke-width": "2",
 			d: "M6 18L18 6M6 6l12 12"
-		})], -1)]])])]), a("div", At, [
+		})], -1)]])])]), a("div", jt, [
 			n[19] ||= a("div", { class: "border-b-2 border-slate-800 pb-3 text-center" }, [a("h2", { class: "text-xl font-bold tracking-wide uppercase text-slate-900" }, "PAYMENT VOUCHER"), a("p", { class: "text-xs uppercase tracking-wider text-slate-600 font-medium" }, "Truck Hire & Freight Disbursement Memo")], -1),
-			a("div", jt, [a("div", null, [
+			a("div", Mt, [a("div", null, [
 				a("p", null, [
 					n[4] ||= a("span", { class: "font-semibold text-slate-700" }, "Voucher No:", -1),
 					n[5] ||= s(),
-					a("span", Mt, x(e.payment.number ?? "—"), 1)
+					a("span", Nt, x(e.payment.number ?? "—"), 1)
 				]),
-				a("p", Nt, [n[6] ||= a("span", { class: "font-semibold text-slate-700" }, "Payment Date:", -1), s(" " + x(e.payment.date ?? "—"), 1)]),
-				a("p", Pt, [
+				a("p", Pt, [n[6] ||= a("span", { class: "font-semibold text-slate-700" }, "Payment Date:", -1), s(" " + x(e.payment.date ?? "—"), 1)]),
+				a("p", Ft, [
 					n[7] ||= a("span", { class: "font-semibold text-slate-700" }, "Payment Nature:", -1),
 					n[8] ||= s(),
-					a("span", Ft, x(u.value), 1)
+					a("span", It, x(u.value), 1)
 				])
-			]), a("div", It, [
+			]), a("div", Lt, [
 				a("p", null, [
 					n[9] ||= a("span", { class: "font-semibold text-slate-700" }, "Trip No:", -1),
 					n[10] ||= s(),
-					a("span", Lt, "#" + x(e.trip.trip_no), 1)
+					a("span", Rt, "#" + x(e.trip.trip_no), 1)
 				]),
-				a("p", Rt, [
+				a("p", zt, [
 					n[11] ||= a("span", { class: "font-semibold text-slate-700" }, "Truck / Lorry No:", -1),
 					n[12] ||= s(),
-					a("span", zt, x(e.payment.lorry_no || e.trip.lorry_no || "—"), 1)
+					a("span", Bt, x(e.payment.lorry_no || e.trip.lorry_no || "—"), 1)
 				]),
-				a("p", Bt, [n[13] ||= a("span", { class: "font-semibold text-slate-700" }, "Route:", -1), s(" " + x(e.trip.from_city ?? "—") + " → " + x(e.trip.to_city ?? "—"), 1)])
+				a("p", Vt, [n[13] ||= a("span", { class: "font-semibold text-slate-700" }, "Route:", -1), s(" " + x(e.trip.from_city ?? "—") + " → " + x(e.trip.to_city ?? "—"), 1)])
 			])]),
-			a("div", Vt, [
-				a("div", Ht, [n[14] ||= a("span", { class: "font-semibold text-slate-700" }, "Paid To (Beneficiary):", -1), a("span", Ut, x(e.payment.pay_to ?? "Vehicle Owner / Supplier"), 1)]),
-				a("div", Wt, [n[15] ||= a("span", { class: "font-semibold text-slate-700" }, "Payment Mode:", -1), a("span", Gt, x(e.payment.method ?? "Bank Transfer / NEFT"), 1)]),
-				e.payment.reference ? (_(), i("div", Kt, [n[16] ||= a("span", { class: "font-semibold text-slate-700" }, "Reference / UTR / Cheque No:", -1), a("span", qt, x(e.payment.reference), 1)])) : r("", !0),
-				e.payment.notes ? (_(), i("div", Jt, [n[17] ||= a("span", { class: "font-semibold text-slate-700" }, "Particulars / Remarks:", -1), a("span", Yt, x(e.payment.notes), 1)])) : r("", !0)
+			a("div", Ht, [
+				a("div", Ut, [n[14] ||= a("span", { class: "font-semibold text-slate-700" }, "Paid To (Beneficiary):", -1), a("span", Wt, x(e.payment.pay_to ?? "Vehicle Owner / Supplier"), 1)]),
+				a("div", Gt, [n[15] ||= a("span", { class: "font-semibold text-slate-700" }, "Payment Mode:", -1), a("span", Kt, x(e.payment.method ?? "Bank Transfer / NEFT"), 1)]),
+				e.payment.reference ? (_(), i("div", qt, [n[16] ||= a("span", { class: "font-semibold text-slate-700" }, "Reference / UTR / Cheque No:", -1), a("span", Jt, x(e.payment.reference), 1)])) : r("", !0),
+				e.payment.notes ? (_(), i("div", Yt, [n[17] ||= a("span", { class: "font-semibold text-slate-700" }, "Particulars / Remarks:", -1), a("span", Xt, x(e.payment.notes), 1)])) : r("", !0)
 			]),
-			a("div", Xt, [n[18] ||= a("span", { class: "text-xs font-bold uppercase tracking-wider text-slate-700" }, "Amount Paid", -1), a("span", Zt, x(S(R)(e.payment.amount)), 1)]),
+			a("div", Zt, [n[18] ||= a("span", { class: "text-xs font-bold uppercase tracking-wider text-slate-700" }, "Amount Paid", -1), a("span", Qt, x(S(L)(e.payment.amount)), 1)]),
 			n[20] ||= o("<div class=\"mt-8 grid grid-cols-3 gap-4 pt-8 text-center text-xs\" data-v-c761222a><div class=\"border-t border-slate-400 pt-1\" data-v-c761222a><p class=\"font-medium text-slate-700\" data-v-c761222a>Prepared By</p></div><div class=\"border-t border-slate-400 pt-1\" data-v-c761222a><p class=\"font-medium text-slate-700\" data-v-c761222a>Checked / Verified</p></div><div class=\"border-t border-slate-400 pt-1\" data-v-c761222a><p class=\"font-medium text-slate-700\" data-v-c761222a>Receiver&#39;s Signature</p></div></div>", 1)
 		])])])) : r("", !0);
 	}
-}), [["__scopeId", "data-v-c761222a"]]), $t = { class: "min-h-screen bg-surface-secondary" }, en = { class: "mx-auto max-w-5xl p-4 lg:p-6" }, tn = {
+}), [["__scopeId", "data-v-c761222a"]]), en = { class: "min-h-screen bg-surface-secondary" }, tn = { class: "mx-auto max-w-5xl p-4 lg:p-6" }, nn = {
 	key: 0,
 	class: "py-16 text-center text-sm text-muted"
-}, nn = { class: "mb-4 flex flex-wrap items-center justify-between gap-3" }, rn = { class: "text-xl font-semibold text-heading" }, an = {
+}, rn = { class: "mb-4 flex flex-wrap items-center justify-between gap-3" }, an = { class: "text-xl font-semibold text-heading" }, on = {
 	key: 0,
 	class: "inline-flex items-center rounded-md bg-primary-50 px-2 py-0.5 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-primary-700/20 align-middle ml-1.5",
 	title: "Consolidated Multi-LR Load"
-}, on = {
+}, sn = {
 	key: 1,
 	class: "text-base font-normal text-muted"
-}, sn = { class: "flex items-center gap-2" }, cn = {
+}, cn = { class: "flex items-center gap-2" }, ln = {
 	key: 0,
 	class: "rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-500/20"
-}, ln = {
+}, un = {
 	key: 1,
 	class: "rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 ring-1 ring-inset ring-amber-500/20"
-}, un = {
+}, dn = {
 	key: 2,
 	class: "rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-500/20"
-}, dn = {
+}, fn = {
 	key: 3,
 	class: "rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white"
-}, fn = ["disabled"], pn = ["value"], mn = {
+}, pn = ["disabled"], mn = ["value"], hn = {
 	key: 0,
 	class: "mb-4 rounded-lg bg-alert-error-bg p-3 text-sm text-alert-error-text"
-}, hn = { class: "space-y-4" }, gn = { class: "space-y-2" }, _n = { class: "min-w-0" }, vn = { class: "font-medium text-heading" }, yn = { class: "truncate text-xs text-muted" }, bn = { class: "flex shrink-0 gap-1" }, xn = {
+}, gn = { class: "space-y-4" }, _n = { class: "space-y-2" }, vn = { class: "min-w-0" }, yn = { class: "font-medium text-heading" }, bn = { class: "truncate text-xs text-muted" }, xn = { class: "flex shrink-0 gap-1" }, Sn = {
 	key: 0,
 	class: "text-sm text-muted"
-}, Sn = { class: "flex gap-2 pt-1" }, Cn = { class: "mt-4 border-t border-line-light pt-3" }, wn = { class: "mb-2 flex items-center justify-between" }, Tn = { class: "flex items-center gap-2" }, En = { class: "min-w-0" }, Dn = { class: "font-medium text-heading" }, On = { class: "truncate text-xs text-muted" }, kn = { class: "flex shrink-0 gap-1" }, An = {
+}, Cn = { class: "flex gap-2 pt-1" }, wn = { class: "mt-4 border-t border-line-light pt-3" }, Tn = { class: "mb-2 flex items-center justify-between" }, En = { class: "flex items-center gap-2" }, Dn = { class: "min-w-0" }, On = { class: "font-medium text-heading" }, kn = { class: "truncate text-xs text-muted" }, An = { class: "flex shrink-0 gap-1" }, jn = {
 	key: 0,
 	class: "text-sm text-muted"
-}, jn = {
+}, Mn = {
 	key: 0,
 	class: "text-xs text-muted"
-}, Mn = { class: "mt-4 border-t border-line-light pt-3" }, Nn = { class: "mb-2 flex items-center justify-between" }, Pn = { class: "flex items-center gap-2" }, Fn = { class: "min-w-0" }, In = { class: "font-medium text-heading" }, Ln = { class: "truncate text-xs text-muted" }, Rn = { class: "flex shrink-0 gap-1" }, zn = {
+}, Nn = { class: "mt-4 border-t border-line-light pt-3" }, Pn = { class: "mb-2 flex items-center justify-between" }, Fn = { class: "flex items-center gap-2" }, In = { class: "min-w-0" }, Ln = { class: "font-medium text-heading" }, Rn = { class: "truncate text-xs text-muted" }, zn = { class: "flex shrink-0 gap-1" }, Bn = {
 	key: 0,
 	class: "text-sm text-muted"
-}, Bn = {
+}, Vn = {
 	key: 0,
 	class: "text-xs text-muted"
-}, Vn = { class: "mt-4 border-t border-line-light pt-3" }, Hn = { class: "mb-2 text-sm font-semibold text-heading" }, Un = { class: "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" }, Wn = { class: "mb-1.5 text-xs font-medium text-muted" }, Gn = {
+}, Hn = { class: "mt-4 border-t border-line-light pt-3" }, Un = { class: "mb-2 text-sm font-semibold text-heading" }, Wn = { class: "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" }, Gn = { class: "mb-1.5 text-xs font-medium text-muted" }, Kn = {
 	key: 0,
 	class: "group relative flex h-28 items-center justify-center overflow-hidden rounded-lg border border-line-default bg-surface-secondary"
-}, Kn = ["src", "alt"], qn = {
+}, qn = ["src", "alt"], Jn = {
 	key: 1,
 	class: "flex flex-col items-center gap-1 text-subtle"
-}, Jn = {
+}, Yn = {
 	key: 2,
 	class: "flex items-center justify-center text-subtle"
-}, Yn = { class: "absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" }, Xn = ["onClick"], Zn = ["disabled", "onClick"], Qn = {
+}, Xn = { class: "absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" }, Zn = ["onClick"], Qn = ["disabled", "onClick"], $n = {
 	key: 2,
 	class: "mt-1 flex items-center justify-between gap-1"
-}, $n = { class: "min-w-0 truncate text-xs text-muted" }, er = ["onClick"], tr = { class: "mt-4 border-t border-line-light pt-3" }, nr = { class: "grid grid-cols-2 gap-3 text-center sm:grid-cols-4" }, rr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, ir = { class: "mt-1 text-lg font-bold text-heading" }, ar = { class: "mt-1 flex flex-wrap items-center justify-center gap-1 text-[11px]" }, or = { class: "font-medium text-status-green" }, sr = {
+}, er = { class: "min-w-0 truncate text-xs text-muted" }, tr = ["onClick"], nr = { class: "mt-4 border-t border-line-light pt-3" }, rr = { class: "grid grid-cols-2 gap-3 text-center sm:grid-cols-4" }, ir = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, ar = { class: "mt-1 text-lg font-bold text-heading" }, or = { class: "mt-1 flex flex-wrap items-center justify-center gap-1 text-[11px]" }, sr = { class: "font-medium text-status-green" }, cr = {
 	key: 0,
 	class: "font-medium text-indigo-600"
-}, cr = {
+}, lr = {
 	key: 1,
 	class: "font-medium text-status-red"
-}, lr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, ur = { class: "mt-1 text-lg font-bold text-heading" }, dr = { class: "mt-1 text-[11px] text-muted" }, fr = { key: 0 }, pr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, mr = { class: "mt-1 text-lg font-bold text-heading" }, hr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, gr = { class: "mt-1 text-[11px] font-medium text-muted" }, _r = {
+}, ur = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, dr = { class: "mt-1 text-lg font-bold text-heading" }, fr = { class: "mt-1 text-[11px] text-muted" }, pr = { key: 0 }, mr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, hr = { class: "mt-1 text-lg font-bold text-heading" }, gr = { class: "rounded-xl border border-line-light bg-surface-secondary p-3" }, _r = { class: "mt-1 text-[11px] font-medium text-muted" }, vr = {
 	key: 0,
 	class: "mt-4"
-}, vr = { class: "flex items-center justify-between gap-2" }, yr = { class: "min-w-0" }, br = { class: "font-medium text-heading" }, xr = { class: "truncate text-xs text-muted" }, Sr = {
+}, yr = { class: "flex items-center justify-between gap-2" }, br = { class: "min-w-0" }, xr = { class: "font-medium text-heading" }, Sr = { class: "truncate text-xs text-muted" }, Cr = {
 	key: 0,
 	class: "mt-2.5 space-y-1.5 border-t border-line-light pt-2"
-}, Cr = { class: "flex items-center gap-2" }, wr = { class: "font-medium text-heading" }, Tr = { class: "text-muted" }, Er = { class: "flex items-center gap-3" }, Dr = { class: "text-right" }, Or = { class: "font-bold text-heading" }, kr = {
+}, wr = { class: "flex items-center gap-2" }, Tr = { class: "font-medium text-heading" }, Er = { class: "text-muted" }, Dr = { class: "flex items-center gap-3" }, Or = { class: "text-right" }, kr = { class: "font-bold text-heading" }, Ar = {
 	key: 0,
 	class: "block text-[10px] text-muted"
-}, Ar = ["onClick"], jr = {
+}, jr = ["onClick"], Mr = {
 	key: 1,
 	class: "mt-4"
-}, Mr = { class: "flex items-center justify-between gap-2" }, Nr = { class: "min-w-0" }, Pr = { class: "font-medium text-heading" }, Fr = {
+}, Nr = { class: "flex items-center justify-between gap-2" }, Pr = { class: "min-w-0" }, Fr = { class: "font-medium text-heading" }, Ir = {
 	key: 0,
 	class: "text-xs font-normal text-muted"
-}, Ir = { class: "truncate text-xs text-muted" }, Lr = { key: 0 }, Rr = {
+}, Lr = { class: "truncate text-xs text-muted" }, Rr = { key: 0 }, zr = {
 	key: 0,
 	class: "mt-1 text-xs text-muted"
-}, zr = { class: "font-semibold text-heading" }, Br = {
+}, Br = { class: "font-semibold text-heading" }, Vr = {
 	key: 1,
 	class: "mt-2.5 space-y-1.5 border-t border-line-light pt-2"
-}, Vr = { class: "flex items-center gap-2" }, Hr = { class: "text-muted" }, Ur = { key: 0 }, Wr = { class: "flex items-center gap-3" }, Gr = { class: "font-bold text-heading" }, Kr = ["onClick"], qr = { class: "mt-3 flex items-center justify-between rounded-lg border border-line-light bg-surface-secondary p-2.5 text-xs" }, Jr = { class: "text-muted" }, Yr = { class: "text-heading" }, Xr = /* @__PURE__ */ l({
+}, Hr = { class: "flex items-center gap-2" }, Ur = { class: "text-muted" }, Wr = { key: 0 }, Gr = { class: "flex items-center gap-3" }, Kr = { class: "font-bold text-heading" }, qr = ["onClick"], Jr = { class: "mt-3 flex items-center justify-between rounded-lg border border-line-light bg-surface-secondary p-2.5 text-xs" }, Yr = { class: "text-muted" }, Xr = { class: "text-heading" }, Zr = /* @__PURE__ */ l({
 	__name: "TripDetailPage",
 	props: {
 		id: {},
@@ -1216,19 +1177,19 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 		router: {}
 	},
 	setup(o) {
-		let l = o, u = v(null), d = v(!0), m = v([]), D = v(!1), O = v(!1), k = v(!1), A = v(!1), M = v(!1), N = v(null), ee = v(null), te = v(""), P = t(() => Number(l.id)), ne = t({
+		let l = o, u = v(null), d = v(!0), m = v([]), D = v(!1), O = v(!1), k = v(!1), A = v(!1), M = v(!1), N = v(null), ee = v(null), te = v(""), ne = t(() => Number(l.id)), P = t({
 			get: () => u.value?.status.id ?? null,
 			set: (e) => {
-				e !== null && _e(e);
+				e !== null && ve(e);
 			}
-		}), F = t(() => u.value?.receipts.filter((e) => e.type === "lr") ?? []), re = t(() => u.value?.receipts.filter((e) => e.type === "lorry") ?? []), ie = t(() => u.value?.receipts.filter((e) => e.type === "invoice") ?? []), ae = v(!1), oe = v(null);
-		function se(e) {
-			oe.value = e, ae.value = !0;
-		}
+		}), re = t(() => u.value?.receipts.filter((e) => e.type === "lr") ?? []), ie = t(() => u.value?.receipts.filter((e) => e.type === "lorry") ?? []), ae = t(() => u.value?.receipts.filter((e) => e.type === "invoice") ?? []), oe = v(!1), se = v(null);
 		function ce(e) {
+			se.value = e, oe.value = !0;
+		}
+		function le(e) {
 			e && window.open("/payments/pdf/" + e, "_blank");
 		}
-		let le = [
+		let ue = [
 			{
 				role: "consignment",
 				label: "Consignment & Proof of Delivery",
@@ -1285,172 +1246,172 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 				}]
 			}
 		];
-		function ue(e) {
+		function de(e) {
 			return u.value?.documents.find((t) => t.category === e) ?? null;
 		}
-		let de = v({});
-		function fe() {
-			for (let e of Object.values(de.value)) URL.revokeObjectURL(e);
-			de.value = {};
+		let fe = v({});
+		function pe() {
+			for (let e of Object.values(fe.value)) URL.revokeObjectURL(e);
+			fe.value = {};
 		}
-		async function pe() {
+		async function me() {
 			if (u.value) {
-				fe();
+				pe();
 				for (let e of u.value.documents) try {
-					let t = await Ue(l.client, u.value.id, e.id);
-					de.value[e.id] = URL.createObjectURL(t);
+					let t = await We(l.client, u.value.id, e.id);
+					fe.value[e.id] = URL.createObjectURL(t);
 				} catch {}
 			}
 		}
-		function me(e) {
-			let t = de.value[e];
+		function he(e) {
+			let t = fe.value[e];
 			t && window.open(t, "_blank", "noopener");
 		}
 		w(() => u.value?.documents, () => {
-			pe();
+			me();
 		});
-		async function he() {
+		async function ge() {
 			d.value = !0;
 			try {
-				u.value = await Me(l.client, P.value);
+				u.value = await Ne(l.client, ne.value);
 			} catch (e) {
-				l.notify("error", L(e, "Unable to load the trip."));
+				l.notify("error", I(e, "Unable to load the trip."));
 			} finally {
 				d.value = !1;
 			}
 		}
-		async function ge() {
+		async function _e() {
 			try {
-				m.value = await je(l.client);
+				m.value = await Me(l.client);
 			} catch {}
 		}
-		async function _e(e) {
+		async function ve(e) {
 			if (!(!u.value || D.value)) {
 				D.value = !0;
 				try {
-					u.value = await Ie(l.client, u.value.id, e), l.notify("success", "Status updated.");
+					u.value = await Le(l.client, u.value.id, e), l.notify("success", "Status updated.");
 				} catch (e) {
-					l.notify("error", L(e, "Unable to change the status."));
+					l.notify("error", I(e, "Unable to change the status."));
 				} finally {
 					D.value = !1;
 				}
 			}
 		}
-		function ve() {
-			document.hidden || he();
+		function ye() {
+			document.hidden || ge();
 		}
 		h(() => {
-			he(), ge(), document.addEventListener("visibilitychange", ve);
+			ge(), _e(), document.addEventListener("visibilitychange", ye);
 		}), g(() => {
-			fe(), document.removeEventListener("visibilitychange", ve);
+			pe(), document.removeEventListener("visibilitychange", ye);
 		});
-		async function ye() {
+		async function be() {
 			if (!(!u.value || !window.confirm("Cancel this trip?"))) try {
-				u.value = await Fe(l.client, u.value.id), l.notify("success", "Trip cancelled.");
+				u.value = await Ie(l.client, u.value.id), l.notify("success", "Trip cancelled.");
 			} catch (e) {
-				l.notify("error", L(e, "Unable to cancel the trip."));
-			}
-		}
-		async function be(e) {
-			if (u.value) {
-				O.value = !1;
-				try {
-					for (let t of e) u.value = await Re(l.client, u.value.id, t, "lr");
-					l.notify("success", "LR receipt linked.");
-				} catch (e) {
-					l.notify("error", L(e, "Unable to link the receipt."));
-				}
+				l.notify("error", I(e, "Unable to cancel the trip."));
 			}
 		}
 		async function xe(e) {
-			if (!(!u.value || e.length === 0)) {
-				k.value = !1;
+			if (u.value) {
+				O.value = !1;
 				try {
-					for (let t of e) u.value = await Re(l.client, u.value.id, t, "lorry");
-					l.notify("success", "Lorry receipt linked.");
+					for (let t of e) u.value = await ze(l.client, u.value.id, t, "lr");
+					l.notify("success", "LR receipt linked.");
 				} catch (e) {
-					l.notify("error", L(e, "Unable to link the receipt."));
+					l.notify("error", I(e, "Unable to link the receipt."));
 				}
 			}
 		}
-		async function Se() {
+		async function Se(e) {
+			if (!(!u.value || e.length === 0)) {
+				k.value = !1;
+				try {
+					for (let t of e) u.value = await ze(l.client, u.value.id, t, "lorry");
+					l.notify("success", "Lorry receipt linked.");
+				} catch (e) {
+					l.notify("error", I(e, "Unable to link the receipt."));
+				}
+			}
+		}
+		async function Ce() {
 			if (u.value) {
 				M.value = !0;
 				try {
-					u.value = await ze(l.client, u.value.id), l.notify("success", "Lorry receipt(s) fetched and linked.");
+					u.value = await Be(l.client, u.value.id), l.notify("success", "Lorry receipt(s) fetched and linked.");
 				} catch (e) {
-					l.notify("error", L(e, "No lorry receipt found with matching bilty numbers for these LRs."));
+					l.notify("error", I(e, "No lorry receipt found with matching bilty numbers for these LRs."));
 				} finally {
 					M.value = !1;
 				}
 			}
 		}
-		async function Ce(e) {
+		async function we(e) {
 			if (u.value) try {
-				u.value = await We(l.client, u.value.id, e), l.notify("success", "Receipt unlinked.");
+				u.value = await Ge(l.client, u.value.id, e), l.notify("success", "Receipt unlinked.");
 			} catch (e) {
-				l.notify("error", L(e, "Unable to unlink the receipt."));
+				l.notify("error", I(e, "Unable to unlink the receipt."));
 			}
 		}
-		async function we() {
+		async function Te() {
 			if (u.value) {
 				A.value = !0;
 				try {
-					u.value = await Be(l.client, u.value.id), l.notify("success", "Invoice receipt fetched and linked.");
+					u.value = await Ve(l.client, u.value.id), l.notify("success", "Invoice receipt fetched and linked.");
 				} catch (e) {
-					l.notify("error", L(e, "No invoice receipt found for these LR numbers."));
+					l.notify("error", I(e, "No invoice receipt found for these LR numbers."));
 				} finally {
 					A.value = !1;
 				}
 			}
 		}
-		function Te(e) {
+		function Ee(e) {
 			te.value = e, ee.value?.click();
 		}
-		async function Ee(e) {
+		async function De(e) {
 			if (!u.value) return;
 			let t = e.target, n = t.files;
 			if (!n || n.length === 0) return;
 			let r = te.value;
 			N.value = r;
 			try {
-				u.value = await Ve(l.client, u.value.id, n[0], r), l.notify("success", "Document uploaded.");
+				u.value = await He(l.client, u.value.id, n[0], r), l.notify("success", "Document uploaded.");
 			} catch (e) {
-				l.notify("error", L(e, "Unable to upload the document."));
+				l.notify("error", I(e, "Unable to upload the document."));
 			} finally {
 				N.value = null, t.value = "";
 			}
 		}
-		async function De(e) {
+		async function Oe(e) {
 			if (u.value) try {
-				u.value = await He(l.client, u.value.id, e), l.notify("success", "Document removed.");
+				u.value = await Ue(l.client, u.value.id, e), l.notify("success", "Document removed.");
 			} catch (e) {
-				l.notify("error", L(e, "Unable to remove the document."));
+				l.notify("error", I(e, "Unable to remove the document."));
 			}
 		}
-		function Oe(e) {
+		function ke(e) {
 			l.router?.push(j.invoiceView(e));
 		}
-		function ke() {
+		function Ae() {
 			l.router?.push(j.board);
 		}
 		return (t, l) => {
 			let h = b("BaseButton"), g = b("BaseSettingCard");
-			return _(), i("div", $t, [
-				a("div", en, [d.value ? (_(), i("div", tn, "Loading the trip…")) : u.value ? (_(), i(e, { key: 1 }, [
-					a("div", nn, [a("div", null, [a("button", {
+			return _(), i("div", en, [
+				a("div", tn, [d.value ? (_(), i("div", nn, "Loading the trip…")) : u.value ? (_(), i(e, { key: 1 }, [
+					a("div", rn, [a("div", null, [a("button", {
 						type: "button",
 						class: "text-sm text-muted hover:text-heading",
-						onClick: ke
-					}, " ← Trips "), a("h1", rn, [
+						onClick: Ae
+					}, " ← Trips "), a("h1", an, [
 						s(" Trip #" + x(u.value.trip_no) + " ", 1),
-						u.value.lr_numbers && u.value.lr_numbers.length > 1 ? (_(), i("span", an, " LR: " + x(u.value.lr_numbers.join(", ")), 1)) : u.value.lr_numbers && u.value.lr_numbers.length === 1 && String(u.value.trip_no) !== String(u.value.lr_numbers[0]) ? (_(), i("span", on, " [LR: " + x(u.value.lr_numbers[0]) + "] ", 1)) : r("", !0),
+						u.value.lr_numbers && u.value.lr_numbers.length > 1 ? (_(), i("span", on, " LR: " + x(u.value.lr_numbers.join(", ")), 1)) : u.value.lr_numbers && u.value.lr_numbers.length === 1 && String(u.value.trip_no) !== String(u.value.lr_numbers[0]) ? (_(), i("span", sn, " [LR: " + x(u.value.lr_numbers[0]) + "] ", 1)) : r("", !0),
 						s(" · " + x(u.value.from_city ?? "—") + " → " + x(u.value.to_city ?? "—"), 1)
-					])]), a("div", sn, [
-						u.value.money?.payment_status === "PAID" ? (_(), i("span", cn, " ● Payment Received ")) : u.value.money?.payment_status === "PARTIALLY_PAID" ? (_(), i("span", ln, " ◐ Partially Paid ")) : u.value.money?.payment_status ? (_(), i("span", un, " ○ Payment Pending ")) : r("", !0),
-						u.value.cancelled_at ? (_(), i("span", dn, " Cancelled ")) : m.value.length > 0 ? E((_(), i("select", {
+					])]), a("div", cn, [
+						u.value.money?.payment_status === "PAID" ? (_(), i("span", ln, " ● Payment Received ")) : u.value.money?.payment_status === "PARTIALLY_PAID" ? (_(), i("span", un, " ◐ Partially Paid ")) : u.value.money?.payment_status ? (_(), i("span", dn, " ○ Payment Pending ")) : r("", !0),
+						u.value.cancelled_at ? (_(), i("span", fn, " Cancelled ")) : m.value.length > 0 ? E((_(), i("select", {
 							key: 4,
-							"onUpdate:modelValue": l[0] ||= (e) => ne.value = e,
+							"onUpdate:modelValue": l[0] ||= (e) => P.value = e,
 							disabled: D.value,
 							class: "cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-semibold text-white outline-none",
 							style: p({ backgroundColor: u.value.status.colour ?? "#94a3b8" })
@@ -1458,7 +1419,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 							key: e.id,
 							value: e.id,
 							class: "bg-surface text-body"
-						}, x(e.name), 9, pn))), 128))], 12, fn)), [[C, ne.value]]) : (_(), i("span", {
+						}, x(e.name), 9, mn))), 128))], 12, pn)), [[C, P.value]]) : (_(), i("span", {
 							key: 5,
 							class: "rounded-full px-3 py-1 text-xs font-semibold text-white",
 							style: p({ backgroundColor: u.value.status.colour ?? "#94a3b8" })
@@ -1467,26 +1428,26 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 							key: 6,
 							size: "sm",
 							variant: "danger",
-							onClick: ye
+							onClick: be
 						}, {
 							default: T(() => [...l[6] ||= [s(" Cancel Trip ", -1)]]),
 							_: 1
 						}))
 					])]),
-					u.value.cancelled_at ? (_(), i("div", mn, " This trip is cancelled. ")) : r("", !0),
-					a("div", hn, [c(g, {
+					u.value.cancelled_at ? (_(), i("div", hn, " This trip is cancelled. ")) : r("", !0),
+					a("div", gn, [c(g, {
 						title: "Documents",
 						description: "LR receipts, lorry receipt, invoice receipt and trip documents for this trip."
 					}, {
 						default: T(() => [
-							a("div", gn, [
-								(_(!0), i(e, null, y(F.value, (e) => (_(), i("div", {
+							a("div", _n, [
+								(_(!0), i(e, null, y(re.value, (e) => (_(), i("div", {
 									key: e.id,
 									class: "flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", _n, [a("p", vn, "📄 " + x(e.invoice_number), 1), a("p", yn, x(e.customer_name ?? "No customer") + " · " + x(S(R)(e.amount)), 1)]), a("div", bn, [c(h, {
+								}, [a("div", vn, [a("p", yn, "📄 " + x(e.invoice_number), 1), a("p", bn, x(e.customer_name ?? "No customer") + " · " + x(S(L)(e.amount)), 1)]), a("div", xn, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
-									onClick: (t) => Oe(e.invoice_id)
+									onClick: (t) => ke(e.invoice_id)
 								}, {
 									default: T(() => [...l[7] ||= [s(" View ", -1)]]),
 									_: 1
@@ -1494,13 +1455,13 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									key: 0,
 									size: "sm",
 									variant: "danger-outline",
-									onClick: (t) => Ce(e.id)
+									onClick: (t) => we(e.id)
 								}, {
 									default: T(() => [...l[8] ||= [s(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								F.value.length === 0 ? (_(), i("p", xn, "No LR receipts linked yet.")) : r("", !0),
-								a("div", Sn, [c(h, {
+								re.value.length === 0 ? (_(), i("p", Sn, "No LR receipts linked yet.")) : r("", !0),
+								a("div", Cn, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
 									onClick: l[1] ||= (e) => O.value = !0
@@ -1509,12 +1470,12 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									_: 1
 								})])
 							]),
-							a("div", Cn, [
-								a("div", wn, [l[11] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Lorry Receipt", -1), a("div", Tn, [c(h, {
+							a("div", wn, [
+								a("div", Tn, [l[11] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Lorry Receipt", -1), a("div", En, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
-									disabled: M.value || F.value.length === 0,
-									onClick: Se
+									disabled: M.value || re.value.length === 0,
+									onClick: Ce
 								}, {
 									default: T(() => [s(x(M.value ? "Fetching…" : "Fetch Lorry Receipt"), 1)]),
 									_: 1
@@ -1526,13 +1487,13 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									default: T(() => [...l[10] ||= [s(" + Link Lorry Receipt ", -1)]]),
 									_: 1
 								})])]),
-								(_(!0), i(e, null, y(re.value, (e) => (_(), i("div", {
+								(_(!0), i(e, null, y(ie.value, (e) => (_(), i("div", {
 									key: e.id,
 									class: "mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", En, [a("p", Dn, "🚛 " + x(e.invoice_number), 1), a("p", On, x(e.customer_name ?? "No customer") + " · " + x(S(R)(e.amount)), 1)]), a("div", kn, [c(h, {
+								}, [a("div", Dn, [a("p", On, "🚛 " + x(e.invoice_number), 1), a("p", kn, x(e.customer_name ?? "No customer") + " · " + x(S(L)(e.amount)), 1)]), a("div", An, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
-									onClick: (t) => Oe(e.invoice_id)
+									onClick: (t) => ke(e.invoice_id)
 								}, {
 									default: T(() => [...l[12] ||= [s(" View ", -1)]]),
 									_: 1
@@ -1540,30 +1501,30 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									key: 0,
 									size: "sm",
 									variant: "danger-outline",
-									onClick: (t) => Ce(e.id)
+									onClick: (t) => we(e.id)
 								}, {
 									default: T(() => [...l[13] ||= [s(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								re.value.length === 0 ? (_(), i("p", An, [l[14] ||= s(" No lorry receipt linked yet. ", -1), F.value.length === 0 ? (_(), i("span", jn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
+								ie.value.length === 0 ? (_(), i("p", jn, [l[14] ||= s(" No lorry receipt linked yet. ", -1), re.value.length === 0 ? (_(), i("span", Mn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
 							]),
-							a("div", Mn, [
-								a("div", Nn, [l[15] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Invoice Receipt", -1), a("div", Pn, [c(h, {
+							a("div", Nn, [
+								a("div", Pn, [l[15] ||= a("p", { class: "text-xs font-semibold uppercase tracking-wide text-muted" }, "Invoice Receipt", -1), a("div", Fn, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
-									disabled: A.value || F.value.length === 0,
-									onClick: we
+									disabled: A.value || re.value.length === 0,
+									onClick: Te
 								}, {
 									default: T(() => [s(x(A.value ? "Fetching…" : "Fetch Invoice Receipt"), 1)]),
 									_: 1
 								}, 8, ["disabled"])])]),
-								(_(!0), i(e, null, y(ie.value, (e) => (_(), i("div", {
+								(_(!0), i(e, null, y(ae.value, (e) => (_(), i("div", {
 									key: e.id,
 									class: "mb-2 flex items-center justify-between gap-2 rounded-lg border border-line-light p-2.5 text-sm"
-								}, [a("div", Fn, [a("p", In, "🧾 " + x(e.invoice_number), 1), a("p", Ln, x(e.customer_name ?? "No customer") + " · " + x(S(R)(e.amount)), 1)]), a("div", Rn, [c(h, {
+								}, [a("div", In, [a("p", Ln, "🧾 " + x(e.invoice_number), 1), a("p", Rn, x(e.customer_name ?? "No customer") + " · " + x(S(L)(e.amount)), 1)]), a("div", zn, [c(h, {
 									size: "sm",
 									variant: "primary-outline",
-									onClick: (t) => Oe(e.invoice_id)
+									onClick: (t) => ke(e.invoice_id)
 								}, {
 									default: T(() => [...l[16] ||= [s(" View ", -1)]]),
 									_: 1
@@ -1571,14 +1532,14 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									key: 0,
 									size: "sm",
 									variant: "danger-outline",
-									onClick: (t) => Ce(e.id)
+									onClick: (t) => we(e.id)
 								}, {
 									default: T(() => [...l[17] ||= [s(" Unlink ", -1)]]),
 									_: 1
 								}, 8, ["onClick"]))])]))), 128)),
-								ie.value.length === 0 ? (_(), i("p", zn, [l[18] ||= s(" No invoice receipt linked yet. ", -1), F.value.length === 0 ? (_(), i("span", Bn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
+								ae.value.length === 0 ? (_(), i("p", Bn, [l[18] ||= s(" No invoice receipt linked yet. ", -1), re.value.length === 0 ? (_(), i("span", Vn, " (Link an LR first)")) : r("", !0)])) : r("", !0)
 							]),
-							a("div", Vn, [
+							a("div", Hn, [
 								l[27] ||= a("p", { class: "mb-3 text-xs font-semibold uppercase tracking-wide text-muted" }, "Trip Documents", -1),
 								a("input", {
 									ref_key: "podFileInput",
@@ -1586,22 +1547,22 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 									type: "file",
 									class: "hidden",
 									accept: "image/*,application/pdf",
-									onChange: Ee
+									onChange: De
 								}, null, 544),
-								(_(), i(e, null, y(le, (t) => a("div", {
+								(_(), i(e, null, y(ue, (t) => a("div", {
 									key: t.role,
 									class: "mb-4 last:mb-0"
-								}, [a("p", Hn, x(t.label), 1), a("div", Un, [(_(!0), i(e, null, y(t.slots, (t) => (_(), i("div", {
+								}, [a("p", Un, x(t.label), 1), a("div", Wn, [(_(!0), i(e, null, y(t.slots, (t) => (_(), i("div", {
 									key: t.key,
 									class: "flex flex-col"
 								}, [
-									a("p", Wn, x(t.label), 1),
-									ue(t.key) ? (_(), i("div", Gn, [ue(t.key).is_image && de.value[ue(t.key).id] ? (_(), i("img", {
+									a("p", Gn, x(t.label), 1),
+									de(t.key) ? (_(), i("div", Kn, [de(t.key).is_image && fe.value[de(t.key).id] ? (_(), i("img", {
 										key: 0,
-										src: de.value[ue(t.key).id],
+										src: fe.value[de(t.key).id],
 										alt: t.label,
 										class: "h-full w-full object-cover"
-									}, null, 8, Kn)) : ue(t.key).is_image ? (_(), i("div", Jn, [...l[20] ||= [a("svg", {
+									}, null, 8, qn)) : de(t.key).is_image ? (_(), i("div", Yn, [...l[20] ||= [a("svg", {
 										class: "h-5 w-5 animate-spin",
 										fill: "none",
 										viewBox: "0 0 24 24"
@@ -1616,7 +1577,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 										class: "opacity-75",
 										fill: "currentColor",
 										d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-									})], -1)]])) : (_(), i("div", qn, [...l[19] ||= [a("svg", {
+									})], -1)]])) : (_(), i("div", Jn, [...l[19] ||= [a("svg", {
 										class: "h-8 w-8",
 										fill: "none",
 										viewBox: "0 0 24 24",
@@ -1626,10 +1587,10 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 										"stroke-linejoin": "round",
 										"stroke-width": "1.25",
 										d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-									})], -1), a("span", { class: "text-xs" }, "PDF", -1)]])), a("div", Yn, [c(h, {
+									})], -1), a("span", { class: "text-xs" }, "PDF", -1)]])), a("div", Xn, [c(h, {
 										size: "sm",
 										variant: "primary",
-										onClick: (e) => me(ue(t.key).id)
+										onClick: (e) => he(de(t.key).id)
 									}, {
 										default: T(() => [...l[21] ||= [s(" View ", -1)]]),
 										_: 1
@@ -1637,7 +1598,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 										type: "button",
 										class: "flex h-7 w-7 items-center justify-center rounded-full bg-surface text-status-red shadow",
 										"aria-label": "Remove",
-										onClick: (e) => De(ue(t.key).id)
+										onClick: (e) => Oe(de(t.key).id)
 									}, [...l[22] ||= [a("svg", {
 										class: "h-4 w-4",
 										fill: "none",
@@ -1648,12 +1609,12 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 										"stroke-linejoin": "round",
 										"stroke-width": "2",
 										d: "M6 18L18 6M6 6l12 12"
-									})], -1)]], 8, Xn)])])) : (_(), i("button", {
+									})], -1)]], 8, Zn)])])) : (_(), i("button", {
 										key: 1,
 										type: "button",
 										class: "flex h-28 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-strong bg-surface-secondary text-subtle transition-colors hover:border-primary-400 hover:text-primary-500",
 										disabled: N.value === t.key,
-										onClick: (e) => Te(t.key)
+										onClick: (e) => Ee(t.key)
 									}, [N.value === t.key ? (_(), i(e, { key: 0 }, [l[23] ||= a("svg", {
 										class: "h-5 w-5 animate-spin",
 										fill: "none",
@@ -1679,63 +1640,63 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 										"stroke-linejoin": "round",
 										"stroke-width": "1.5",
 										d: "M12 4v16m8-8H4"
-									})], -1), l[26] ||= a("span", { class: "text-xs" }, "Upload", -1)], 64))], 8, Zn)),
-									ue(t.key) ? (_(), i("div", Qn, [a("span", $n, x(ue(t.key).file_name), 1), a("button", {
+									})], -1), l[26] ||= a("span", { class: "text-xs" }, "Upload", -1)], 64))], 8, Qn)),
+									de(t.key) ? (_(), i("div", $n, [a("span", er, x(de(t.key).file_name), 1), a("button", {
 										type: "button",
 										class: "shrink-0 text-xs text-primary-500 hover:underline",
-										onClick: (e) => Te(t.key)
-									}, " Replace ", 8, er)])) : r("", !0)
+										onClick: (e) => Ee(t.key)
+									}, " Replace ", 8, tr)])) : r("", !0)
 								]))), 128))])])), 64))
 							]),
-							a("div", tr, [
+							a("div", nr, [
 								l[36] ||= a("p", { class: "mb-3 text-xs font-semibold uppercase tracking-wide text-muted" }, "Trip Financial Summary & Payments", -1),
-								a("div", nr, [
-									a("div", rr, [
+								a("div", rr, [
+									a("div", ir, [
 										l[28] ||= a("p", { class: "text-xs font-medium text-muted" }, "Customer Billed (Revenue)", -1),
-										a("p", ir, x(u.value.money.revenue > 0 ? S(R)(u.value.money.revenue) : "—"), 1),
-										a("div", ar, [
-											a("span", or, "Recv: " + x(S(R)(u.value.money.actual_revenue ?? 0)), 1),
-											(u.value.money.tds_amount ?? 0) > 0 ? (_(), i("span", sr, "| TDS: " + x(S(R)(u.value.money.tds_amount)), 1)) : r("", !0),
-											(u.value.money.customer_due ?? 0) > 0 ? (_(), i("span", cr, "| Due: " + x(S(R)(u.value.money.customer_due)), 1)) : r("", !0)
+										a("p", ar, x(u.value.money.revenue > 0 ? S(L)(u.value.money.revenue) : "—"), 1),
+										a("div", or, [
+											a("span", sr, "Recv: " + x(S(L)(u.value.money.actual_revenue ?? 0)), 1),
+											(u.value.money.tds_amount ?? 0) > 0 ? (_(), i("span", cr, "| TDS: " + x(S(L)(u.value.money.tds_amount)), 1)) : r("", !0),
+											(u.value.money.customer_due ?? 0) > 0 ? (_(), i("span", lr, "| Due: " + x(S(L)(u.value.money.customer_due)), 1)) : r("", !0)
 										])
 									]),
-									a("div", lr, [
+									a("div", ur, [
 										l[29] ||= a("p", { class: "text-xs font-medium text-muted" }, "Truck Hire & Costs", -1),
-										a("p", ur, x(S(R)(u.value.money.cost)), 1),
-										a("p", dr, [s(" Hire: " + x(S(R)(u.value.money.cost - u.value.expenses.reduce((e, t) => e + t.amount, 0))) + " ", 1), u.value.expenses.length > 0 ? (_(), i("span", fr, "· Exp: " + x(S(R)(u.value.expenses.reduce((e, t) => e + t.amount, 0))), 1)) : r("", !0)])
+										a("p", dr, x(S(L)(u.value.money.cost)), 1),
+										a("p", fr, [s(" Hire: " + x(S(L)(u.value.money.cost - u.value.expenses.reduce((e, t) => e + t.amount, 0))) + " ", 1), u.value.expenses.length > 0 ? (_(), i("span", pr, "· Exp: " + x(S(L)(u.value.expenses.reduce((e, t) => e + t.amount, 0))), 1)) : r("", !0)])
 									]),
-									a("div", pr, [
+									a("div", mr, [
 										l[30] ||= a("p", { class: "text-xs font-medium text-muted" }, "Paid to Truck Owner", -1),
-										a("p", mr, x(S(R)(u.value.money.owner_paid)), 1),
-										a("p", { class: f(["mt-1 text-[11px] font-semibold", u.value.money.owner_balance > 0 ? "text-amber-600" : "text-status-green"]) }, x(u.value.money.owner_balance > 0 ? `Balance Due: ${S(R)(u.value.money.owner_balance)}` : "✓ All Settled"), 3)
+										a("p", hr, x(S(L)(u.value.money.owner_paid)), 1),
+										a("p", { class: f(["mt-1 text-[11px] font-semibold", u.value.money.owner_balance > 0 ? "text-amber-600" : "text-status-green"]) }, x(u.value.money.owner_balance > 0 ? `Balance Due: ${S(L)(u.value.money.owner_balance)}` : "✓ All Settled"), 3)
 									]),
-									a("div", hr, [
+									a("div", gr, [
 										l[31] ||= a("p", { class: "text-xs font-medium text-muted" }, "Net Trip Profit", -1),
-										a("p", { class: f(["mt-1 text-lg font-extrabold", u.value.money.profit >= 0 ? "text-status-green" : "text-status-red"]) }, x(S(R)(u.value.money.profit)), 3),
-										a("p", gr, x(u.value.money.revenue > 0 ? "Margin: " + (u.value.money.profit / u.value.money.revenue * 100).toFixed(1) + "%" : "Margin: —"), 1)
+										a("p", { class: f(["mt-1 text-lg font-extrabold", u.value.money.profit >= 0 ? "text-status-green" : "text-status-red"]) }, x(S(L)(u.value.money.profit)), 3),
+										a("p", _r, x(u.value.money.revenue > 0 ? "Margin: " + (u.value.money.profit / u.value.money.revenue * 100).toFixed(1) + "%" : "Margin: —"), 1)
 									])
 								]),
-								u.value.money.receivable.length > 0 ? (_(), i("div", _r, [l[32] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "Customer Collections (Money In)", -1), (_(!0), i(e, null, y(u.value.money.receivable, (t) => (_(), i("div", {
+								u.value.money.receivable.length > 0 ? (_(), i("div", vr, [l[32] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "Customer Collections (Money In)", -1), (_(!0), i(e, null, y(u.value.money.receivable, (t) => (_(), i("div", {
 									key: t.invoice_id,
 									class: "mb-2 rounded-lg border border-line-light p-3 text-sm"
-								}, [a("div", vr, [a("div", yr, [a("p", br, "🧾 Invoice #" + x(t.invoice_number), 1), a("p", xr, x(t.customer_name ?? "No customer") + " · Billed " + x(S(R)(t.total)) + " · Due " + x(S(R)(t.due_amount)), 1)]), a("span", { class: f(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
+								}, [a("div", yr, [a("div", br, [a("p", xr, "🧾 Invoice #" + x(t.invoice_number), 1), a("p", Sr, x(t.customer_name ?? "No customer") + " · Billed " + x(S(L)(t.total)) + " · Due " + x(S(L)(t.due_amount)), 1)]), a("span", { class: f(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
 									"bg-status-red/10 text-status-red": t.paid_status === "UNPAID",
 									"bg-status-yellow/10 text-status-yellow": t.paid_status === "PARTIALLY_PAID",
 									"bg-status-green/10 text-status-green": t.paid_status === "PAID"
-								}]) }, x(t.paid_status), 3)]), t.payments.length > 0 ? (_(), i("div", Sr, [(_(!0), i(e, null, y(t.payments, (e) => (_(), i("div", {
+								}]) }, x(t.paid_status), 3)]), t.payments.length > 0 ? (_(), i("div", Cr, [(_(!0), i(e, null, y(t.payments, (e) => (_(), i("div", {
 									key: e.id,
 									class: "flex items-center justify-between gap-2 rounded-md bg-surface-secondary px-2.5 py-1.5 text-xs"
-								}, [a("div", Cr, [a("span", wr, "💰 " + x(e.number ?? "Payment"), 1), a("span", Tr, x(e.date ?? "—") + " · " + x(e.method ?? "Bank"), 1)]), a("div", Er, [a("div", Dr, [a("span", Or, x(S(R)(e.amount + (e.tds_amount ?? 0))), 1), (e.tds_amount ?? 0) > 0 ? (_(), i("span", kr, " Bank: " + x(S(R)(e.amount)) + " | TDS: " + x(S(R)(e.tds_amount)), 1)) : r("", !0)]), e.unique_hash ? (_(), i("button", {
+								}, [a("div", wr, [a("span", Tr, "💰 " + x(e.number ?? "Payment"), 1), a("span", Er, x(e.date ?? "—") + " · " + x(e.method ?? "Bank"), 1)]), a("div", Dr, [a("div", Or, [a("span", kr, x(S(L)(e.amount + (e.tds_amount ?? 0))), 1), (e.tds_amount ?? 0) > 0 ? (_(), i("span", Ar, " Bank: " + x(S(L)(e.amount)) + " | TDS: " + x(S(L)(e.tds_amount)), 1)) : r("", !0)]), e.unique_hash ? (_(), i("button", {
 									key: 0,
 									type: "button",
 									class: "rounded border border-primary-300 bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700 hover:bg-primary-100",
-									onClick: (t) => ce(e.unique_hash)
-								}, " 📄 Payment Receipt ", 8, Ar)) : r("", !0)])]))), 128))])) : r("", !0)]))), 128))])) : r("", !0),
-								u.value.money.payable.length > 0 ? (_(), i("div", jr, [l[33] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "Truck Owner Hire & Payment Vouchers (Money Out)", -1), (_(!0), i(e, null, y(u.value.money.payable, (t) => (_(), i("div", {
+									onClick: (t) => le(e.unique_hash)
+								}, " 📄 Payment Receipt ", 8, jr)) : r("", !0)])]))), 128))])) : r("", !0)]))), 128))])) : r("", !0),
+								u.value.money.payable.length > 0 ? (_(), i("div", Mr, [l[33] ||= a("p", { class: "mb-2 text-xs font-semibold uppercase tracking-wide text-muted" }, "Truck Owner Hire & Payment Vouchers (Money Out)", -1), (_(!0), i(e, null, y(u.value.money.payable, (t) => (_(), i("div", {
 									key: t.invoice_number,
 									class: "mb-2 rounded-lg border border-line-light p-3 text-sm"
 								}, [
-									a("div", Mr, [a("div", Nr, [a("p", Pr, [s("🚛 Lorry Challan #" + x(t.invoice_number) + " ", 1), t.bill_number ? (_(), i("span", Fr, "(Bill #" + x(t.bill_number) + ")", 1)) : r("", !0)]), a("p", Ir, [s(x(t.supplier_name ?? "Truck Owner / Supplier"), 1), t.lorry_no ? (_(), i("span", Lr, " · Vehicle: " + x(t.lorry_no), 1)) : r("", !0)])]), t.bill_status ? (_(), i("span", {
+									a("div", Nr, [a("div", Pr, [a("p", Fr, [s("🚛 Lorry Challan #" + x(t.invoice_number) + " ", 1), t.bill_number ? (_(), i("span", Ir, "(Bill #" + x(t.bill_number) + ")", 1)) : r("", !0)]), a("p", Lr, [s(x(t.supplier_name ?? "Truck Owner / Supplier"), 1), t.lorry_no ? (_(), i("span", Rr, " · Vehicle: " + x(t.lorry_no), 1)) : r("", !0)])]), t.bill_status ? (_(), i("span", {
 										key: 0,
 										class: f(["shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", {
 											"bg-status-red/10 text-status-red": t.bill_status === "UNPAID",
@@ -1743,21 +1704,21 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 											"bg-status-green/10 text-status-green": t.bill_status === "SETTLED"
 										}])
 									}, x(t.bill_status), 3)) : r("", !0)]),
-									t.bill_total === null ? r("", !0) : (_(), i("p", Rr, [s(" Total Hire " + x(S(R)(t.bill_total)) + " · Balance Due ", 1), a("span", zr, x(S(R)(t.bill_due ?? 0)), 1)])),
-									t.payments.length > 0 ? (_(), i("div", Br, [(_(!0), i(e, null, y(t.payments, (e) => (_(), i("div", {
+									t.bill_total === null ? r("", !0) : (_(), i("p", zr, [s(" Total Hire " + x(S(L)(t.bill_total)) + " · Balance Due ", 1), a("span", Br, x(S(L)(t.bill_due ?? 0)), 1)])),
+									t.payments.length > 0 ? (_(), i("div", Vr, [(_(!0), i(e, null, y(t.payments, (e) => (_(), i("div", {
 										key: e.id,
 										class: "flex items-center justify-between gap-2 rounded-md bg-surface-secondary px-2.5 py-1.5 text-xs"
-									}, [a("div", Vr, [a("span", { class: f(["rounded px-1.5 py-0.5 text-[10px] font-bold uppercase", e.type === "advance" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"]) }, x(e.type === "advance" ? "Advance" : "Final Settlement"), 3), a("span", Hr, [s(x(e.date ?? "—"), 1), e.reference ? (_(), i("span", Ur, " · Ref: " + x(e.reference), 1)) : r("", !0)])]), a("div", Wr, [a("span", Gr, x(S(R)(e.amount)), 1), a("button", {
+									}, [a("div", Hr, [a("span", { class: f(["rounded px-1.5 py-0.5 text-[10px] font-bold uppercase", e.type === "advance" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"]) }, x(e.type === "advance" ? "Advance" : "Final Settlement"), 3), a("span", Ur, [s(x(e.date ?? "—"), 1), e.reference ? (_(), i("span", Wr, " · Ref: " + x(e.reference), 1)) : r("", !0)])]), a("div", Gr, [a("span", Kr, x(S(L)(e.amount)), 1), a("button", {
 										type: "button",
 										class: "inline-flex items-center gap-1 rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 shadow-sm hover:bg-indigo-100",
-										onClick: (t) => se(e)
-									}, " 🎫 View Voucher ", 8, Kr)])]))), 128))])) : r("", !0)
+										onClick: (t) => ce(e)
+									}, " 🎫 View Voucher ", 8, qr)])]))), 128))])) : r("", !0)
 								]))), 128))])) : r("", !0),
-								a("div", qr, [a("span", Jr, [
+								a("div", Jr, [a("span", Yr, [
 									l[34] ||= s(" Total Paid to Owner: ", -1),
-									a("strong", Yr, x(S(R)(u.value.money.owner_paid)), 1),
+									a("strong", Xr, x(S(L)(u.value.money.owner_paid)), 1),
 									l[35] ||= s(" · Remaining Balance: ", -1),
-									a("strong", { class: f(u.value.money.owner_balance > 0 ? "text-amber-600" : "text-status-green") }, x(S(R)(u.value.money.owner_balance)), 3)
+									a("strong", { class: f(u.value.money.owner_balance > 0 ? "text-amber-600" : "text-status-green") }, x(S(L)(u.value.money.owner_balance)), 3)
 								]), u.value.money.bill_status ? (_(), i("span", {
 									key: 0,
 									class: f(["rounded-full px-2 py-0.5 text-[11px] font-semibold", {
@@ -1771,7 +1732,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 						_: 1
 					})])
 				], 64)) : r("", !0)]),
-				c(Ct, {
+				c(wt, {
 					show: O.value,
 					client: o.client,
 					notify: o.notify,
@@ -1779,21 +1740,6 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 					multiple: "",
 					"trip-id": u.value?.id,
 					onClose: l[3] ||= (e) => O.value = !1,
-					onSelect: be
-				}, null, 8, [
-					"show",
-					"client",
-					"notify",
-					"trip-id"
-				]),
-				c(Ct, {
-					show: k.value,
-					client: o.client,
-					notify: o.notify,
-					type: "lorry",
-					multiple: "",
-					"trip-id": u.value?.id,
-					onClose: l[4] ||= (e) => k.value = !1,
 					onSelect: xe
 				}, null, 8, [
 					"show",
@@ -1801,11 +1747,26 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 					"notify",
 					"trip-id"
 				]),
-				c(Qt, {
-					show: ae.value,
-					payment: oe.value,
+				c(wt, {
+					show: k.value,
+					client: o.client,
+					notify: o.notify,
+					type: "lorry",
+					multiple: "",
+					"trip-id": u.value?.id,
+					onClose: l[4] ||= (e) => k.value = !1,
+					onSelect: Se
+				}, null, 8, [
+					"show",
+					"client",
+					"notify",
+					"trip-id"
+				]),
+				c($t, {
+					show: oe.value,
+					payment: se.value,
 					trip: u.value,
-					onClose: l[5] ||= (e) => ae.value = !1
+					onClose: l[5] ||= (e) => oe.value = !1
 				}, null, 8, [
 					"show",
 					"payment",
@@ -1817,7 +1778,7 @@ var Ke = { class: "pt-5 mt-5 border-t border-line-light" }, qe = { class: "flex 
 });
 //#endregion
 //#region ../../node_modules/sortablejs/modular/sortable.esm.js
-function Zr(e, t) {
+function Qr(e, t) {
 	var n = Object.keys(e);
 	if (Object.getOwnPropertySymbols) {
 		var r = Object.getOwnPropertySymbols(e);
@@ -1827,26 +1788,26 @@ function Zr(e, t) {
 	}
 	return n;
 }
-function Qr(e) {
+function $r(e) {
 	for (var t = 1; t < arguments.length; t++) {
 		var n = arguments[t] == null ? {} : arguments[t];
-		t % 2 ? Zr(Object(n), !0).forEach(function(t) {
-			ei(e, t, n[t]);
-		}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(n)) : Zr(Object(n)).forEach(function(t) {
+		t % 2 ? Qr(Object(n), !0).forEach(function(t) {
+			ti(e, t, n[t]);
+		}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(n)) : Qr(Object(n)).forEach(function(t) {
 			Object.defineProperty(e, t, Object.getOwnPropertyDescriptor(n, t));
 		});
 	}
 	return e;
 }
-function $r(e) {
+function ei(e) {
 	"@babel/helpers - typeof";
-	return $r = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
+	return ei = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
 		return typeof e;
 	} : function(e) {
 		return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
-	}, $r(e);
+	}, ei(e);
 }
-function ei(e, t, n) {
+function ti(e, t, n) {
 	return t in e ? Object.defineProperty(e, t, {
 		value: n,
 		enumerable: !0,
@@ -1854,45 +1815,45 @@ function ei(e, t, n) {
 		writable: !0
 	}) : e[t] = n, e;
 }
-function ti() {
-	return ti = Object.assign || function(e) {
+function ni() {
+	return ni = Object.assign || function(e) {
 		for (var t = 1; t < arguments.length; t++) {
 			var n = arguments[t];
 			for (var r in n) Object.prototype.hasOwnProperty.call(n, r) && (e[r] = n[r]);
 		}
 		return e;
-	}, ti.apply(this, arguments);
+	}, ni.apply(this, arguments);
 }
-function ni(e, t) {
+function ri(e, t) {
 	if (e == null) return {};
 	var n = {}, r = Object.keys(e), i, a;
 	for (a = 0; a < r.length; a++) i = r[a], !(t.indexOf(i) >= 0) && (n[i] = e[i]);
 	return n;
 }
-function ri(e, t) {
+function ii(e, t) {
 	if (e == null) return {};
-	var n = ni(e, t), r, i;
+	var n = ri(e, t), r, i;
 	if (Object.getOwnPropertySymbols) {
 		var a = Object.getOwnPropertySymbols(e);
 		for (i = 0; i < a.length; i++) r = a[i], !(t.indexOf(r) >= 0) && Object.prototype.propertyIsEnumerable.call(e, r) && (n[r] = e[r]);
 	}
 	return n;
 }
-var ii = "1.14.0";
-function ai(e) {
+var ai = "1.14.0";
+function oi(e) {
 	if (typeof window < "u" && window.navigator) return !!/* @__PURE__ */ navigator.userAgent.match(e);
 }
-var oi = ai(/(?:Trident.*rv[ :]?11\.|msie|iemobile|Windows Phone)/i), si = ai(/Edge/i), ci = ai(/firefox/i), li = ai(/safari/i) && !ai(/chrome/i) && !ai(/android/i), ui = ai(/iP(ad|od|hone)/i), di = ai(/chrome/i) && ai(/android/i), fi = {
+var si = oi(/(?:Trident.*rv[ :]?11\.|msie|iemobile|Windows Phone)/i), ci = oi(/Edge/i), li = oi(/firefox/i), ui = oi(/safari/i) && !oi(/chrome/i) && !oi(/android/i), di = oi(/iP(ad|od|hone)/i), fi = oi(/chrome/i) && oi(/android/i), pi = {
 	capture: !1,
 	passive: !1
 };
+function R(e, t, n) {
+	e.addEventListener(t, n, !si && pi);
+}
 function z(e, t, n) {
-	e.addEventListener(t, n, !oi && fi);
+	e.removeEventListener(t, n, !si && pi);
 }
-function B(e, t, n) {
-	e.removeEventListener(t, n, !oi && fi);
-}
-function pi(e, t) {
+function mi(e, t) {
 	if (t) {
 		if (t[0] === ">" && (t = t.substring(1)), e) try {
 			if (e.matches) return e.matches(t);
@@ -1904,22 +1865,22 @@ function pi(e, t) {
 		return !1;
 	}
 }
-function mi(e) {
+function hi(e) {
 	return e.host && e !== document && e.host.nodeType ? e.host : e.parentNode;
 }
-function hi(e, t, n, r) {
+function gi(e, t, n, r) {
 	if (e) {
 		n ||= document;
 		do {
-			if (t != null && (t[0] === ">" ? e.parentNode === n && pi(e, t) : pi(e, t)) || r && e === n) return e;
+			if (t != null && (t[0] === ">" ? e.parentNode === n && mi(e, t) : mi(e, t)) || r && e === n) return e;
 			if (e === n) break;
-		} while (e = mi(e));
+		} while (e = hi(e));
 	}
 	return null;
 }
-var gi = /\s+/g;
-function _i(e, t, n) {
-	e && t && (e.classList ? e.classList[n ? "add" : "remove"](t) : e.className = ((" " + e.className + " ").replace(gi, " ").replace(" " + t + " ", " ") + (n ? " " + t : "")).replace(gi, " "));
+var _i = /\s+/g;
+function B(e, t, n) {
+	e && t && (e.classList ? e.classList[n ? "add" : "remove"](t) : e.className = ((" " + e.className + " ").replace(_i, " ").replace(" " + t + " ", " ") + (n ? " " + t : "")).replace(_i, " "));
 }
 function V(e, t, n) {
 	var r = e && e.style;
@@ -1952,7 +1913,7 @@ function bi() {
 function H(e, t, n, r, i) {
 	if (!(!e.getBoundingClientRect && e !== window)) {
 		var a, o, s, c, l, u, d;
-		if (e !== window && e.parentNode && e !== bi() ? (a = e.getBoundingClientRect(), o = a.top, s = a.left, c = a.bottom, l = a.right, u = a.height, d = a.width) : (o = 0, s = 0, c = window.innerHeight, l = window.innerWidth, u = window.innerHeight, d = window.innerWidth), (t || n) && e !== window && (i ||= e.parentNode, !oi)) do
+		if (e !== window && e.parentNode && e !== bi() ? (a = e.getBoundingClientRect(), o = a.top, s = a.left, c = a.bottom, l = a.right, u = a.height, d = a.width) : (o = 0, s = 0, c = window.innerHeight, l = window.innerWidth, u = window.innerHeight, d = window.innerWidth), (t || n) && e !== window && (i ||= e.parentNode, !si)) do
 			if (i && i.getBoundingClientRect && (V(i, "transform") !== "none" || n && V(i, "position") !== "static")) {
 				var f = i.getBoundingClientRect();
 				o -= f.top + parseInt(V(i, "border-top-width")), s -= f.left + parseInt(V(i, "border-left-width")), c = o + a.height, l = s + a.width;
@@ -1984,7 +1945,7 @@ function xi(e, t, n) {
 }
 function Si(e, t, n, r) {
 	for (var i = 0, a = 0, o = e.children; a < o.length;) {
-		if (o[a].style.display !== "none" && o[a] !== Q.ghost && (r || o[a] !== Q.dragged) && hi(o[a], n.draggable, e, !1)) {
+		if (o[a].style.display !== "none" && o[a] !== Q.ghost && (r || o[a] !== Q.dragged) && gi(o[a], n.draggable, e, !1)) {
 			if (i === t) return o[a];
 			i++;
 		}
@@ -1993,13 +1954,13 @@ function Si(e, t, n, r) {
 	return null;
 }
 function Ci(e, t) {
-	for (var n = e.lastElementChild; n && (n === Q.ghost || V(n, "display") === "none" || t && !pi(n, t));) n = n.previousElementSibling;
+	for (var n = e.lastElementChild; n && (n === Q.ghost || V(n, "display") === "none" || t && !mi(n, t));) n = n.previousElementSibling;
 	return n || null;
 }
 function wi(e, t) {
 	var n = 0;
 	if (!e || !e.parentNode) return -1;
-	for (; e = e.previousElementSibling;) e.nodeName.toUpperCase() !== "TEMPLATE" && e !== Q.clone && (!t || pi(e, t)) && n++;
+	for (; e = e.previousElementSibling;) e.nodeName.toUpperCase() !== "TEMPLATE" && e !== Q.clone && (!t || mi(e, t)) && n++;
 	return n;
 }
 function Ti(e) {
@@ -2070,7 +2031,7 @@ function Ii() {
 						target: t,
 						rect: H(t)
 					});
-					var n = Qr({}, e[e.length - 1].rect);
+					var n = $r({}, e[e.length - 1].rect);
 					if (t.thisAnimationDuration) {
 						var r = vi(t, !0);
 						r && (n.top -= r.f, n.left -= r.e);
@@ -2132,7 +2093,7 @@ var zi = [], Bi = { initializeByDefault: !0 }, Vi = {
 		};
 		var i = e + "Global";
 		zi.forEach(function(r) {
-			t[r.pluginName] && (t[r.pluginName][i] && t[r.pluginName][i](Qr({ sortable: t }, n)), t.options[r.pluginName] && t[r.pluginName][e] && t[r.pluginName][e](Qr({ sortable: t }, n)));
+			t[r.pluginName] && (t[r.pluginName][i] && t[r.pluginName][i]($r({ sortable: t }, n)), t.options[r.pluginName] && t[r.pluginName][e] && t[r.pluginName][e]($r({ sortable: t }, n)));
 		});
 	},
 	initializePlugins: function(e, t, n, r) {
@@ -2140,7 +2101,7 @@ var zi = [], Bi = { initializeByDefault: !0 }, Vi = {
 			var i = r.pluginName;
 			if (!(!e.options[i] && !r.initializeByDefault)) {
 				var a = new r(e, t, e.options);
-				a.sortable = e, a.options = e.options, e[i] = a, ti(n, a.defaults);
+				a.sortable = e, a.options = e.options, e[i] = a, ni(n, a.defaults);
 			}
 		}), e.options) if (e.options.hasOwnProperty(i)) {
 			var a = this.modifyOption(e, i, e.options[i]);
@@ -2150,7 +2111,7 @@ var zi = [], Bi = { initializeByDefault: !0 }, Vi = {
 	getEventProperties: function(e, t) {
 		var n = {};
 		return zi.forEach(function(r) {
-			typeof r.eventProperties == "function" && ti(n, r.eventProperties.call(t[r.pluginName], e));
+			typeof r.eventProperties == "function" && ni(n, r.eventProperties.call(t[r.pluginName], e));
 		}), n;
 	},
 	modifyOption: function(e, t, n) {
@@ -2164,18 +2125,18 @@ function Hi(e) {
 	var t = e.sortable, n = e.rootEl, r = e.name, i = e.targetEl, a = e.cloneEl, o = e.toEl, s = e.fromEl, c = e.oldIndex, l = e.newIndex, u = e.oldDraggableIndex, d = e.newDraggableIndex, f = e.originalEvent, p = e.putSortable, m = e.extraEventProperties;
 	if (t ||= n && n[Fi], t) {
 		var h, g = t.options, _ = "on" + r.charAt(0).toUpperCase() + r.substr(1);
-		window.CustomEvent && !oi && !si ? h = new CustomEvent(r, {
+		window.CustomEvent && !si && !ci ? h = new CustomEvent(r, {
 			bubbles: !0,
 			cancelable: !0
 		}) : (h = document.createEvent("Event"), h.initEvent(r, !0, !0)), h.to = o || n, h.from = s || n, h.item = i || n, h.clone = a, h.oldIndex = c, h.newIndex = l, h.oldDraggableIndex = u, h.newDraggableIndex = d, h.originalEvent = f, h.pullMode = p ? p.lastPutMode : void 0;
-		var v = Qr(Qr({}, m), Vi.getEventProperties(r, t));
+		var v = $r($r({}, m), Vi.getEventProperties(r, t));
 		for (var y in v) h[y] = v[y];
 		n && n.dispatchEvent(h), g[_] && g[_].call(t, h);
 	}
 }
 var Ui = ["evt"], U = function(e, t) {
-	var n = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, r = n.evt, i = ri(n, Ui);
-	Vi.pluginEvent.bind(Q)(e, t, Qr({
+	var n = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, r = n.evt, i = ii(n, Ui);
+	Vi.pluginEvent.bind(Q)(e, t, $r({
 		dragEl: G,
 		parentEl: K,
 		ghostEl: q,
@@ -2210,7 +2171,7 @@ var Ui = ["evt"], U = function(e, t) {
 	}, i));
 };
 function W(e) {
-	Hi(Qr({
+	Hi($r({
 		putSortable: X,
 		cloneEl: Y,
 		targetEl: G,
@@ -2221,9 +2182,9 @@ function W(e) {
 		newDraggableIndex: Xi
 	}, e));
 }
-var G, K, q, J, Wi, Gi, Y, Ki, qi, Ji, Yi, Xi, Zi, X, Qi = !1, $i = !1, ea = [], ta, na, ra, ia, aa, oa, sa, ca, la, ua = !1, da = !1, fa, Z, pa = [], ma = !1, ha = [], ga = typeof document < "u", _a = ui, va = si || oi ? "cssFloat" : "float", ya = ga && !di && !ui && "draggable" in document.createElement("div"), ba = function() {
+var G, K, q, J, Wi, Gi, Y, Ki, qi, Ji, Yi, Xi, Zi, X, Qi = !1, $i = !1, ea = [], ta, na, ra, ia, aa, oa, sa, ca, la, ua = !1, da = !1, fa, Z, pa = [], ma = !1, ha = [], ga = typeof document < "u", _a = di, va = ci || si ? "cssFloat" : "float", ya = ga && !fi && !di && "draggable" in document.createElement("div"), ba = function() {
 	if (ga) {
-		if (oi) return !1;
+		if (si) return !1;
 		var e = document.createElement("x");
 		return e.style.cssText = "pointer-events:auto", e.style.pointerEvents === "auto";
 	}
@@ -2261,7 +2222,7 @@ var G, K, q, J, Wi, Gi, Y, Ki, qi, Ji, Yi, Xi, Zi, X, Qi = !1, $i = !1, ea = [],
 		};
 	}
 	var n = {}, r = e.group;
-	(!r || $r(r) != "object") && (r = { name: r }), n.name = r.name, n.checkPull = t(r.pull, !0), n.checkPut = t(r.put), n.revertClone = r.revertClone, e.group = n;
+	(!r || ei(r) != "object") && (r = { name: r }), n.name = r.name, n.checkPull = t(r.pull, !0), n.checkPut = t(r.put), n.revertClone = r.revertClone, e.group = n;
 }, Ta = function() {
 	!ba && q && V(q, "display", "none");
 }, Ea = function() {
@@ -2285,7 +2246,7 @@ var Da = function(e) {
 };
 function Q(e, t) {
 	if (!(e && e.nodeType && e.nodeType === 1)) throw `Sortable: \`el\` must be an HTMLElement, not ${{}.toString.call(e)}`;
-	this.el = e, this.options = t = ti({}, t), e[Fi] = this;
+	this.el = e, this.options = t = ni({}, t), e[Fi] = this;
 	var n = {
 		group: null,
 		sort: !0,
@@ -2325,12 +2286,12 @@ function Q(e, t) {
 			x: 0,
 			y: 0
 		},
-		supportPointer: Q.supportPointer !== !1 && "PointerEvent" in window && !li,
+		supportPointer: Q.supportPointer !== !1 && "PointerEvent" in window && !ui,
 		emptyInsertThreshold: 5
 	};
 	for (var r in Vi.initializePlugins(this, e, n), n) !(r in t) && (t[r] = n[r]);
 	for (var i in wa(t), this) i.charAt(0) === "_" && typeof this[i] == "function" && (this[i] = this[i].bind(this));
-	this.nativeDraggable = t.forceFallback ? !1 : ya, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? z(e, "pointerdown", this._onTapStart) : (z(e, "mousedown", this._onTapStart), z(e, "touchstart", this._onTapStart)), this.nativeDraggable && (z(e, "dragover", this), z(e, "dragenter", this)), ea.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), ti(this, Ii());
+	this.nativeDraggable = t.forceFallback ? !1 : ya, this.nativeDraggable && (this.options.touchStartThreshold = 1), t.supportPointer ? R(e, "pointerdown", this._onTapStart) : (R(e, "mousedown", this._onTapStart), R(e, "touchstart", this._onTapStart)), this.nativeDraggable && (R(e, "dragover", this), R(e, "dragenter", this)), ea.push(this.el), t.store && t.store.get && this.sort(t.store.get(this) || []), ni(this, Ii());
 }
 Q.prototype = {
 	constructor: Q,
@@ -2343,7 +2304,7 @@ Q.prototype = {
 	_onTapStart: function(e) {
 		if (e.cancelable) {
 			var t = this, n = this.el, r = this.options, i = r.preventOnFilter, a = e.type, o = e.touches && e.touches[0] || e.pointerType && e.pointerType === "touch" && e, s = (o || e).target, c = e.target.shadowRoot && (e.path && e.path[0] || e.composedPath && e.composedPath()[0]) || s, l = r.filter;
-			if (Ra(n), !G && !(/mousedown|pointerdown/.test(a) && e.button !== 0 || r.disabled) && !c.isContentEditable && !(!this.nativeDraggable && li && s && s.tagName.toUpperCase() === "SELECT") && (s = hi(s, r.draggable, n, !1), !(s && s.animated) && Gi !== s)) {
+			if (Ra(n), !G && !(/mousedown|pointerdown/.test(a) && e.button !== 0 || r.disabled) && !c.isContentEditable && !(!this.nativeDraggable && ui && s && s.tagName.toUpperCase() === "SELECT") && (s = gi(s, r.draggable, n, !1), !(s && s.animated) && Gi !== s)) {
 				if (qi = wi(s), Yi = wi(s, r.draggable), typeof l == "function") {
 					if (l.call(this, e, s, this)) {
 						W({
@@ -2357,7 +2318,7 @@ Q.prototype = {
 						return;
 					}
 				} else if (l && (l = l.split(",").some(function(r) {
-					if (r = hi(c, r.trim(), n, !1), r) return W({
+					if (r = gi(c, r.trim(), n, !1), r) return W({
 						sortable: t,
 						rootEl: r,
 						name: "filter",
@@ -2369,7 +2330,7 @@ Q.prototype = {
 					i && e.cancelable && e.preventDefault();
 					return;
 				}
-				r.handle && !hi(c, r.handle, n, !1) || this._prepareDragStart(e, o, s);
+				r.handle && !gi(c, r.handle, n, !1) || this._prepareDragStart(e, o, s);
 			}
 		}
 	},
@@ -2386,19 +2347,19 @@ Q.prototype = {
 					r._onDrop();
 					return;
 				}
-				r._disableDelayedDragEvents(), !ci && r.nativeDraggable && (G.draggable = !0), r._triggerDragStart(e, t), W({
+				r._disableDelayedDragEvents(), !li && r.nativeDraggable && (G.draggable = !0), r._triggerDragStart(e, t), W({
 					sortable: r,
 					name: "choose",
 					originalEvent: e
-				}), _i(G, a.chosenClass, !0);
+				}), B(G, a.chosenClass, !0);
 			}, a.ignore.split(",").forEach(function(e) {
 				yi(G, e.trim(), ja);
-			}), z(o, "dragover", Da), z(o, "mousemove", Da), z(o, "touchmove", Da), z(o, "mouseup", r._onDrop), z(o, "touchend", r._onDrop), z(o, "touchcancel", r._onDrop), ci && this.nativeDraggable && (this.options.touchStartThreshold = 4, G.draggable = !0), U("delayStart", this, { evt: e }), a.delay && (!a.delayOnTouchOnly || t) && (!this.nativeDraggable || !(si || oi))) {
+			}), R(o, "dragover", Da), R(o, "mousemove", Da), R(o, "touchmove", Da), R(o, "mouseup", r._onDrop), R(o, "touchend", r._onDrop), R(o, "touchcancel", r._onDrop), li && this.nativeDraggable && (this.options.touchStartThreshold = 4, G.draggable = !0), U("delayStart", this, { evt: e }), a.delay && (!a.delayOnTouchOnly || t) && (!this.nativeDraggable || !(ci || si))) {
 				if (Q.eventCanceled) {
 					this._onDrop();
 					return;
 				}
-				z(o, "mouseup", r._disableDelayedDrag), z(o, "touchend", r._disableDelayedDrag), z(o, "touchcancel", r._disableDelayedDrag), z(o, "mousemove", r._delayedDragTouchMoveHandler), z(o, "touchmove", r._delayedDragTouchMoveHandler), a.supportPointer && z(o, "pointermove", r._delayedDragTouchMoveHandler), r._dragStartTimer = setTimeout(s, a.delay);
+				R(o, "mouseup", r._disableDelayedDrag), R(o, "touchend", r._disableDelayedDrag), R(o, "touchcancel", r._disableDelayedDrag), R(o, "mousemove", r._delayedDragTouchMoveHandler), R(o, "touchmove", r._delayedDragTouchMoveHandler), a.supportPointer && R(o, "pointermove", r._delayedDragTouchMoveHandler), r._dragStartTimer = setTimeout(s, a.delay);
 			} else s();
 		}
 	},
@@ -2411,10 +2372,10 @@ Q.prototype = {
 	},
 	_disableDelayedDragEvents: function() {
 		var e = this.el.ownerDocument;
-		B(e, "mouseup", this._disableDelayedDrag), B(e, "touchend", this._disableDelayedDrag), B(e, "touchcancel", this._disableDelayedDrag), B(e, "mousemove", this._delayedDragTouchMoveHandler), B(e, "touchmove", this._delayedDragTouchMoveHandler), B(e, "pointermove", this._delayedDragTouchMoveHandler);
+		z(e, "mouseup", this._disableDelayedDrag), z(e, "touchend", this._disableDelayedDrag), z(e, "touchcancel", this._disableDelayedDrag), z(e, "mousemove", this._delayedDragTouchMoveHandler), z(e, "touchmove", this._delayedDragTouchMoveHandler), z(e, "pointermove", this._delayedDragTouchMoveHandler);
 	},
 	_triggerDragStart: function(e, t) {
-		t ||= e.pointerType == "touch" && e, !this.nativeDraggable || t ? this.options.supportPointer ? z(document, "pointermove", this._onTouchMove) : t ? z(document, "touchmove", this._onTouchMove) : z(document, "mousemove", this._onTouchMove) : (z(G, "dragend", this), z(J, "dragstart", this._onDragStart));
+		t ||= e.pointerType == "touch" && e, !this.nativeDraggable || t ? this.options.supportPointer ? R(document, "pointermove", this._onTouchMove) : t ? R(document, "touchmove", this._onTouchMove) : R(document, "mousemove", this._onTouchMove) : (R(G, "dragend", this), R(J, "dragstart", this._onDragStart));
 		try {
 			document.selection ? za(function() {
 				document.selection.empty();
@@ -2423,9 +2384,9 @@ Q.prototype = {
 	},
 	_dragStarted: function(e, t) {
 		if (Qi = !1, J && G) {
-			U("dragStarted", this, { evt: t }), this.nativeDraggable && z(document, "dragover", Oa);
+			U("dragStarted", this, { evt: t }), this.nativeDraggable && R(document, "dragover", Oa);
 			var n = this.options;
-			!e && _i(G, n.dragClass, !1), _i(G, n.ghostClass, !0), Q.active = this, e && this._appendGhost(), W({
+			!e && B(G, n.dragClass, !1), B(G, n.ghostClass, !0), Q.active = this, e && this._appendGhost(), W({
 				sortable: this,
 				name: "start",
 				originalEvent: t
@@ -2480,7 +2441,7 @@ Q.prototype = {
 				for (Z = e; V(Z, "position") === "static" && V(Z, "transform") === "none" && Z !== document;) Z = Z.parentNode;
 				Z !== document.body && Z !== document.documentElement ? (Z === document && (Z = bi()), t.top += Z.scrollTop, t.left += Z.scrollLeft) : Z = bi(), pa = Ti(Z);
 			}
-			q = G.cloneNode(!0), _i(q, n.ghostClass, !1), _i(q, n.fallbackClass, !0), _i(q, n.dragClass, !0), V(q, "transition", ""), V(q, "transform", ""), V(q, "box-sizing", "border-box"), V(q, "margin", 0), V(q, "top", t.top), V(q, "left", t.left), V(q, "width", t.width), V(q, "height", t.height), V(q, "opacity", "0.8"), V(q, "position", _a ? "absolute" : "fixed"), V(q, "zIndex", "100000"), V(q, "pointerEvents", "none"), Q.ghost = q, e.appendChild(q), V(q, "transform-origin", aa / parseInt(q.style.width) * 100 + "% " + oa / parseInt(q.style.height) * 100 + "%");
+			q = G.cloneNode(!0), B(q, n.ghostClass, !1), B(q, n.fallbackClass, !0), B(q, n.dragClass, !0), V(q, "transition", ""), V(q, "transform", ""), V(q, "box-sizing", "border-box"), V(q, "margin", 0), V(q, "top", t.top), V(q, "left", t.left), V(q, "width", t.width), V(q, "height", t.height), V(q, "opacity", "0.8"), V(q, "position", _a ? "absolute" : "fixed"), V(q, "zIndex", "100000"), V(q, "pointerEvents", "none"), Q.ghost = q, e.appendChild(q), V(q, "transform-origin", aa / parseInt(q.style.width) * 100 + "% " + oa / parseInt(q.style.height) * 100 + "%");
 		}
 	},
 	_onDragStart: function(e, t) {
@@ -2489,18 +2450,18 @@ Q.prototype = {
 			this._onDrop();
 			return;
 		}
-		U("setupClone", this), Q.eventCanceled || (Y = Pi(G), Y.draggable = !1, Y.style["will-change"] = "", this._hideClone(), _i(Y, this.options.chosenClass, !1), Q.clone = Y), n.cloneId = za(function() {
+		U("setupClone", this), Q.eventCanceled || (Y = Pi(G), Y.draggable = !1, Y.style["will-change"] = "", this._hideClone(), B(Y, this.options.chosenClass, !1), Q.clone = Y), n.cloneId = za(function() {
 			U("clone", n), !Q.eventCanceled && (n.options.removeCloneOnHide || J.insertBefore(Y, G), n._hideClone(), W({
 				sortable: n,
 				name: "clone"
 			}));
-		}), !t && _i(G, i.dragClass, !0), t ? ($i = !0, n._loopId = setInterval(n._emulateDragOver, 50)) : (B(document, "mouseup", n._onDrop), B(document, "touchend", n._onDrop), B(document, "touchcancel", n._onDrop), r && (r.effectAllowed = "move", i.setData && i.setData.call(n, r, G)), z(document, "drop", n), V(G, "transform", "translateZ(0)")), Qi = !0, n._dragStartId = za(n._dragStarted.bind(n, t, e)), z(document, "selectstart", n), sa = !0, li && V(document.body, "user-select", "none");
+		}), !t && B(G, i.dragClass, !0), t ? ($i = !0, n._loopId = setInterval(n._emulateDragOver, 50)) : (z(document, "mouseup", n._onDrop), z(document, "touchend", n._onDrop), z(document, "touchcancel", n._onDrop), r && (r.effectAllowed = "move", i.setData && i.setData.call(n, r, G)), R(document, "drop", n), V(G, "transform", "translateZ(0)")), Qi = !0, n._dragStartId = za(n._dragStarted.bind(n, t, e)), R(document, "selectstart", n), sa = !0, ui && V(document.body, "user-select", "none");
 	},
 	_onDragOver: function(e) {
 		var t = this.el, n = e.target, r, i, a, o = this.options, s = o.group, c = Q.active, l = Zi === s, u = o.sort, d = X || c, f, p = this, m = !1;
 		if (ma) return;
 		function h(o, s) {
-			U(o, p, Qr({
+			U(o, p, $r({
 				evt: e,
 				isOwner: l,
 				axis: f ? "vertical" : "horizontal",
@@ -2521,7 +2482,7 @@ Q.prototype = {
 			h("dragOverAnimationCapture"), p.captureAnimationState(), p !== d && d.captureAnimationState();
 		}
 		function _(r) {
-			return h("dragOverCompleted", { insertion: r }), r && (l ? c._hideClone() : c._showClone(p), p !== d && (_i(G, X ? X.options.ghostClass : c.options.ghostClass, !1), _i(G, o.ghostClass, !0)), X !== p && p !== Q.active ? X = p : p === Q.active && X && (X = null), d === p && (p._ignoreWhileAnimating = n), p.animateAll(function() {
+			return h("dragOverCompleted", { insertion: r }), r && (l ? c._hideClone() : c._showClone(p), p !== d && (B(G, X ? X.options.ghostClass : c.options.ghostClass, !1), B(G, o.ghostClass, !0)), X !== p && p !== Q.active ? X = p : p === Q.active && X && (X = null), d === p && (p._ignoreWhileAnimating = n), p.animateAll(function() {
 				h("dragOverAnimationComplete"), p._ignoreWhileAnimating = null;
 			}), p !== d && (d.animateAll(), d._ignoreWhileAnimating = null)), (n === G && !G.animated || n === t && !n.animated) && (ca = null), !o.dragoverBubble && !e.rootEl && n !== document && (G.parentNode[Fi]._isOutsideThisEl(e.target), !r && Da(e)), !o.dragoverBubble && e.stopPropagation && e.stopPropagation(), m = !0;
 		}
@@ -2535,7 +2496,7 @@ Q.prototype = {
 				originalEvent: e
 			});
 		}
-		if (e.preventDefault !== void 0 && e.cancelable && e.preventDefault(), n = hi(n, o.draggable, t, !0), h("dragOver"), Q.eventCanceled) return m;
+		if (e.preventDefault !== void 0 && e.cancelable && e.preventDefault(), n = gi(n, o.draggable, t, !0), h("dragOver"), Q.eventCanceled) return m;
 		if (G.contains(e.target) || n.animated && n.animatingX && n.animatingY || p._ignoreWhileAnimating === n) return _(!1);
 		if ($i = !1, c && !o.disabled && (l ? u || (a = K !== J) : X === this || (this.lastPutMode = Zi.checkPull(this, c, G, e)) && s.checkPut(this, c, G, e))) {
 			if (f = this._getDirection(e, n) === "vertical", r = H(G), h("dragOverValid"), Q.eventCanceled) return m;
@@ -2572,11 +2533,11 @@ Q.prototype = {
 	},
 	_ignoreWhileAnimating: null,
 	_offMoveEvents: function() {
-		B(document, "mousemove", this._onTouchMove), B(document, "touchmove", this._onTouchMove), B(document, "pointermove", this._onTouchMove), B(document, "dragover", Da), B(document, "mousemove", Da), B(document, "touchmove", Da);
+		z(document, "mousemove", this._onTouchMove), z(document, "touchmove", this._onTouchMove), z(document, "pointermove", this._onTouchMove), z(document, "dragover", Da), z(document, "mousemove", Da), z(document, "touchmove", Da);
 	},
 	_offUpEvents: function() {
 		var e = this.el.ownerDocument;
-		B(e, "mouseup", this._onDrop), B(e, "touchend", this._onDrop), B(e, "pointerup", this._onDrop), B(e, "touchcancel", this._onDrop), B(document, "selectstart", this);
+		z(e, "mouseup", this._onDrop), z(e, "touchend", this._onDrop), z(e, "pointerup", this._onDrop), z(e, "touchcancel", this._onDrop), z(document, "selectstart", this);
 	},
 	_onDrop: function(e) {
 		var t = this.el, n = this.options;
@@ -2584,7 +2545,7 @@ Q.prototype = {
 			this._nulling();
 			return;
 		}
-		Qi = !1, da = !1, ua = !1, clearInterval(this._loopId), clearTimeout(this._dragStartTimer), Ba(this.cloneId), Ba(this._dragStartId), this.nativeDraggable && (B(document, "drop", this), B(t, "dragstart", this._onDragStart)), this._offMoveEvents(), this._offUpEvents(), li && V(document.body, "user-select", ""), V(G, "transform", ""), e && (sa && (e.cancelable && e.preventDefault(), !n.dropBubble && e.stopPropagation()), q && q.parentNode && q.parentNode.removeChild(q), (J === K || X && X.lastPutMode !== "clone") && Y && Y.parentNode && Y.parentNode.removeChild(Y), G && (this.nativeDraggable && B(G, "dragend", this), ja(G), G.style["will-change"] = "", sa && !Qi && _i(G, X ? X.options.ghostClass : this.options.ghostClass, !1), _i(G, this.options.chosenClass, !1), W({
+		Qi = !1, da = !1, ua = !1, clearInterval(this._loopId), clearTimeout(this._dragStartTimer), Ba(this.cloneId), Ba(this._dragStartId), this.nativeDraggable && (z(document, "drop", this), z(t, "dragstart", this._onDragStart)), this._offMoveEvents(), this._offUpEvents(), ui && V(document.body, "user-select", ""), V(G, "transform", ""), e && (sa && (e.cancelable && e.preventDefault(), !n.dropBubble && e.stopPropagation()), q && q.parentNode && q.parentNode.removeChild(q), (J === K || X && X.lastPutMode !== "clone") && Y && Y.parentNode && Y.parentNode.removeChild(Y), G && (this.nativeDraggable && z(G, "dragend", this), ja(G), G.style["will-change"] = "", sa && !Qi && B(G, X ? X.options.ghostClass : this.options.ghostClass, !1), B(G, this.options.chosenClass, !1), W({
 			sortable: this,
 			name: "unchoose",
 			toEl: K,
@@ -2651,14 +2612,14 @@ Q.prototype = {
 		}
 	},
 	toArray: function() {
-		for (var e = [], t, n = this.el.children, r = 0, i = n.length, a = this.options; r < i; r++) t = n[r], hi(t, a.draggable, this.el, !1) && e.push(t.getAttribute(a.dataIdAttr) || La(t));
+		for (var e = [], t, n = this.el.children, r = 0, i = n.length, a = this.options; r < i; r++) t = n[r], gi(t, a.draggable, this.el, !1) && e.push(t.getAttribute(a.dataIdAttr) || La(t));
 		return e;
 	},
 	sort: function(e, t) {
 		var n = {}, r = this.el;
 		this.toArray().forEach(function(e, t) {
 			var i = r.children[t];
-			hi(i, this.options.draggable, r, !1) && (n[e] = i);
+			gi(i, this.options.draggable, r, !1) && (n[e] = i);
 		}, this), t && this.captureAnimationState(), e.forEach(function(e) {
 			n[e] && (r.removeChild(n[e]), r.appendChild(n[e]));
 		}), t && this.animateAll();
@@ -2668,7 +2629,7 @@ Q.prototype = {
 		e && e.set && e.set(this);
 	},
 	closest: function(e, t) {
-		return hi(e, t || this.options.draggable, this.el, !1);
+		return gi(e, t || this.options.draggable, this.el, !1);
 	},
 	option: function(e, t) {
 		var n = this.options;
@@ -2679,7 +2640,7 @@ Q.prototype = {
 	destroy: function() {
 		U("destroy", this);
 		var e = this.el;
-		e[Fi] = null, B(e, "mousedown", this._onTapStart), B(e, "touchstart", this._onTapStart), B(e, "pointerdown", this._onTapStart), this.nativeDraggable && (B(e, "dragover", this), B(e, "dragenter", this)), Array.prototype.forEach.call(e.querySelectorAll("[draggable]"), function(e) {
+		e[Fi] = null, z(e, "mousedown", this._onTapStart), z(e, "touchstart", this._onTapStart), z(e, "pointerdown", this._onTapStart), this.nativeDraggable && (z(e, "dragover", this), z(e, "dragenter", this)), Array.prototype.forEach.call(e.querySelectorAll("[draggable]"), function(e) {
 			e.removeAttribute("draggable");
 		}), this._onDrop(), this._disableDelayedDragEvents(), ea.splice(ea.indexOf(this.el), 1), this.el = e = null;
 	},
@@ -2705,7 +2666,7 @@ function ka(e) {
 }
 function Aa(e, t, n, r, i, a, o, s) {
 	var c, l = e[Fi], u = l.options.onMove, d;
-	return window.CustomEvent && !oi && !si ? c = new CustomEvent("move", {
+	return window.CustomEvent && !si && !ci ? c = new CustomEvent("move", {
 		bubbles: !0,
 		cancelable: !0
 	}) : (c = document.createEvent("Event"), c.initEvent("move", !0, !0)), c.to = t, c.from = e, c.dragged = n, c.draggedRect = r, c.related = i || t, c.relatedRect = a || H(t), c.willInsertAfter = s, c.originalEvent = o, e.dispatchEvent(c), u && (d = u.call(l, c, o)), d;
@@ -2754,20 +2715,20 @@ function za(e) {
 function Ba(e) {
 	return clearTimeout(e);
 }
-ga && z(document, "touchmove", function(e) {
+ga && R(document, "touchmove", function(e) {
 	(Q.active || Qi) && e.cancelable && e.preventDefault();
 }), Q.utils = {
-	on: z,
-	off: B,
+	on: R,
+	off: z,
 	css: V,
 	find: yi,
 	is: function(e, t) {
-		return !!hi(e, t, e, !1);
+		return !!gi(e, t, e, !1);
 	},
 	extend: Oi,
 	throttle: ji,
-	closest: hi,
-	toggleClass: _i,
+	closest: gi,
+	toggleClass: B,
 	clone: Pi,
 	index: wi,
 	nextTick: za,
@@ -2780,11 +2741,11 @@ ga && z(document, "touchmove", function(e) {
 	var e = [...arguments];
 	e[0].constructor === Array && (e = e[0]), e.forEach(function(e) {
 		if (!e.prototype || !e.prototype.constructor) throw `Sortable: Mounted plugin must be a constructor function, not ${{}.toString.call(e)}`;
-		e.utils && (Q.utils = Qr(Qr({}, Q.utils), e.utils)), Vi.mount(e);
+		e.utils && (Q.utils = $r($r({}, Q.utils), e.utils)), Vi.mount(e);
 	});
 }, Q.create = function(e, t) {
 	return new Q(e, t);
-}, Q.version = ii;
+}, Q.version = ai;
 var $ = [], Va, Ha, Ua = !1, Wa, Ga, Ka, qa;
 function Ja() {
 	function e() {
@@ -2799,14 +2760,14 @@ function Ja() {
 	return e.prototype = {
 		dragStarted: function(e) {
 			var t = e.originalEvent;
-			this.sortable.nativeDraggable ? z(document, "dragover", this._handleAutoScroll) : this.options.supportPointer ? z(document, "pointermove", this._handleFallbackAutoScroll) : t.touches ? z(document, "touchmove", this._handleFallbackAutoScroll) : z(document, "mousemove", this._handleFallbackAutoScroll);
+			this.sortable.nativeDraggable ? R(document, "dragover", this._handleAutoScroll) : this.options.supportPointer ? R(document, "pointermove", this._handleFallbackAutoScroll) : t.touches ? R(document, "touchmove", this._handleFallbackAutoScroll) : R(document, "mousemove", this._handleFallbackAutoScroll);
 		},
 		dragOverCompleted: function(e) {
 			var t = e.originalEvent;
 			!this.options.dragOverBubble && !t.rootEl && this._handleAutoScroll(t);
 		},
 		drop: function() {
-			this.sortable.nativeDraggable ? B(document, "dragover", this._handleAutoScroll) : (B(document, "pointermove", this._handleFallbackAutoScroll), B(document, "touchmove", this._handleFallbackAutoScroll), B(document, "mousemove", this._handleFallbackAutoScroll)), Xa(), Ya(), Mi();
+			this.sortable.nativeDraggable ? z(document, "dragover", this._handleAutoScroll) : (z(document, "pointermove", this._handleFallbackAutoScroll), z(document, "touchmove", this._handleFallbackAutoScroll), z(document, "mousemove", this._handleFallbackAutoScroll)), Xa(), Ya(), Mi();
 		},
 		nulling: function() {
 			Ka = Ha = Va = Ua = qa = Wa = Ga = null, $.length = 0;
@@ -2816,7 +2777,7 @@ function Ja() {
 		},
 		_handleAutoScroll: function(e, t) {
 			var n = this, r = (e.touches ? e.touches[0] : e).clientX, i = (e.touches ? e.touches[0] : e).clientY, a = document.elementFromPoint(r, i);
-			if (Ka = e, t || this.options.forceAutoScrollFallback || si || oi || li) {
+			if (Ka = e, t || this.options.forceAutoScrollFallback || ci || si || ui) {
 				Za(e, this.options, a, t);
 				var o = Di(a, !0);
 				Ua && (!qa || r !== Wa || i !== Ga) && (qa && Xa(), qa = setInterval(function() {
@@ -2831,7 +2792,7 @@ function Ja() {
 				Za(e, this.options, Di(a, !1), !1);
 			}
 		}
-	}, ti(e, {
+	}, ni(e, {
 		pluginName: "scroll",
 		initializeByDefault: !0
 	});
@@ -2887,7 +2848,7 @@ $a.prototype = {
 		r ? this.sortable.el.insertBefore(t, r) : this.sortable.el.appendChild(t), this.sortable.animateAll(), n && n.animateAll();
 	},
 	drop: Qa
-}, ti($a, { pluginName: "revertOnSpill" });
+}, ni($a, { pluginName: "revertOnSpill" });
 function eo() {}
 eo.prototype = {
 	onSpill: function(e) {
@@ -2895,7 +2856,7 @@ eo.prototype = {
 		n.captureAnimationState(), t.parentNode && t.parentNode.removeChild(t), n.animateAll();
 	},
 	drop: Qa
-}, ti(eo, { pluginName: "removeOnSpill" }), Q.mount(new Ja()), Q.mount(eo, $a);
+}, ni(eo, { pluginName: "removeOnSpill" }), Q.mount(new Ja()), Q.mount(eo, $a);
 //#endregion
 //#region resources/js/support/filters.ts
 var to = {
@@ -3042,8 +3003,8 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 			])) : r("", !0)])]),
 			a("p", bo, x(p.value), 1),
 			n.trip.lorry_no ? (_(), i("p", xo, "🚛 " + x(n.trip.lorry_no), 1)) : r("", !0),
-			a("div", So, [a("span", Co, x(n.trip.lr_count) + " LR" + x(n.trip.lr_count === 1 ? "" : "s") + " · " + x(S(R)(n.trip.revenue)), 1), a("span", { class: f(["text-sm font-semibold", m.value]) }, x(S(R)(n.trip.profit)), 3)]),
-			a("div", wo, [a("div", To, [n.trip.payment_status === "PAID" ? (_(), i("span", Eo, " ● Payment Received ")) : n.trip.payment_status === "PARTIALLY_PAID" ? (_(), i("span", Do, " ◐ Partially Paid ")) : (_(), i("span", Oo, " ○ Payment Pending "))]), n.trip.customer_paid > 0 ? (_(), i("span", ko, [o[3] ||= s(" Recvd: ", -1), a("span", Ao, x(S(R)(n.trip.customer_paid)), 1)])) : r("", !0)])
+			a("div", So, [a("span", Co, x(n.trip.lr_count) + " LR" + x(n.trip.lr_count === 1 ? "" : "s") + " · " + x(S(L)(n.trip.revenue)), 1), a("span", { class: f(["text-sm font-semibold", m.value]) }, x(S(L)(n.trip.profit)), 3)]),
+			a("div", wo, [a("div", To, [n.trip.payment_status === "PAID" ? (_(), i("span", Eo, " ● Payment Received ")) : n.trip.payment_status === "PARTIALLY_PAID" ? (_(), i("span", Do, " ◐ Partially Paid ")) : (_(), i("span", Oo, " ○ Payment Pending "))]), n.trip.customer_paid > 0 ? (_(), i("span", ko, [o[3] ||= s(" Recvd: ", -1), a("span", Ao, x(S(L)(n.trip.customer_paid)), 1)])) : r("", !0)])
 		], 2));
 	}
 }), Mo = {
@@ -3076,9 +3037,9 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 		async function b() {
 			l.value = !0;
 			try {
-				s.value = await Ae(o.client, co(o.filters));
+				s.value = await je(o.client, co(o.filters));
 			} catch (e) {
-				o.notify("error", L(e, "Unable to load the board."));
+				o.notify("error", I(e, "Unable to load the board."));
 			} finally {
 				l.value = !1;
 			}
@@ -3111,10 +3072,10 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 			if (C(e), !t || Number.isNaN(n)) return;
 			let r = s.value.filter((e) => e.status_id === n && e.id !== t).sort((e, t) => e.board_position - t.board_position), i = r[e.newIndex - 1], a = r[e.newIndex], c = i && a ? (i.board_position + a.board_position) / 2 : a ? a.board_position - .5 : i ? i.board_position + .5 : 1;
 			try {
-				let e = await Pe(o.client, t, n, c);
+				let e = await Fe(o.client, t, n, c);
 				s.value = s.value.map((n) => n.id === t ? e : n);
 			} catch (e) {
-				o.notify("error", L(e, "Unable to move the trip.")), await b();
+				o.notify("error", I(e, "Unable to move the trip.")), await b();
 			}
 		}
 		function E(e) {
@@ -3122,17 +3083,17 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 		}
 		async function D(e, t) {
 			try {
-				let n = await Pe(o.client, e.id, t, null);
+				let n = await Fe(o.client, e.id, t, null);
 				s.value = s.value.map((t) => t.id === e.id ? n : t);
 			} catch (e) {
-				o.notify("error", L(e, "Unable to move the trip."));
+				o.notify("error", I(e, "Unable to move the trip."));
 			}
 		}
 		async function O(e) {
 			if (window.confirm("Cancel this trip? It stays on the board, greyed out, and can never be billed.")) try {
-				await Fe(o.client, e.id), o.notify("success", "Trip cancelled."), await b();
+				await Ie(o.client, e.id), o.notify("success", "Trip cancelled."), await b();
 			} catch (e) {
-				o.notify("error", L(e, "Unable to cancel the trip."));
+				o.notify("error", I(e, "Unable to cancel the trip."));
 			}
 		}
 		return (t, o) => (_(), i("div", null, [l.value ? (_(), i("div", Mo, "Loading the board…")) : g.value ? (_(), i("div", No, [...o[0] ||= [
@@ -3378,24 +3339,24 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 			});
 		}
 		let ee = (e) => s.statuses.find((t) => t.id === e)?.name ?? "—", te = (e) => s.statuses.find((t) => t.id === e)?.colour ?? "#6366f1";
-		async function P() {
+		async function ne() {
 			u.value = !0;
 			try {
-				l.value = await Ae(s.client, co(s.filters));
+				l.value = await je(s.client, co(s.filters));
 			} catch (e) {
-				s.notify("error", L(e, "Unable to load trips."));
+				s.notify("error", I(e, "Unable to load trips."));
 			} finally {
 				u.value = !1;
 			}
 		}
 		h(() => {
-			P();
+			ne();
 		}), w(() => ao(s.filters), () => {
-			d.value = 1, P();
+			d.value = 1, ne();
 		}), w(k, (e) => {
 			d.value > e && (d.value = e);
 		});
-		function ne(e) {
+		function P(e) {
 			s.router?.push(j.trip(e.id));
 		}
 		return (t, o) => {
@@ -3498,7 +3459,7 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 			])]), a("tbody", null, [(_(!0), i(e, null, y(A.value, (e) => (_(), i("tr", {
 				key: e.id,
 				class: f(["cursor-pointer border-b border-line-light hover:bg-hover", { "opacity-50": e.cancelled_at }]),
-				onClick: (t) => ne(e)
+				onClick: (t) => P(e)
 			}, [
 				a("td", ps, [a("div", ms, [a("span", null, "#" + x(e.trip_no), 1), e.lr_numbers && e.lr_numbers.length > 1 ? (_(), i("span", hs, " LR: " + x(e.lr_numbers.join(", ")), 1)) : e.lr_numbers && e.lr_numbers.length === 1 && String(e.trip_no) !== String(e.lr_numbers[0]) ? (_(), i("span", gs, " [LR: " + x(e.lr_numbers[0]) + "] ", 1)) : r("", !0)])]),
 				a("td", _s, x(e.from_city ?? "—") + " → " + x(e.to_city ?? "—"), 1),
@@ -3511,11 +3472,11 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 						color: te(e.status_id)
 					})
 				}, x(ee(e.status_id)), 5)]),
-				a("td", xs, x(e.revenue > 0 ? S(R)(e.revenue) : "—"), 1),
-				a("td", Ss, x(e.actual_revenue > 0 ? S(R)(e.actual_revenue) : e.revenue > 0 ? S(R)(0) : "—"), 1),
-				a("td", Cs, x(e.tds_amount > 0 ? S(R)(e.tds_amount) : e.revenue > 0 || e.actual_revenue > 0 ? S(R)(0) : "—"), 1),
-				a("td", ws, x(S(R)(e.cost)), 1),
-				a("td", { class: f(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, x(S(R)(e.profit)), 3)
+				a("td", xs, x(e.revenue > 0 ? S(L)(e.revenue) : "—"), 1),
+				a("td", Ss, x(e.actual_revenue > 0 ? S(L)(e.actual_revenue) : e.revenue > 0 ? S(L)(0) : "—"), 1),
+				a("td", Cs, x(e.tds_amount > 0 ? S(L)(e.tds_amount) : e.revenue > 0 || e.actual_revenue > 0 ? S(L)(0) : "—"), 1),
+				a("td", ws, x(S(L)(e.cost)), 1),
+				a("td", { class: f(["p-3 text-end font-semibold", e.profit >= 0 ? "text-status-green" : "text-status-red"]) }, x(S(L)(e.profit)), 3)
 			], 10, fs))), 128))])])]), c(as, {
 				pagination: M.value,
 				onPageChange: N
@@ -3580,9 +3541,9 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 		async function E() {
 			u.value = !0;
 			try {
-				l.value = await Ae(o.client, co(o.filters));
+				l.value = await je(o.client, co(o.filters));
 			} catch (e) {
-				o.notify("error", L(e, "Unable to load trips."));
+				o.notify("error", I(e, "Unable to load trips."));
 			} finally {
 				u.value = !1;
 			}
@@ -3652,8 +3613,8 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 					s(" #" + x(e.trip_no) + " ", 1),
 					e.lr_numbers && e.lr_numbers.length > 1 ? (_(), i("span", Rs, " [" + x(e.lr_numbers.join(", ")) + "] ", 1)) : r("", !0),
 					s(" · " + x(e.from_city ?? "—") + " → " + x(e.to_city ?? "—"), 1)
-				]), a("p", zs, x(e.lorry_no ?? "No lorry") + " · " + x(S(R)(e.revenue)), 1)], 8, Is))), 128))]),
-				t.trips.length > 0 ? (_(), i("p", Bs, x(S(R)(t.revenue)), 1)) : r("", !0)
+				]), a("p", zs, x(e.lorry_no ?? "No lorry") + " · " + x(S(L)(e.revenue)), 1)], 8, Is))), 128))]),
+				t.trips.length > 0 ? (_(), i("p", Bs, x(S(L)(t.revenue)), 1)) : r("", !0)
 			], 2))), 128))]), g.value.length > 0 ? (_(), i("div", Vs, [a("p", Hs, " Unscheduled (" + x(g.value.length) + ") ", 1), a("div", Us, [(_(!0), i(e, null, y(g.value, (e) => (_(), i("div", {
 				key: e.id,
 				class: "cursor-pointer rounded-lg border border-line-light bg-surface p-2 hover:bg-hover",
@@ -3812,9 +3773,9 @@ var fo = { class: "flex items-start justify-between gap-2" }, po = { class: "min
 		async function y() {
 			l.value = !0;
 			try {
-				o.value = await je(r.client);
+				o.value = await Me(r.client);
 			} catch (e) {
-				r.notify("error", L(e, "Unable to load statuses."));
+				r.notify("error", I(e, "Unable to load statuses."));
 			} finally {
 				l.value = !1;
 			}
@@ -3944,7 +3905,7 @@ function lc(e) {
 		id: "new",
 		module: k,
 		path: "new",
-		component: N(e, it),
+		component: N(e, at),
 		meta: {
 			ability: cc,
 			title: "trips.title"
@@ -3953,7 +3914,7 @@ function lc(e) {
 		id: "trip",
 		module: k,
 		path: ":id(\\d+)",
-		component: N(e, Xr),
+		component: N(e, Zr),
 		meta: {
 			ability: cc,
 			title: "trips.title"
@@ -3963,6 +3924,6 @@ function lc(e) {
 //#endregion
 //#region resources/js/init.ts
 window.InvoiceShelf.booting((e, t, n) => {
-	n.addMessages(O), lc(n), ke(n);
+	n.addMessages(O), lc(n), Ae(n);
 });
 //#endregion

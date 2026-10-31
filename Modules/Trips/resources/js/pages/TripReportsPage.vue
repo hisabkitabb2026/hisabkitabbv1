@@ -22,15 +22,12 @@ const t = useTranslate()
 const presets = reportPresets(t)
 const period = ref<PeriodValue>(presetValue(presets[2]))
 
-const tabKeys = ['customer', 'lr', 'supplier', 'invoice', 'details'] as const
+const tabKeys = ['customer', 'lr'] as const
 type TabKey = (typeof tabKeys)[number]
 
 const tabTitles: Record<TabKey, string> = {
   customer: 'By Customer',
-  lr: 'By LR / Consignment',
-  supplier: 'By Truck Owner',
-  invoice: 'By Invoice Receipt',
-  details: 'All Trip Details',
+  lr: 'By LR',
 }
 
 const selectedType = ref<TabKey>('customer')
@@ -54,8 +51,6 @@ const toDate = ref<string>(initialRange.to)
 
 const filterCustomer = ref<string>('')
 const filterLrNo = ref<string>('')
-const filterInvoiceNo = ref<string>('')
-const filterSupplier = ref<string>('')
 
 const reportUrl = computed<string | null>(() => url.value)
 
@@ -63,8 +58,6 @@ const dateRangeUrl = computed<string>(() => {
   let u = '/api/v1/trips/reports/pdf?from_date=' + fromDate.value + '&to_date=' + toDate.value + '&type=' + selectedType.value
   if (filterCustomer.value.trim()) u += '&customer=' + encodeURIComponent(filterCustomer.value.trim())
   if (filterLrNo.value.trim()) u += '&lr_no=' + encodeURIComponent(filterLrNo.value.trim())
-  if (filterInvoiceNo.value.trim()) u += '&invoice_no=' + encodeURIComponent(filterInvoiceNo.value.trim())
-  if (filterSupplier.value.trim()) u += '&supplier=' + encodeURIComponent(filterSupplier.value.trim())
   return u
 })
 
@@ -84,7 +77,7 @@ watch(period, (value) => {
   }
 })
 
-watch([fromDate, toDate, selectedType, filterCustomer, filterLrNo, filterInvoiceNo, filterSupplier], () => {
+watch([fromDate, toDate, selectedType, filterCustomer, filterLrNo], () => {
   url.value = dateRangeUrl.value
 })
 
@@ -149,21 +142,12 @@ function backToTrips(): void {
           <BasePeriodPicker v-model="period" :presets="presets" block position="bottom-start" />
         </BaseInputGroup>
 
-        <!-- Contextual filter input based on active tab -->
-        <BaseInputGroup v-if="selectedType === 'customer' || selectedType === 'details'" label="Filter Customer">
+        <BaseInputGroup label="Filter By Customer">
           <BaseInput v-model="filterCustomer" placeholder="Type customer name..." @update:model-value="getReports" />
         </BaseInputGroup>
 
-        <BaseInputGroup v-if="selectedType === 'lr' || selectedType === 'details'" label="Filter LR Number">
+        <BaseInputGroup label="Filter By LR No">
           <BaseInput v-model="filterLrNo" placeholder="Type LR number..." @update:model-value="getReports" />
-        </BaseInputGroup>
-
-        <BaseInputGroup v-if="selectedType === 'supplier' || selectedType === 'details'" label="Filter Truck Owner / Transporter">
-          <BaseInput v-model="filterSupplier" placeholder="Type owner/transporter name..." @update:model-value="getReports" />
-        </BaseInputGroup>
-
-        <BaseInputGroup v-if="selectedType === 'invoice' || selectedType === 'details'" label="Filter Invoice Number">
-          <BaseInput v-model="filterInvoiceNo" placeholder="Type invoice number..." @update:model-value="getReports" />
         </BaseInputGroup>
 
         <div class="hidden pt-2 md:block">

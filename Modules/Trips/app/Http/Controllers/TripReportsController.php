@@ -79,19 +79,31 @@ final class TripReportsController extends Controller
             $filters,
         );
 
-        $rows = match ($type) {
-            'lr' => $this->reports->byLr($context->companyId, $from->toDateString(), $to->toDateString(), $filters),
-            'supplier' => $this->reports->bySupplier($context->companyId, $from->toDateString(), $to->toDateString(), $filters),
-            'invoice' => $this->reports->byInvoice($context->companyId, $from->toDateString(), $to->toDateString(), $filters),
-            default => $summary['by_customer'],
-        };
-
         $tripDetails = $this->reports->tripDetails(
             $context->companyId,
             $from->toDateString(),
             $to->toDateString(),
             $filters,
         );
+
+        $tripsByCustomer = [];
+        foreach ($tripDetails as $td) {
+            $cust = $td['receivable'][0]['customer_name'] ?? 'Other / Direct Customer';
+            if (! isset($tripsByCustomer[$cust])) {
+                $tripsByCustomer[$cust] = [
+                    'customer_name' => $cust,
+                    'trips' => [],
+                    'total_revenue' => 0,
+                    'total_cost' => 0,
+                    'total_profit' => 0,
+                ];
+            }
+            $tripsByCustomer[$cust]['trips'][] = $td;
+            $tripsByCustomer[$cust]['total_revenue'] += $td['revenue'];
+            $tripsByCustomer[$cust]['total_cost'] += $td['cost'];
+            $tripsByCustomer[$cust]['total_profit'] += $td['profit'];
+        }
+        ksort($tripsByCustomer);
 
         $company = Company::query()->find($context->companyId);
         $currencyId = $company ? (int) CompanySetting::getSetting('currency', $company->id) : 0;
@@ -112,7 +124,7 @@ final class TripReportsController extends Controller
             'to_date' => $to->translatedFormat($dateFormat),
             'currency' => $currency,
             'type' => $type,
-            'rows' => $rows,
+            'trips_by_customer' => $tripsByCustomer,
             'totals' => $summary['totals'],
             'trip_details' => $tripDetails,
             'filters' => $filters,
