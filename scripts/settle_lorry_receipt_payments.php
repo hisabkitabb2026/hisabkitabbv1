@@ -117,6 +117,13 @@ foreach ($invoices as $invoice) {
     $netPayable = max(0, $calculatedBalance + $detention + $extraHire + $finalOther - $lessAdv - $lessDed);
     $dueRs = $netPayable;
 
+    // If already fully settled and no remaining balance or bill due, skip
+    $linkedBill = $invoice->tr_bill_id ? Bill::find($invoice->tr_bill_id) : null;
+    $billDueRs = $linkedBill ? (float) ($linkedBill->due_amount / 100) : 0;
+    if ($dueRs <= 0 && $invoice->paid_status === Invoice::STATUS_PAID && $billDueRs <= 0) {
+        continue;
+    }
+
     // Payment date: use advance date or invoice date
     $balanceDate = ! empty($invoice->tr_advance_on)
         ? substr((string) $invoice->tr_advance_on, 0, 10)
@@ -143,6 +150,11 @@ foreach ($invoices as $invoice) {
         $invoice->status = Invoice::STATUS_COMPLETED;
         $invoice->paid_status = Invoice::STATUS_PAID;
         $invoice->saveQuietly();
+
+        try {
+            $invoice->clearMediaCollection('invoice');
+        } catch (Throwable) {
+        }
 
         // 4. Sync purchasing payables to record final settlement payment against the Bill
         try {
