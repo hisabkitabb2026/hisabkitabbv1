@@ -785,7 +785,7 @@
     $consignorPhone = $toUpper($invoiceField(['consignor_phone', 'consignor_phone_no', 'tr_consignor_phone'])
         ?: ($consignorCustomer?->phone ?: ($consignorCustomer?->billingAddress?->phone ?: '')));
     $consignorGstin = $toUpper($invoiceField(['consignor_gst', 'consignor_gst_no', 'tr_consignor_gst'])
-        ?: ($consignorCustomer?->tax_id ?: ''));
+        ?: ($consignorCustomer?->tax_id ?: ($consignorCustomer?->billingAddress?->tax_id ?: ($consignorCustomer?->shippingAddress?->tax_id ?: ''))));
 
     // Consignee
     $consigneeCustomer = $invoice->relationLoaded('consigneeCustomer')
@@ -800,7 +800,7 @@
     $consigneePhone = $toUpper($invoiceField(['consignee_phone', 'consignee_phone_no', 'tr_consignee_phone'])
         ?: ($consigneeCustomer?->phone ?: ($consigneeCustomer?->billingAddress?->phone ?: '')));
     $consigneeGstin = $toUpper($invoiceField(['consignee_gst', 'consignee_gst_no', 'tr_consignee_gst'])
-        ?: ($consigneeCustomer?->tax_id ?: ''));
+        ?: ($consigneeCustomer?->tax_id ?: ($consigneeCustomer?->billingAddress?->tax_id ?: ($consigneeCustomer?->shippingAddress?->tax_id ?: ''))));
 
     $docketNumber = $toUpper($invoice->invoice_number);
     $descriptionOfGoods = $toUpper(trim((string) $invoiceField(['description_of_goods', 'description_goods'])));

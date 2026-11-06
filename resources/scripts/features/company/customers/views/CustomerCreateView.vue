@@ -162,6 +162,15 @@ async function submitCustomerData(): Promise<void> {
 
   if (
     isInvoiceReceiptModule.value &&
+    !customerStore.currentCustomer.tax_id &&
+    customerStore.currentCustomer.billing?.tax_id
+  ) {
+    customerStore.currentCustomer.tax_id =
+      customerStore.currentCustomer.billing.tax_id
+  }
+
+  if (
+    isInvoiceReceiptModule.value &&
     !customerStore.currentCustomer.currency_id &&
     companyStore.selectedCompanyCurrency?.id
   ) {

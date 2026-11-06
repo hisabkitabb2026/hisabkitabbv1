@@ -174,6 +174,16 @@ async function submitCustomerData(): Promise<void> {
       customerStore.currentCustomer.billing.name
   }
 
+  // HisabKitab feature — auto-populate customer tax_id from billing address GST NO
+  if (
+    isInvoiceReceiptModule.value &&
+    !customerStore.currentCustomer.tax_id &&
+    customerStore.currentCustomer.billing?.tax_id
+  ) {
+    customerStore.currentCustomer.tax_id =
+      customerStore.currentCustomer.billing.tax_id
+  }
+
   v$.value.$touch()
 
   // HisabKitab feature — only show "please enter email" when portal is enabled (email is actually required)
