@@ -143,6 +143,10 @@ class InvoiceResource extends JsonResource
                 $invoice->customer()->exists(),
                 fn () => new CustomerResource($invoice->customer)
             ),
+            'consignee' => $this->when(
+                $invoice->consigneeCustomer()->exists(),
+                fn () => new CustomerResource($invoice->consigneeCustomer)
+            ),
             'creator' => $this->when(
                 $invoice->creator()->exists(),
                 fn () => new UserResource($invoice->creator)

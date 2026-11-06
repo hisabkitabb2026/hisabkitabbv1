@@ -272,6 +272,16 @@ export const useInvoiceStore = defineStore('invoice', {
       const response = await invoiceService.get(id)
       this.setInvoiceData(response.data)
       this.setCustomerAddresses(this.newInvoice.customer)
+      // HisabKitab feature — hydrate consignee on edit LR receipt
+      if (this.newInvoice.consignee) {
+        this.setCustomerAddresses(this.newInvoice.consignee)
+      } else if (this.newInvoice.tr_consignee_customer_id) {
+        try {
+          await this.selectConsignee(Number(this.newInvoice.tr_consignee_customer_id))
+        } catch {
+          // silently fail
+        }
+      }
       return { data: response }
     },
 
@@ -306,11 +316,11 @@ export const useInvoiceStore = defineStore('invoice', {
         | undefined
 
       if (business?.billing_address) {
-        ;(this.newInvoice.customer as Record<string, unknown>).billing_address =
+        ;(customer as Record<string, unknown>).billing_address =
           business.billing_address
       }
       if (business?.shipping_address) {
-        ;(this.newInvoice.customer as Record<string, unknown>).shipping_address =
+        ;(customer as Record<string, unknown>).shipping_address =
           business.shipping_address
       }
     },

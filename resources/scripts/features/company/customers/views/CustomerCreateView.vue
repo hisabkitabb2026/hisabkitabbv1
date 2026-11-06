@@ -16,6 +16,7 @@ import useVuelidate from '@vuelidate/core'
 import { useCustomerStore } from '../store'
 import { useGlobalStore } from '../../../../stores/global.store'
 import { useCompanyStore } from '../../../../stores/company.store'
+import { useNotificationStore } from '../../../../stores/notification.store'
 import CustomFieldsSection from '@/scripts/features/shared/custom-fields/CustomFieldsSection.vue'
 import CopyInputField from '@/scripts/features/company/customers/components/CopyInputField.vue'
 import { customerBaseUrl } from '@/scripts/utils/documents'
@@ -23,6 +24,15 @@ import { customerBaseUrl } from '@/scripts/utils/documents'
 const customerStore = useCustomerStore()
 const globalStore = useGlobalStore()
 const companyStore = useCompanyStore()
+const notificationStore = useNotificationStore()
+
+// HisabKitab feature — hide Basic Info / Portal Access sections when any receipt module is enabled
+// Covers InvoiceReceipt, LrReceipt, LorryReceipt — all use the same simplified customer form
+const isInvoiceReceiptModule = computed<boolean>(() =>
+  globalStore.modules.includes('InvoiceReceipt') ||
+  globalStore.modules.includes('LrReceipt') ||
+  globalStore.modules.includes('LorryReceipt')
+)
 
 const customFieldValidationScope = 'customFields'
 
@@ -47,7 +57,10 @@ const pageTitle = computed<string>(() =>
 const rules = computed(() => ({
   currentCustomer: {
     name: {
-      required: helpers.withMessage(t('validation.required'), required),
+      required: helpers.withMessage(
+        t('validation.required'),
+        requiredIf(!isInvoiceReceiptModule.value)
+      ),
       minLength: helpers.withMessage(
         t('validation.name_min_length', { count: 3 }),
         minLength(3)
@@ -60,7 +73,10 @@ const rules = computed(() => ({
       ),
     },
     currency_id: {
-      required: helpers.withMessage(t('validation.required'), required),
+      required: helpers.withMessage(
+        t('validation.required'),
+        requiredIf(!isInvoiceReceiptModule.value)
+      ),
     },
     email: {
       required: helpers.withMessage(
@@ -134,7 +150,38 @@ customerStore.resetCurrentCustomer()
 customerStore.fetchCustomerInitialSettings(isEdit.value)
 
 async function submitCustomerData(): Promise<void> {
+  // HisabKitab feature — auto-populate name and currency from billing address when Basic Info is hidden
+  if (
+    isInvoiceReceiptModule.value &&
+    !customerStore.currentCustomer.name &&
+    customerStore.currentCustomer.billing?.name
+  ) {
+    customerStore.currentCustomer.name =
+      customerStore.currentCustomer.billing.name
+  }
+
+  if (
+    isInvoiceReceiptModule.value &&
+    !customerStore.currentCustomer.currency_id &&
+    companyStore.selectedCompanyCurrency?.id
+  ) {
+    customerStore.currentCustomer.currency_id =
+      companyStore.selectedCompanyCurrency.id
+  }
+
   v$.value.$touch()
+
+  // HisabKitab feature — only show "please enter email" when portal is enabled (email is actually required)
+  if (
+    v$.value.$invalid &&
+    customerStore.currentCustomer.email === '' &&
+    customerStore.currentCustomer.enable_portal
+  ) {
+    notificationStore.showNotification({
+      type: 'error',
+      message: t('settings.notification.please_enter_email'),
+    })
+  }
 
   if (v$.value.$invalid) {
     return
@@ -188,7 +235,7 @@ async function submitCustomerData(): Promise<void> {
 
       <BaseCard container-class="p-4 md:p-5">
         <!-- Basic Info -->
-        <div class="grid grid-cols-5 gap-4 mb-8">
+        <div v-if="!isInvoiceReceiptModule" class="grid grid-cols-5 gap-4 mb-8">
           <h2 class="col-span-5 font-semibold text-start text-section text-heading lg:col-span-1">
             {{ $t('customers.basic_info') }}
           </h2>
@@ -326,10 +373,10 @@ async function submitCustomerData(): Promise<void> {
           </BaseInputGrid>
         </div>
 
-        <BaseDivider class="mb-5 md:mb-8" />
+        <BaseDivider v-if="!isInvoiceReceiptModule" class="mb-5 md:mb-8" />
 
         <!-- Portal Access -->
-        <div class="grid grid-cols-5 gap-4 mb-8">
+        <div v-if="!isInvoiceReceiptModule" class="grid grid-cols-5 gap-4 mb-8">
           <h2 class="col-span-5 font-semibold text-start text-section text-heading lg:col-span-1">
             {{ $t('customers.portal_access') }}
           </h2>
@@ -397,7 +444,7 @@ async function submitCustomerData(): Promise<void> {
           </BaseInputGrid>
         </div>
 
-        <BaseDivider class="mb-5 md:mb-8" />
+        <BaseDivider v-if="!isInvoiceReceiptModule" class="mb-5 md:mb-8" />
 
         <!-- Billing Address -->
         <div class="grid grid-cols-5 gap-4 mb-8">
@@ -419,6 +466,16 @@ async function submitCustomerData(): Promise<void> {
                 type="text"
                 class="w-full"
                 name="address_name"
+              />
+            </BaseInputGroup>
+
+            <!-- HisabKitab feature — GST NO field on billing address -->
+            <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.billing.tax_id"
+                type="text"
+                name="billingTaxId"
+                class="w-full"
               />
             </BaseInputGroup>
 
@@ -579,6 +636,16 @@ async function submitCustomerData(): Promise<void> {
               />
             </BaseInputGroup>
 
+            <!-- HisabKitab feature — GST NO field on shipping address -->
+            <BaseInputGroup v-if="isInvoiceReceiptModule" label="GST NO">
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.shipping.tax_id"
+                type="text"
+                name="shippingTaxId"
+                class="w-full"
+              />
+            </BaseInputGroup>
+
             <BaseInputGroup
               :label="$t('customers.country')"
               :content-loading="isFetchingInitialData"
@@ -689,6 +756,7 @@ async function submitCustomerData(): Promise<void> {
         </div>
 
         <CustomFieldsSection
+          v-if="!isInvoiceReceiptModule"
           type="Customer"
           :store="customerStore"
           store-prop="currentCustomer"

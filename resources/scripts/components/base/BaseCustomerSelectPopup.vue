@@ -172,6 +172,10 @@ function resetSelectedCustomer(): void {
 async function editCustomer(): Promise<void> {
   if (!selectedCustomer.value) return
   await customerStore.fetchCustomer(selectedCustomer.value.id)
+  // HisabKitab feature — consignee picker support (LR Receipt)
+  if (props.consigneeMode) {
+    invoiceStore.isConsigneeMode = true
+  }
   modalStore.openModal({
     title: t('customers.edit_customer'),
     componentName: 'CustomerModal',
